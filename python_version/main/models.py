@@ -148,4 +148,6 @@ class GameSession(models.Model):
     # ------------------------------
 
     def __str__(self):
-        return f"{self.game_type.name} Masası ({self.game_id | truncatechars:8})"
+        # Eğer game_type (None) ise "Bilinmeyen Oyun" yaz
+        game_name = self.game_type.name if self.game_type else "BİLİNMEYEN OYUN"
+        return f"{game_name} Masası ({self.game_id|truncatechars:8})"
