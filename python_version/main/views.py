@@ -45,11 +45,7 @@ def settings_view(request):
     return render(request, 'settings.html', {'title': 'Ayarlar'})
 
 
-@login_required
-def all_games_lobby(request):
-    all_minigames = MiniGame.objects.all()
-    context = {'minigames_list': all_minigames, }
-    return render(request, 'main/minigames_lobby.html', context)
+
 
 
 # 2. OYUNA ÖZEL LOBİ (Sorgular değişti)
@@ -82,7 +78,7 @@ def game_specific_lobby(request, game_slug):
         'my_games': my_games,
         'available_games': available_games,
     }
-    return render(request, 'main/game_specific_lobby.html', context)
+    return render(request, 'game_specific_lobby.html', context)
 
 
 @login_required
@@ -98,7 +94,7 @@ def all_games_lobby(request):
         'minigames_list': all_minigames,
     }
     # minigames.html adında yeni bir template render et
-    return render(request, 'main/minigames.html', context)
+    return render(request, 'minigames.html', context)
 
 # 3. ODA KURMA (Değişti)
 @login_required
@@ -197,7 +193,7 @@ def game_room(request, game_id):
     if is_spectator and game.status == 'waiting' and not game.is_full:
         return redirect('join_game', game_id=game.game_id)
 
-    return render(request, 'main/game_room.html', {
+    return render(request, 'game_room.html', {
         'game': game,
         'is_spectator': is_spectator,
         'game_id_json': str(game_id),
