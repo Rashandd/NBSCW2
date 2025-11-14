@@ -2,7 +2,7 @@
 
 from django.contrib import admin
 from django.db.models import Count
-from .models import MiniGame, GameSession
+from .models import MiniGame, GameSession, VoiceChannel
 
 
 @admin.register(MiniGame)
@@ -58,3 +58,13 @@ class GameSessionAdmin(admin.ModelAdmin):
         qs = super().get_queryset(request)
         qs = qs.annotate(player_count_admin=Count('players'))
         return qs
+
+
+@admin.register(VoiceChannel)
+class VoiceChannelAdmin(admin.ModelAdmin):
+    list_display = ('name', 'slug', 'is_private')
+    list_filter = ('is_private',)
+    search_fields = ('name', 'slug')
+
+    # 'name' alanını doldururken 'slug' alanını otomatik doldurur
+    prepopulated_fields = {'slug': ('name',)}
