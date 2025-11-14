@@ -163,7 +163,7 @@
                 <div id="game-over-overlay">
                     <h2 class="mb-3">Oyun Bitti!</h2>
                     <h4 class="mb-4">Kazanan: <span id="winner-name">...</span></h4>
-                    <a href="{% url 'game_specific_lobby', game_slug=game.slug %}" class="btn btn-primary btn-lg">Yeni Oyun</a>
+                    <a href="{% url 'game_specific_lobby' game_slug=game.slug %}" class="btn btn-primary btn-lg">Yeni Oyun</a>
                 </div>
 
                 <div id="wheel-overlay">
