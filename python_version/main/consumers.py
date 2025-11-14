@@ -1,14 +1,16 @@
+import json
 import logging
 
-from asgiref.sync import sync_to_async
+from asgiref.sync import sync_to_async, async_to_sync
 from django.contrib.auth import get_user_model
 from django.contrib.auth import get_user_model
+from django.db import transaction
 
 from .models import GameSession
 
 User = get_user_model()
 
-from channels.generic.websocket import AsyncJsonWebsocketConsumer
+from channels.generic.websocket import AsyncJsonWebsocketConsumer, AsyncWebsocketConsumer
 from urllib.parse import parse_qs
 from channels.db import database_sync_to_async
 from django.contrib.auth import get_user_model
@@ -320,190 +322,186 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
         })
 
 
-class GameConsumer(AsyncJsonWebsocketConsumer):
+# main/consumers.py
+
+
+class GameConsumer(AsyncWebsocketConsumer):
 
     async def connect(self):
-        """
-        Bir kullanıcı odaya bağlandığında (oyuncu veya izleyici).
-        """
+        # 1. URL'den game_id'yi al
         self.game_id = self.scope['url_route']['kwargs']['game_id']
-        self.game_group_name = f'game_{self.game_id}'
-        self.user = self.scope['user']  # <-- AuthMiddlewareStack sayesinde!
+        self.game_group_name = f"game_{self.game_id}"
+        self.user = self.scope['user']
 
-        # Gruba katıl (bu odadaki herkese yayın yapmak için)
-        await self.channel_layer.group_add(
-            self.game_group_name,
-            self.channel_name
-        )
-        await self.accept()
+        # 2. Giriş yapmamış kullanıcıları reddet
+        if not self.user.is_authenticated:
+            await self.close()
+            return
 
-        # Odaya yeni biri katıldığında (belki player2 budur)
-        # Veritabanı işlemleri için sync_to_async kullan
-        game = await self.get_game(self.game_id)
+        # 3. Oyunu veritabanından al ve kullanıcıyı gruba ekle
+        try:
+            self.game = await self.get_game_session()
+            await self.channel_layer.group_add(
+                self.game_group_name,
+                self.channel_name
+            )
+            await self.accept()
 
-        # Eğer oyun bekliyorsa ve bağlanan kişi P1 değilse, onu P2 yap
-        if game.status == 'waiting' and game.player1 != self.user and not game.player2:
-            game.player2 = self.user
-            game.board_state[4][4]['owner'] = self.user.username
-            game.status = 'in_progress'
-            await self.save_game(game)
+            # 4. Bağlanan kullanıcıya güncel oyun durumunu gönder
+            await self.send_game_state(self)
 
-            # Herkese (P1'e) yeni durumu ve P2'nin katıldığını bildir
-            await self.broadcast_game_state(game, message=f"{self.user.username} oyuna katıldı.")
-        else:
-            # Sadece bağlanan kişiye mevcut oyun durumunu gönder
-            await self.send_json({
-                'type': 'game_state',
-                'state': game.board_state,
-                'turn': game.current_turn.username if game.current_turn else None,
-                'p1': game.player1.username,
-                'p2': game.player2.username if game.player2 else None,
-            })
+        except GameSession.DoesNotExist:
+            await self.close()
+        except Exception as e:
+            print(f"HATA (connect): {e}")  # Sunucu loglarını kontrol et
+            await self.close()
 
     async def disconnect(self, close_code):
-        """Kullanıcı bağlantıyı kapattığında."""
+        # Grubu terk et
         await self.channel_layer.group_discard(
             self.game_group_name,
             self.channel_name
         )
+        # ... (Oyunculardan biri çıkınca ne yapılacağına dair mantık buraya eklenebilir) ...
 
-    async def receive_json(self, content, **kwargs):
-        """
-        TÜM İSTEKLERİ BİRLEŞTİREN TAM SÜRÜM
-        - İlk hamle (boş kare) / Normal hamle (dolu kare) ayrımı
-        - Zincirleme reaksiyon
-        - Kazanan kontrolü
-        """
-        message_type = content.get('type')
-        if not self.user.is_authenticated:
-            await self.send_error("Giriş yapmalısınız.")
-            return
+    async def receive(self, text_data):
+        data = json.loads(text_data)
 
-        if message_type == 'make_move':
-            row = content.get('row')
-            col = content.get('col')
-            game = await self.get_game(self.game_id)
-            player_username = self.user.username
+        # Sadece 'make_move' (hamle yap) mesajlarını işle
+        if data.get('type') == 'make_move':
+            await self.handle_make_move(data)
 
-            # --- GÜVENLİK KONTROLLERİ ---
+    # --- HAMLE ALMA VE OYUN MANTIĞI ---
+
+    @database_sync_to_async
+    def handle_make_move(self, data):
+        # 1. Veritabanından en güncel hali al (transaction kilidiyle)
+        with transaction.atomic():
+            game = GameSession.objects.select_for_update().get(game_id=self.game_id)
+
+            # 2. Gerekli kontroller
             if game.status != 'in_progress':
-                await self.send_error("Oyun başlamadı veya bitti.")
-                return
-
+                return self.send_error_to_user("Oyun henüz başlamadı veya bitti.")
             if game.current_turn != self.user:
-                await self.send_error("Sıra sizde değil.")
-                return
+                return self.send_error_to_user("Sıra sizde değil.")
 
-            # --- YENİ: İLK HAMLE / NORMAL HAMLE KONTROLÜ ---
-            piece_count = _count_player_pieces(game.board_state, player_username)
-            cell = game.board_state[row][col]
+            # 3. OYUN MANTIĞINI ÇAĞIR (Bu sizin DiceWars mantığınız olmalı)
+            # --------------------------------------------------
+            # ÖRNEK MANTIK (Kendi mantığınızla değiştirin):
+            try:
+                row = int(data.get('row'))
+                col = int(data.get('col'))
 
-            exploded_cells_list = []  # Patlama listesini başta tanımla
+                # 'game_logic.py' dosyanız olduğunu varsayalım
+                # game_logic = DiceWarsGame(game.board_state)
+                # result = game_logic.make_move(self.user.username, row, col)
 
-            if piece_count == 0:
-                # Bu, oyuncunun İLK HAMLESİ
-                if cell is not None:
-                    await self.send_error("İlk hamleniz boş bir hücreye olmalı.")
-                    return
-                # Hamle geçerli: Boş hücreye 1 taş koy
-                game.board_state[row][col] = {'owner': player_username, 'count': 1}
-                # İlk hamlede patlama veya kazanan olmaz
+                # Şimdilik basit bir örnek:
+                board_state = game.board_state or {}
+                if not board_state.get(str(row)):
+                    board_state[str(row)] = {}
 
-            else:
-                # Bu, normal bir HAMLE (ilk hamle değil)
-                if not cell:
-                    await self.send_error("Boş bir hücreye oynayamazsınız.")
-                    return
-                if cell.get('owner') != player_username:
-                    await self.send_error("Bu hücre rakibinize ait.")
-                    return
+                board_state[str(row)][str(col)] = {
+                    'owner': self.user.username,
+                    'count': 1
+                }
+                game.board_state = board_state
 
-                # --- Normal Hamleyi Yap ---
-                cell['count'] += 1
-                cell['owner'] = player_username
+                # Sırayı diğer oyuncuya geçir (N-kişilik)
+                players_list = list(game.players.all())
+                current_turn_index = players_list.index(self.user)
+                next_turn_index = (current_turn_index + 1) % len(players_list)
+                game.current_turn = players_list[next_turn_index]
 
-                # --- Zincirleme Reaksiyon Başlat ---
-                cells_to_explode = find_critical_cells(game.board_state)
+                game.save()
 
-                while cells_to_explode:
-                    r, c = cells_to_explode.pop(0)
+                # Başarılı hamle sonrası herkese yeni durumu gönder
+                return self.send_game_state_to_group(game)
 
-                    if (r, c) not in exploded_cells_list:
-                        exploded_cells_list.append((r, c))
+            except Exception as e:
+                print(f"HATA (handle_make_move): {e}")
+                return self.send_error_to_user("Geçersiz hamle.")
+            # --------------------------------------------------
 
-                    # bum fonksiyonu komşuları günceller
-                    bum(game, r, c, player_username)
+    # --- VERİ GÖNDERME FONKSİYONLARI ---
 
-                    # Tahtayı tekrar tara (yeni patlamalar için)
-                    cells_to_explode = find_critical_cells(game.board_state)
+    @database_sync_to_async
+    def get_game_state_data(self, game_obj):
+        """Veritabanı nesnesini JSON'a hazır dict'e çevirir."""
+        # N-Kişilik modele göre 'players' listesi oluştur
+        player_usernames = [p.username for p in game_obj.players.all()]
 
-                # --- KAZANAN KONTROLÜ (Sadece normal hamlede) ---
-                check_for_winner(game, self.user)
+        return {
+            'type': 'game_state',  # 'game_message' yerine 'game_state'
+            'state': game_obj.board_state,
+            'turn': game_obj.current_turn.username if game_obj.current_turn else None,
+            'players': player_usernames,  # 'p1'/'p2' yerine bu
+            'status': game_obj.status,
+            'winner': game_obj.winner.username if game_obj.winner else None,
+            'message': '',  # Hamle mesajları için
+            'exploded_cells': [],  # Patlama animasyonu için
+        }
 
-            # --- OYUN SIRASINI DEĞİŞTİR ---
-            if game.status != 'finished':
-                game.current_turn = game.player2 if self.user == game.player1 else game.player1
-
-            await self.save_game(game)
-
-            # --- YAYINLA ---
-            await self.broadcast_game_state(
-                game,
-                message=f"{player_username} hamle yaptı.",
-                exploded_cells=exploded_cells_list
-            )
-
-    # --- Yardımcı Metodlar ---
-
-    async def broadcast_game_state(self, game, message=None, exploded_cells=None):  # <-- 1. BURAYA EKLENDİ
+    def send_game_state_to_group(self, game_obj):
         """
-        Odada bulunan herkese (tüm kanallara) oyunun son durumunu gönderir.
+        Oyun durumunu gruptaki HERKESE gönderir.
+        (Bu 'async' olmalı çünkü channel_layer'a erişiyor)
         """
-        await self.channel_layer.group_send(
+        state_data = self.get_game_state_data(game_obj)
+
+        # 'database_sync_to_async' içindeyken 'await' kullanamayız,
+        # bu yüzden 'async_to_sync' ile sarmalarız.
+        async_to_sync(self.channel_layer.group_send)(
             self.game_group_name,
-            {
-                'type': 'game_message',  # Bu, aşağıdakı 'game_message' fonksiyonunu tetikler
-                'state': game.board_state,
-                'turn': game.current_turn.username if game.current_turn else None,
-                'p1': game.player1.username,
-                'p2': game.player2.username if game.player2 else None,
-                'status': game.status,
-                'winner': game.winner.username if game.winner else None,
-                'message': message,
-                'exploded_cells': exploded_cells if exploded_cells is not None else []  # <-- 2. BURAYA EKLENDİ
-            }
+            state_data  # 'type' anahtarı zaten state_data içinde ('game_state')
         )
 
-    async def game_message(self, event):
+    async def send_game_state(self, event):
         """
-        Grup mesajını (event) alır ve istemciye (JS) WebSocket üzerinden gönderir.
+        Gruptan gelen 'game_state' mesajını WebSocket'e gönderir.
         """
-        # Veriyi istemciye (JS) JSON olarak gönder
-        await self.send_json({
-            'type': 'game_state',  # <-- JS'in anladığı 'type'
-            'state': event['state'],
-            'turn': event['turn'],
-            'p1': event['p1'],
-            'p2': event['p2'],
-            'status': event['status'],
-            'winner': event['winner'],
-            'message': event['message'],
-            'exploded_cells': event['exploded_cells']  # <-- 3. VERİ BURADAN JS'e GİDER
-        })
+        await self.send(text_data=json.dumps({
+            'type': event.get('type', 'game_state'),
+            'state': event.get('state'),
+            'turn': event.get('turn'),
+            'players': event.get('players'),  # N-kişilik
+            'status': event.get('status'),
+            'winner': event.get('winner'),
+            'message': event.get('message'),
+            'special_event': event.get('special_event'),
+            'exploded_cells': event.get('exploded_cells'),
+        }))
 
-    async def send_error(self, message):
-        """Sadece bu kullanıcıya bir hata mesajı gönder."""
-        await self.send_json({
+    def send_error_to_user(self, message):
+        """Sadece bu kullanıcıya (hamleyi yapan) hata mesajı gönderir."""
+        async_to_sync(self.send)(text_data=json.dumps({
             'type': 'error',
             'message': message
-        })
+        }))
 
-    # --- Veritabanı (Sync) Metodları ---
-    # Django ORM'i asenkron ortamda kullanmak için
-    @sync_to_async
-    def get_game(self, game_id):
-        return GameSession.objects.select_related('player1', 'player2', 'current_turn', 'winner').get(game_id=game_id)
+    # --- GEREKLİ VERİTABANI ERİŞİMİ ---
 
-    @sync_to_async
-    def save_game(self, game):
-        game.save()
+    @database_sync_to_async
+    def get_game_session(self):
+        """
+        WebSocket bağlanırken oyunu çeker.
+        (N-kişilik model için güncellendi)
+        """
+        game = GameSession.objects.select_related(
+            'game_type', 'host', 'current_turn', 'winner'
+        ).prefetch_related('players').get(game_id=self.game_id)
+
+        # Oyuncu veya izleyici mi? (İzin kontrolü)
+        is_player = game.players.filter(id=self.user.id).exists()
+        is_spectator = not is_player
+
+        # Eğer izleyiciyse ve oda bekliyorsa ve dolu değilse...
+        # Normalde bu 'join_game' view'i tarafından engellenir,
+        # ama WebSocket'e direkt gelenler için ekstra güvenlik.
+        if is_spectator and game.status == 'waiting' and not game.is_full:
+            # İzleyiciyi oyuncu listesine ekle
+            game.players.add(self.user)
+            # (Burada 'join_game' view'indeki gibi
+            # oyun başlatma mantığı da eklenebilir)
+
+        return game
