@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import random
@@ -45,20 +46,18 @@ def get_valid_neighbors(row, col):
 def find_critical_cells(board_state):
     """
     SÖZLÜK (dict) tabanlı tahtada patlamaya hazır hücreleri bulur.
-    (Sizin 2-kişilik oyun mantığınızın N-kişilik ve sözlük uyarlaması)
+    YENİ KURAL: Bir hücre 4 veya daha fazla olduğunda patlar.
     """
-    # Kendi oyun mantığınızı (komşu sayısı vb.) buraya uyarlamalısınız.
-    # Bu, Dice Wars'ın "atom" mantığına göre basitleştirilmiş bir örnektir.
-    # ÖNEMLİ: Gerçek Dice Wars mantığı çok daha karmaşıktır.
-
-    # Şimdilik, 3 taşı olanları patlat (Siz bunu 4, 5 vb. yapmalısınız)
     critical_cells = []
     if not board_state: return critical_cells
 
     for r_str, row in board_state.items():
         for c_str, cell in row.items():
-            if cell and cell.get('count', 0) >= 3:  # Veya 4
-                # String'leri int'e geri çevir
+            if not cell:
+                continue
+
+            # KURAL: Basitçe 4'ü kontrol et
+            if cell.get('count', 0) >= 4:
                 critical_cells.append((int(r_str), int(c_str)))
     return critical_cells
 
@@ -66,45 +65,44 @@ def find_critical_cells(board_state):
 def bum(game, row, col, username):
     """
     SÖZLÜK (dict) tabanlı tahtada bir hücreyi patlatır.
-    (row, col) INT olarak gelir.
+    KURAL: Hücre 4 kaybeder, etrafa 1'er tane dağıtır.
     """
-
-    # 1. Patlayan hücrenin kendisini sıfırla (string anahtarlarla)
     r_str, c_str = str(row), str(col)
-    try:
-        exploding_cell = game.board_state[r_str][c_str]
-        exploding_cell['count'] = 0
-        exploding_cell['owner'] = None  # Sahipsiz kalsın
-    except KeyError:
-        print(f"HATA: bum() patlayacak hücreyi bulamadı: {r_str}, {c_str}")
-        return  # Hata varsa devam etme
 
-    # 2. Geçerli komşuları al (bu int döndürür, bu OK)
+    # Patlayan hücredeki zar sayısını al (4, 5, 6... olabilir)
+    try:
+        current_count = game.board_state[r_str][c_str].get('count', 0)
+    except KeyError:
+        return  # Patlayacak hücre yoksa çık
+
+    # KURAL: Patlayan hücre 4 zar kaybeder
+    new_count = current_count - 4
+
+    if new_count <= 0:
+        game.board_state[r_str][c_str] = None  # Hücre boşalır
+    else:
+        # Kalan zarlar hücrede kalır
+        game.board_state[r_str][c_str]['count'] = new_count
+        # Sahibi değişmez (çünkü içinde hâlâ zar var)
+
+    # 4 zarı etrafa dağıt
     valids = get_valid_neighbors(row, col)
 
-    # 3. Komşuları güncelle
     for r_int, c_int in valids:
-
-        # Komşu koordinatlarını string'e çevir
         r_neighbor_str, c_neighbor_str = str(r_int), str(c_int)
 
-        # --- GÜVENLİ SÖZLÜK GÜNCELLEME MANTIĞI ---
-
-        # Komşu satır (örn: '0') sözlükte var mı?
         if r_neighbor_str not in game.board_state:
             game.board_state[r_neighbor_str] = {}
 
-        # Komşu hücre (örn: '0') o satırda var mı?
         current_cell = game.board_state[r_neighbor_str].get(c_neighbor_str)
 
         if current_cell is None:
-            # Hücre boşsa, yeni hücre oluştur
+            # Hücre boşsa, 1 zar ile yeni hücre oluştur
             game.board_state[r_neighbor_str][c_neighbor_str] = {
-                'owner': username,
-                'count': 1
+                'owner': username, 'count': 1
             }
         else:
-            # Hücre doluysa, 'count'u 1 artır ve sahibini güncelle
+            # Hücre doluysa, 1 zar ekle ve sahibini güncelle
             current_cell['count'] += 1
             current_cell['owner'] = username
 
@@ -369,75 +367,154 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
         )
 
     async def receive_json(self, content, **kwargs):
+        """
+        Gelen hamleyi alır ve ASENKRON hamle işleyiciye yönlendirir.
+        """
         if not self.user.is_authenticated:
             await self.send_error("Giriş yapmalısınız.")
             return
-
         if content.get('type') == 'make_move':
+            # Eski '@database_sync_to_async' 'handle_make_move' yerine
+            # 'async def handle_make_move' fonksiyonunu çağırıyoruz.
             await self.handle_make_move(content)
 
-    @database_sync_to_async
-    def handle_make_move(self, content):
+    async def handle_make_move(self, content):
+        """
+        YENİ ASENKRON HAMLE İŞLEYİCİ.
+        Tüm zincirleme reaksiyonu adım adım yönetir.
+        """
         try:
-            with transaction.atomic():
-                game = GameSession.objects.select_for_update().get(game_id=self.game_id)
-                player_username = self.user.username
+            # --- 1. TIKLAMA (İLK HAMLE) ---
+            # Oyuncunun tıkladığı ilk hamleyi (örn: 3'ü 4 yapma)
+            # veritabanına işler ve geçerli olup olmadığını kontrol eder.
+            game, is_valid_move, error_msg = await self.perform_initial_click(content)
 
-                if game.status != 'in_progress':
-                    return self.send_error_to_user("Oyun başlamadı veya bitti.")
-                if game.current_turn != self.user:
-                    return self.send_error_to_user("Sıra sizde değil.")
+            if not is_valid_move:
+                await self.send_error(error_msg)
+                return
 
-                row = content.get('row')
-                col = content.get('col')
-                piece_count = _count_player_pieces(game.board_state, player_username)
+            player_username = self.user.username
 
-                # 'str' anahtarları kullandığımız için 'str' ile erişmeliyiz
-                cell = game.board_state.get(str(row), {}).get(str(col))
+            # --- 2. TIKLAMAYI YAYINLA ---
+            # Tıkladığı hücrenin (örn: 4) görünmesi için
+            # ilk durumu, patlama olmadan yayınla.
+            await self.broadcast_game_state(game, message=f"{player_username} tıkladı.")
 
-                exploded_cells_list = []
+            # JS'in bu ilk tıklamayı çizmesi için kısa bir ara ver
+            await asyncio.sleep(0.1)
 
-                if piece_count == 0:  # İlk Hamle
-                    if cell is not None:
-                        return self.send_error_to_user("İlk hamleniz boş bir hücreye olmalı.")
-                    if not game.board_state.get(str(row)):
-                        game.board_state[str(row)] = {}
-                    game.board_state[str(row)][str(col)] = {'owner': player_username, 'count': 1}
-                else:  # Normal Hamle
-                    if not cell:
-                        return self.send_error_to_user("Boş bir hücreye oynayamazsınız.")
-                    if cell.get('owner') != player_username:
-                        return self.send_error_to_user("Bu hücre rakibinize ait.")
+            # --- 3. ZİNCİRLEME REAKSİYON DÖNGÜSÜ ---
+            # Tahtada patlayacak hücre (sayısı >= 4 olan) kaldığı sürece
+            # bu döngü devam eder.
+            while True:
+                # Patlayacak hücreleri bul
+                cells_to_explode = await self.find_critical_cells_async(game.board_state)
+                if not cells_to_explode:
+                    break  # Patlayacak hücre kalmadı, döngü bitti.
 
-                    cell['count'] += 1
-                    cell['owner'] = player_username
-                    cells_to_explode = find_critical_cells(game.board_state)
-                    while cells_to_explode:
-                        r, c = cells_to_explode.pop(0)
-                        if (r, c) not in exploded_cells_list:
-                            exploded_cells_list.append((r, c))
-                        bum(game, r, c, player_username)
-                        cells_to_explode = find_critical_cells(game.board_state)
-                    check_for_winner(game, self.user)
+                # --- ANLAŞILABİLİR ANİMASYON İÇİN BEKLE ---
+                # Patlama dalgaları arasında BEKLE (örn: 600ms)
+                await asyncio.sleep(0.6)
 
-                if game.status != 'finished':
-                    players_list = list(game.players.all())
-                    current_turn_index = players_list.index(self.user)
-                    next_turn_index = (current_turn_index + 1) % len(players_list)
-                    game.current_turn = players_list[next_turn_index]
-
-                game.save()
-
-                self.broadcast_game_state_sync(
-                    game,
-                    message=f"{player_username} hamle yaptı.",
-                    exploded_cells=exploded_cells_list
+                # Patlamaları uygula (bum) ve DB'yi güncelle
+                game, exploded_cells_list = await self.apply_explosions(
+                    game.game_id, cells_to_explode, player_username
                 )
+
+                # Herkese "ARA DURUMU" ve patlayan hücre listesini gönder
+                await self.broadcast_game_state(game, exploded_cells=exploded_cells_list)
+
+            # --- 4. OYUN BİTTİ, SIRAYI DEĞİŞTİR ---
+            # Döngü bittiğinde kazananı kontrol et ve sırayı değiştir
+            final_game = await self.check_winner_and_change_turn(game.game_id, self.user)
+
+            # Son bir bekleme ve "SON DURUMU" (yeni sıra ile) yayınla
+            await asyncio.sleep(0.6)
+
+            if final_game.status == 'finished':
+                await self.broadcast_game_state(final_game, message="Oyun Bitti!")
+            else:
+                await self.broadcast_game_state(
+                    final_game,
+                    message=f"Sıra {final_game.current_turn.username} kullanıcısında."
+                )
+
         except Exception as e:
-            print(f"HATA (handle_make_move): {e}")
-            self.send_error_to_user(f"Hamle yapılamadı: {e}")
+            print(f"HATA (handle_make_move ASYNC): {e}")
+            await self.send_error(f"Hamle yapılamadı: {e}")
 
     # --- Grup Yayını Metodları ---
+    @database_sync_to_async
+    def perform_initial_click(self, content):
+        """
+        Sadece ilk tıklamayı yapar. (Hata kontrolü)
+        (Eski 'handle_make_move' kodunuzun sadeleştirilmiş hali)
+        """
+        with transaction.atomic():
+            game = GameSession.objects.select_for_update().get(game_id=self.game_id)
+
+            if game.status != 'in_progress':
+                return game, False, "Oyun başlamadı veya bitti."
+            if game.current_turn != self.user:
+                return game, False, "Sıra sizde değil."
+
+            row, col = content.get('row'), content.get('col')
+            r_str, c_str = str(row), str(col)
+            piece_count = _count_player_pieces(game.board_state, self.user.username)
+            cell = game.board_state.get(r_str, {}).get(c_str)
+
+            if piece_count == 0:  # İlk hamle
+                if cell is not None:
+                    return game, False, "İlk hamleniz boş bir hücreye olmalı."
+                if r_str not in game.board_state: game.board_state[r_str] = {}
+                game.board_state[r_str][c_str] = {'owner': self.user.username, 'count': 1}
+            else:  # Normal hamle
+                if not cell:
+                    return game, False, "Boş bir hücreye oynayamazsınız."
+                if cell.get('owner') != self.user.username:
+                    return game, False, "Bu hücre rakibinize ait."
+                cell['count'] += 1
+                cell['owner'] = self.user.username
+
+            game.save()
+            return game, True, ""
+
+    @database_sync_to_async
+    def find_critical_cells_async(self, board_state):
+        # find_critical_cells (CPU-yoğun)
+        return find_critical_cells(board_state)
+
+    @database_sync_to_async
+    def apply_explosions(self, game_id, cells_to_explode, player_username):
+        """
+        Bir patlama dalgasını (o an kritik olan tüm hücreler)
+        veritabanına işler.
+        """
+        with transaction.atomic():
+            game = GameSession.objects.get(game_id=game_id)
+            for r, c in cells_to_explode:
+                # 'bum' fonksiyonu game.board_state'i GÜNCELLER
+                bum(game, r, c, player_username)
+            game.save()
+            return game, cells_to_explode
+
+    @database_sync_to_async
+    def check_winner_and_change_turn(self, game_id, user):
+        """
+        Kazananı kontrol eder ve sırayı değiştirir.
+        """
+        with transaction.atomic():
+            game = GameSession.objects.get(game_id=game_id)
+            check_for_winner(game, user)  # Kazananı belirler
+
+            if game.status != 'finished':
+                players_list = list(game.players.all())
+                current_turn_index = players_list.index(user)
+                next_turn_index = (current_turn_index + 1) % len(players_list)
+                game.current_turn = players_list[next_turn_index]
+
+            game.save()
+            return game
     async def broadcast_game_state(self, game, message=None, exploded_cells=None):
         state_data = await self.get_game_state_data_async(game)
         state_data['message'] = message

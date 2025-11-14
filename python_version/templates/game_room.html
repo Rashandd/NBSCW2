@@ -266,13 +266,11 @@
                 }
 
                 // --- 4. Sıralı Patlama Animasyonu ---
+                renderBoard(data.state);
+
                 if (data.exploded_cells && data.exploded_cells.length > 0) {
-                    boardElement.style.pointerEvents = 'none';
-                    await triggerSequentialExplosions(data.exploded_cells);
-                    renderBoard(data.state); // Animasyon sonrası son hali çiz
-                    boardElement.style.pointerEvents = 'auto';
-                } else {
-                    renderBoard(data.state); // Patlama yoksa hemen çiz
+                    // 'await' komutunu buradan kaldırdık!
+                    triggerSequentialExplosions(data.exploded_cells);
                 }
 
                 if (data.message && data.special_event !== 'game_start_roll') {
