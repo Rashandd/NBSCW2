@@ -5,149 +5,112 @@
 {% block extra_css %}
     <style>
         :root {
-        --p1-color: #d90429; /* Canlı Kırmızı */
-        --p2-color: #0077b6; /* Canlı Mavi */
-        --board-bg: #212529; /* Koyu Gri */
-        --cell-border: #495057;
-        --cell-hover: #343a40;
+            /* 4 oyuncuya kadar renk tanımlaması */
+            --p1-color: #d90429; /* Kırmızı */
+            --p2-color: #0077b6; /* Mavi */
+            --p3-color: #28a745; /* Yeşil */
+            --p4-color: #ffc107; /* Sarı */
 
-        /* YENİ: Arka plan için soluk renkler */
-        --p1-bg-color: #3a2b2f; /* Soluk Kırmızı Arka Plan */
-        --p2-bg-color: #2b3540; /* Soluk Mavi Arka Plan */
-    }
+            --board-bg: #212529;
+            --cell-border: #495057;
+            --cell-hover: #343a40;
+        }
 
-    /* YENİ: Sıra kimdeyse body arka planını değiştir */
-    body {
-        /* Geçişi yumuşat */
-        transition: background-color 0.5s ease-in-out;
-    }
-    body.turn-p1 {
-        background-color: var(--p1-bg-color);
-    }
-    body.turn-p2 {
-        background-color: var(--p2-bg-color);
-    }
+        #game-board-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            margin: auto;
+        }
 
-    #game-board-container {
-        position: relative; /* Parçacıkların buna göre konumlanması için ŞART */
-        width: 100%;
-        max-width: 500px;
-        margin: auto;
-    }
+        #game-board {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            grid-template-rows: repeat(5, 1fr);
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            background-color: var(--board-bg);
+            border: 2px solid var(--cell-border);
+            border-radius: 8px;
+            overflow: hidden;
+        }
 
-    #game-board {
-        /* ... (değişiklik yok) ... */
-    }
+        .cell {
+            border: 1px solid var(--cell-border);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            color: white;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .cell:hover { background-color: var(--cell-hover); }
 
-    .cell {
-        /* ... (değişiklik yok) ... */
-        transition: all 0.2s ease; /* Gölge için geçişi yumuşat */
-    }
+        /* Her oyuncu için renk ve gölge */
+        .cell.p1 { background-color: var(--p1-color); box-shadow: 0 0 10px 2px var(--p1-color); }
+        .cell.p2 { background-color: var(--p2-color); box-shadow: 0 0 10px 2px var(--p2-color); }
+        .cell.p3 { background-color: var(--p3-color); box-shadow: 0 0 10px 2px var(--p3-color); }
+        .cell.p4 { background-color: var(--p4-color); box-shadow: 0 0 10px 2px var(--p4-color); }
 
-    /* YENİ: Gölge efekti (Önceki cevaptan) */
-    .cell.p1 {
-        background-color: var(--p1-color);
-        box-shadow: 0 0 10px 2px var(--p1-color);
-    }
-    .cell.p2 {
-        background-color: var(--p2-color);
-        box-shadow: 0 0 10px 2px var(--p2-color);
-    }
+        /* Parçacık Animasyonu (Değişiklik yok) */
+        .particle {
+            position: absolute; width: 12px; height: 12px;
+            border-radius: 50%; z-index: 99;
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+            transition: transform 0.4s ease-out, opacity 0.4s ease-out;
+        }
+        .particle.up    { transform: translate(-50%, -450%) scale(0.5); opacity: 0; }
+        .particle.down  { transform: translate(-50%, 450%) scale(0.5); opacity: 0; }
+        .particle.left  { transform: translate(-450%, -50%) scale(0.5); opacity: 0; }
+        .particle.right { transform: translate(450%, -50%) scale(0.5); opacity: 0; }
 
-    /* KALDIRILDI: .cell.explode::after ve @keyframes boom silebilirsiniz */
-
-
-    /* YENİ: Parçacık (Atom) Stili */
-    .particle {
-        position: absolute;
-        width: 12px;
-        height: 12px;
-        border-radius: 50%;
-        z-index: 99;
-        /* Başlangıçta tam merkezde ve görünür */
-        transform: translate(-50%, -50%) scale(1);
-        opacity: 1;
-        /* JS tarafından ayarlanacaklar: top, left, background-color */
-
-        /* Animasyon tanımı: 0.4 saniyede uç ve kaybol */
-        transition: transform 0.4s ease-out, opacity 0.4s ease-out;
-    }
-
-    /* YENİ: Parçacıkların gideceği 4 yön */
-    .particle.up {
-        transform: translate(-50%, -450%) scale(0.5); /* Yukarı uç */
-        opacity: 0;
-    }
-    .particle.down {
-        transform: translate(-50%, 450%) scale(0.5); /* Aşağı uç */
-        opacity: 0;
-    }
-    .particle.left {
-        transform: translate(-450%, -50%) scale(0.5); /* Sola uç */
-        opacity: 0;
-    }
-    .particle.right {
-        transform: translate(450%, -50%) scale(0.5); /* Sağa uç */
-        opacity: 0;
-    }
-        /* YENİ: Başlangıç Çarkı Stilleri */
-        #wheel-overlay {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
+        /* Çark & Oyun Bitti Ekranları (Değişiklik yok) */
+        #wheel-overlay, #game-over-overlay {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
             background-color: rgba(0, 0, 0, 0.9);
-            color: #fff;
-            display: none; /* JS ile 'flex' yapılacak */
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 20;
-            border-radius: 8px;
-            text-align: center;
-            font-size: 1.5rem;
+            color: #fff; display: none; flex-direction: column;
+            align-items: center; justify-content: center;
+            z-index: 20; border-radius: 8px; text-align: center;
         }
-        #wheel-spinner {
-            font-size: 100px;
-            margin-bottom: 20px;
-            animation: spin 1.5s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        #wheel-overlay.finished #wheel-spinner {
-            animation: spin 0.5s linear 3, spin-stop 0.5s ease-out 1.5s forwards;
-            color: #28a745; /* Yeşil */
-        }
-        @keyframes spin-stop {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(720deg); }
-        }
+        #wheel-spinner { font-size: 100px; margin-bottom: 20px; animation: spin 1.5s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* Oyun Bitti Ekranı */
-        #game-over-overlay {
-            position: absolute;
-            top: 0; left: 0; right: 0; bottom: 0;
-            background-color: rgba(0, 0, 0, 0.85);
-            color: #fff;
-            display: none; /* JS ile 'flex' yapılacak */
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 10;
-            border-radius: 8px;
-            text-align: center;
-        }
-
-        /* Mesaj Logu Stilleri */
+        /* Mesaj Logu (Değişiklik yok) */
         #message-log {
-            height: 250px;
-            overflow-y: scroll;
-            background: #343a40;
-            border-radius: 0.25rem;
-            border: 1px solid #495057;
-            color: #f8f9fa;
+            height: 250px; overflow-y: scroll; background: #343a40;
+            border-radius: 0.25rem; border: 1px solid #495057; color: #f8f9fa;
         }
         #message-log p { margin: 0; padding: 2px 8px; }
+
+
+        /* YENİ: Sıra Tasarımı (Oyuncu Kartı Vurgulama) */
+        .player-box {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            border: 2px solid transparent; /* Vurgu için yer ayır */
+            transition: all 0.3s ease-in-out;
+            margin-bottom: 0.5rem;
+        }
+        /* Renkleri oyuncu sırasına göre ayarla */
+        .player-box.p1 { background-color: rgba(217, 4, 41, 0.1); }
+        .player-box.p2 { background-color: rgba(0, 119, 182, 0.1); }
+        .player-box.p3 { background-color: rgba(40, 167, 69, 0.1); }
+        .player-box.p4 { background-color: rgba(255, 193, 7, 0.1); }
+
+        /* GÜZEL TASARIM: Sıra kimdeyse bu sınıf eklenecek */
+        .player-box.active-turn {
+            border-color: var(--p1-color); /* Varsayılan (JS ile değişecek) */
+            box-shadow: 0 0 15px 3px var(--p1-color);
+            transform: scale(1.03);
+        }
+        /* Aktif oyuncunun rengine göre vurgu */
+        .player-box.active-turn.p1 { border-color: var(--p1-color); box-shadow: 0 0 15px 3px var(--p1-color); }
+        .player-box.active-turn.p2 { border-color: var(--p2-color); box-shadow: 0 0 15px 3px var(--p2-color); }
+        .player-box.active-turn.p3 { border-color: var(--p3-color); box-shadow: 0 0 15px 3px var(--p3-color); }
+        .player-box.active-turn.p4 { border-color: var(--p4-color); box-shadow: 0 0 15px 3px var(--p4-color); }
+
     </style>
 {% endblock %}
 
@@ -157,7 +120,6 @@
 
     <div class="row">
         <div class="col-lg-7 col-md-8 mb-4">
-
             <div id="game-board-container">
 
                 <div id="game-over-overlay">
@@ -173,9 +135,8 @@
                 </div>
 
                 <div id="game-board">
-                </div>
+                    </div>
             </div>
-
         </div>
 
         <div class="col-lg-5 col-md-4">
@@ -185,18 +146,34 @@
                 </div>
                 <div class="card-body">
                     <h5 id="turn-indicator" class="card-title mb-3">
-                        Sıra: {{ game.current_turn.username|default:"Rakip bekleniyor..." }}
+                        Sıra: {{ game.current_turn.username|default:"Oyuncular bekleniyor..." }}
                     </h5>
-                    <p class="mb-1">
-                        <strong><i class="fas fa-circle text-danger"></i> Oyuncu 1:</strong> {{ game.player1.username }}
-                    </p>
-                    <p>
-                        <strong><i class="fas fa-circle text-primary"></i> Oyuncu 2:</strong>
-                        <span id="player2-name">{{ game.player2.username|default:"Rakip bekleniyor..." }}</span>
-                    </p>
+
+                    <div id="player-list-container">
+                        {% for player in game.players.all %}
+                            <div class="player-box p{{ forloop.counter }}" id="player-box-{{ player.username }}">
+                                <strong>
+                                    <i class="fas fa-circle" style="color: var(--p{{ forloop.counter }}-color);"></i>
+                                    {{ player.username }}
+                                </strong>
+                                {% if player == game.host %}
+                                    <span class="badge bg-warning float-end">Kurucu</span>
+                                {% endif %}
+                                {% if player == request.user %}
+                                    <span class="badge bg-primary float-end me-1">Siz</span>
+                                {% endif %}
+                            </div>
+                        {% endfor %}
+                    </div>
+                    {% if game.players.count < game.game_type.max_players and game.status == 'waiting' %}
+                    <div class="alert alert-info mt-3">
+                        <i class="fas fa-spinner fa-spin me-1"></i>
+                        Oyuncular bekleniyor... ({{ game.players.count }}/{{ game.game_type.max_players }})
+                    </div>
+                    {% endif %}
 
                     {% if is_spectator %}
-                    <div class="alert alert-dark border-warning text-warning" role="alert">
+                    <div class="alert alert-dark border-warning text-warning mt-3" role="alert">
                         <strong>İzleyici modundasınız.</strong> Hamle yapamazsınız.
                     </div>
                     {% endif %}
@@ -204,8 +181,8 @@
                     <hr class="border-secondary">
 
                     <label for="message-log" class="form-label">Oyun Kayıtları:</label>
-                    <div id="message-log" class="p-2">
-                        </div>
+                    <div id="message-log" class="p-2"></div>
+
                     <a href="{% url 'game_specific_lobby' game_slug=game.game_type.slug %}" class="btn btn-secondary mt-3 w-100">Lobiden Ayrıl</a>
                 </div>
             </div>
@@ -215,46 +192,43 @@
     {{ game_id_json|json_script:"game-id" }}
     {{ username_json|json_script:"current-username" }}
     {{ is_spectator|json_script:"is-spectator" }}
+    {{ initial_board_state_json|json_script:"initial-board-state" }}
 {% endblock %}
+
 {% block extra_js %}
     <script>
         // DOM elementleri ve veriler
         const gameId = JSON.parse(document.getElementById('game-id').textContent);
         const myUsername = JSON.parse(document.getElementById('current-username').textContent);
         const isSpectator = JSON.parse(document.getElementById('is-spectator').textContent);
+        const initialBoardState = JSON.parse(document.getElementById('initial-board-state').textContent);
 
         const boardElement = document.getElementById('game-board');
         const turnIndicator = document.getElementById('turn-indicator');
-        const player2Name = document.getElementById('player2-name');
         const messageLog = document.getElementById('message-log');
+        const playerListContainer = document.getElementById('player-list-container');
 
-        // Overlay (Ekran) elementleri
+        // Overlay elementleri
         const gameOverOverlay = document.getElementById('game-over-overlay');
         const winnerNameEl = document.getElementById('winner-name');
         const wheelOverlay = document.getElementById('wheel-overlay');
         const wheelWinnerText = document.getElementById('wheel-winner-name');
 
-        let player1Username = '{{ game.player1.username }}';
-        let player2Username = '{{ game.player2.username|default_if_none:"" }}';
+        // DÜZELTME: Oyuncu haritası (Kimin rengi ne?)
+        let playerColors = {}; // {'username1': 'p1', 'username2': 'p2'}
+        let playerUsernames = []; // ['username1', 'username2']
+        const hostUsername = "{{ game.host.username }}"; // Kurucuyu bilmek için
 
-        const diceIcons = {
-            1: 'fa-dice-one',
-            2: 'fa-dice-two',
-            3: 'fa-dice-three'
-        };
+        const diceIcons = { 1: 'fa-dice-one', 2: 'fa-dice-two', 3: 'fa-dice-three' };
+        function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
-        // Gecikme (uyku) fonksiyonu
-        function sleep(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
-        }
-
-        // WebSocket Bağlantısı
+        // WebSocket Bağlantısı (Aynı)
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const gameSocket = new WebSocket(
-    protocol + window.location.host + '/ws/dice-wars/' + gameId + '/'
-);
+            wsProtocol + window.location.host + '/ws/dice-wars/' + gameId + '/'
+        );
 
-        // Sunucudan Mesaj Alma (GÜNCELLENMİŞ - Çark mantığı eklendi)
+        // Sunucudan Mesaj Alma (N-Kişilik modele güncellendi)
         gameSocket.onmessage = async function(e) {
             const data = JSON.parse(e.data);
             console.log("Sunucudan alındı:", data);
@@ -264,76 +238,41 @@
                 return;
             }
 
-            if (data.type === 'game_state') {
+            // DÜZELTME: 'game_message' consumer'da 'game_state' olmalı
+            // (Eğer consumer'ınız 'game_state' gönderiyorsa bunu 'game_state' yapın)
+            if (data.type === 'game_state' || data.type === 'game_message') {
 
-                // --- 1. Oyuncu Adlarını Güncelle (P2 katılınca haberdar ol) ---
-                player1Username = data.p1;
-                player2Username = data.p2 || "";
-                player2Name.textContent = data.p2 || "Rakip bekleniyor...";
-
-                   if (data.status === 'in_progress') {
-                if (data.turn === player1Username) {
-                    document.body.classList.add('turn-p1');
-                    document.body.classList.remove('turn-p2');
-                } else if (data.turn === player2Username) {
-                    document.body.classList.add('turn-p2');
-                    document.body.classList.remove('turn-p1');
+                // --- 1. Oyuncu Bilgilerini ve Renklerini Güncelle ---
+                if (data.players) {
+                    playerUsernames = data.players;
+                    updatePlayerList(data.players); // HTML'i yeniden çiz
                 }
-            } else {
-                // Oyun bitti veya bekliyor, vurguyu kaldır
-                document.body.classList.remove('turn-p1', 'turn-p2');
-            }
-                // --- 2. YENİ: Başlangıç Çarkı Animasyonu ---
+
+                // --- 2. Sıra Göstergesini ve Vurguyu Güncelle (GÜZEL TASARIM) ---
+                updateTurnIndicator(data.turn, data.status, data.winner);
+
+                // --- 3. Başlangıç Çarkı Animasyonu ---
                 if (data.special_event === 'game_start_roll') {
-                    // 1. Çarkı göster
                     wheelWinnerText.style.display = 'none';
                     wheelOverlay.classList.remove('finished');
                     wheelOverlay.style.display = 'flex';
-
-                    // 2. Animasyonun bitmesini bekle (2.5 saniye)
                     await sleep(2500);
-
-                    // 3. Sonucu göster
                     wheelWinnerText.innerHTML = `<i class="fas fa-check-circle"></i> ${data.turn} başlıyor!`;
                     wheelWinnerText.style.display = 'block';
                     wheelOverlay.classList.add('finished');
-
-                    // 4. 2 saniye daha bekle ve çarkı gizle
                     await sleep(2000);
                     wheelOverlay.style.display = 'none';
                     logMessage(data.message, 'success');
                 }
 
-                // --- 3. Durum ve Sıra Göstergesi ---
-                if (data.status === 'finished') {
-                    turnIndicator.textContent = "Oyun Bitti!";
-                    logMessage("Kazanan: " + data.winner, 'success');
-                    winnerNameEl.textContent = data.winner;
-                    gameOverOverlay.style.display = 'flex';
-
-                } else if (data.status === 'waiting') {
-                    turnIndicator.textContent = "Rakip bekleniyor...";
-                } else {
-                    turnIndicator.textContent = "Sıra: " + data.turn;
-                }
-
                 // --- 4. Sıralı Patlama Animasyonu ---
                 if (data.exploded_cells && data.exploded_cells.length > 0) {
-                    // Tahtayı *kilitle* (animasyon bitene kadar tıklanmasın)
                     boardElement.style.pointerEvents = 'none';
-
-                    // Patlamaları SIRAYLA tetikle
                     await triggerSequentialExplosions(data.exploded_cells);
-
-                    // Animasyon bitti, tahtayı son haliyle çiz
-                    renderBoard(data.state);
-
-                    // Tahtanın *kilidini aç*
+                    renderBoard(data.state); // Animasyon sonrası son hali çiz
                     boardElement.style.pointerEvents = 'auto';
-
                 } else {
-                    // Patlama yoksa, tahtayı hemen çiz
-                    renderBoard(data.state);
+                    renderBoard(data.state); // Patlama yoksa hemen çiz
                 }
 
                 if (data.message && data.special_event !== 'game_start_roll') {
@@ -350,41 +289,86 @@
 
         gameSocket.onopen = function(e) {
             logMessage('Oyun masasına başarıyla bağlandınız.', 'success');
+            // Sayfa yüklendiğinde gelen oyuncu listesini ve renkleri ayarla
+            updatePlayerList([{% for p in game.players.all %}"{{ p.username }}"{% if not forloop.last %}, {% endif %}{% endfor %}]);
         };
 
-        // Sıralı Patlama Fonksiyonu
-        async function triggerSequentialExplosions(explodedCells) {
-            const EXPLOSION_DELAY = 200; // Her patlama arası bekleme (ms)
+        // YENİ: Oyuncu Listesini ve Renk Haritasını Güncelleme
+        function updatePlayerList(players) {
+            playerListContainer.innerHTML = ''; // Listeyi temizle
+            playerColors = {}; // Renk haritasını sıfırla
 
+            players.forEach((username, index) => {
+                const playerClass = `p${index + 1}`; // p1, p2, p3...
+                playerColors[username] = playerClass; // Haritaya ekle
+
+                const playerBox = document.createElement('div');
+                playerBox.className = `player-box ${playerClass}`;
+                playerBox.id = `player-box-${username}`;
+
+                let badges = '';
+                if (username === hostUsername) {
+                    badges += `<span class="badge bg-warning float-end">Kurucu</span>`;
+                }
+                if (username === myUsername) {
+                    badges += `<span class="badge bg-primary float-end me-1">Siz</span>`;
+                }
+
+                playerBox.innerHTML = `
+                    <strong>
+                        <i class="fas fa-circle" style="color: var(--${playerClass}-color);"></i>
+                        ${username}
+                    </strong>
+                    ${badges}
+                `;
+                playerListContainer.appendChild(playerBox);
+            });
+        }
+
+        // YENİ: Sıra Göstergesini ve Vurguyu Güncelleme
+        function updateTurnIndicator(turnUsername, status, winnerUsername) {
+            // Önce tüm vurguları kaldır
+            document.querySelectorAll('.player-box').forEach(box => {
+                box.classList.remove('active-turn');
+            });
+
+            if (status === 'finished') {
+                turnIndicator.textContent = "Oyun Bitti!";
+                logMessage("Kazanan: " + winnerUsername, 'success');
+                winnerNameEl.textContent = winnerUsername;
+                gameOverOverlay.style.display = 'flex';
+            } else if (status === 'waiting') {
+                turnIndicator.textContent = "Oyuncular bekleniyor...";
+            } else if (status === 'in_progress' && turnUsername) {
+                turnIndicator.textContent = "Sıra: " + turnUsername;
+
+                // GÜZEL TASARIM: Sırası gelen oyuncunun kutusunu vurgula
+                const activePlayerBox = document.getElementById(`player-box-${turnUsername}`);
+                if (activePlayerBox) {
+                    activePlayerBox.classList.add('active-turn');
+                }
+            }
+        }
+
+        // DÜZELTME: Sıralı Patlama (Renk mantığı değişti)
+        async function triggerSequentialExplosions(explodedCells) {
+            const EXPLOSION_DELAY = 200;
             for (const coords of explodedCells) {
                 const [r, c] = coords;
                 const cellEl = boardElement.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
-
                 if (cellEl) {
+                    // DÜZELTME: Rengi, hücrenin 'p1', 'p2' vb. sınıfından al
+                    const playerClass = Array.from(cellEl.classList).find(c => c.startsWith('p'));
+                    const color = playerClass ? `var(--${playerClass}-color)` : 'var(--cell-border)';
 
-                    // --- ESKİ KOD ---
-                    // cellEl.classList.add('explode');
-
-                    // --- YENİ KOD ---
-                    // Hücrenin rengini al (p1 veya p2)
-                    const color = cellEl.classList.contains('p1') ?
-                                    'var(--p1-color)' :
-                                    'var(--p2-color)';
-
-                    // Yeni parçacık animasyonunu çağır
                     createExplosion(cellEl, color);
-                    // --- BİTTİ ---
-
-                    // Bir sonraki patlamaya geçmeden önce bekle
                     await sleep(EXPLOSION_DELAY);
                 }
             }
-
-            // Sonuncusunun da bitmesi için 400ms (CSS animasyon süresi) kadar bekle.
             await sleep(400);
         }
 
-        // Tahta Çizme Fonksiyonu (Zar ikonlarıyla)
+        // DÜZELTME: Tahta Çizme (Renk mantığı değişti)
         function renderBoard(boardState) {
             boardElement.innerHTML = '';
             for (let r = 0; r < 5; r++) {
@@ -394,7 +378,7 @@
                     cellElement.dataset.row = r;
                     cellElement.dataset.col = c;
 
-                    const cellData = boardState[r][c];
+                    const cellData = boardState[r] ? boardState[r][c] : null;
 
                     if (cellData && cellData.count > 0) {
                         if (diceIcons[cellData.count]) {
@@ -402,13 +386,13 @@
                             icon.className = `fas ${diceIcons[cellData.count]}`;
                             cellElement.appendChild(icon);
                         } else {
-                            cellElement.textContent = cellData.count; // 4+ için
+                            cellElement.textContent = cellData.count;
                         }
 
-                        if (cellData.owner === player1Username) {
-                            cellElement.classList.add('p1');
-                        } else if (cellData.owner === player2Username) {
-                            cellElement.classList.add('p2');
+                        // DÜZELTME: Rengi playerColors haritasından al
+                        const playerClass = playerColors[cellData.owner];
+                        if (playerClass) {
+                            cellElement.classList.add(playerClass);
                         }
 
                     } else {
@@ -419,7 +403,7 @@
             }
         }
 
-        // Hamle Gönderme (Tıklama)
+        // Hamle Gönderme (Değişiklik yok)
         boardElement.addEventListener('click', function(e) {
             const cell = e.target.closest('.cell');
             if (!cell) return;
@@ -427,7 +411,6 @@
                 logMessage("İzleyiciler hamle yapamaz.", 'warning');
                 return;
             }
-            // "Oyun bitti" veya "Çark" ekranı açıksa tıklamayı engelle
             if (gameOverOverlay.style.display === 'flex' || wheelOverlay.style.display === 'flex') {
                 return;
             }
@@ -440,7 +423,7 @@
             }));
         });
 
-        // Loglama Fonksiyonu
+        // Loglama Fonksiyonu (Değişiklik yok)
         function logMessage(msg, type = 'info') {
             let textClass = 'text-info';
             if (type === 'danger') { textClass = 'text-danger'; }
@@ -454,50 +437,37 @@
             messageLog.scrollTop = messageLog.scrollHeight;
         }
 
-        // İlk tahtayı çiz
-        renderBoard({{ game.board_state|safe }});
-        const gameBoardContainer = document.getElementById('game-board-container'); // YENİ
+        // Parçacık Animasyonu (Değişiklik yok)
+        function createExplosion(cellEl, color) {
+            const gameBoardContainer = document.getElementById('game-board-container');
+            const rect = cellEl.getBoundingClientRect();
+            const containerRect = gameBoardContainer.getBoundingClientRect();
+            const startTop = rect.top - containerRect.top + (rect.height / 2);
+            const startLeft = rect.left - containerRect.left + (rect.width / 2);
+            const directions = ['up', 'down', 'left', 'right'];
 
-
-
-    // YENİ FONKSİYON: 4 Yöne Parçacık Animasyonu
-    function createExplosion(cellEl, color) {
-        // Hücrenin ana konteynere göre konumunu al
-        const rect = cellEl.getBoundingClientRect();
-        const containerRect = gameBoardContainer.getBoundingClientRect();
-
-        // Hücrenin merkez koordinatları
-        const startTop = rect.top - containerRect.top + (rect.height / 2);
-        const startLeft = rect.left - containerRect.left + (rect.width / 2);
-
-        const directions = ['up', 'down', 'left', 'right'];
-
-        for (const dir of directions) {
-            const particle = document.createElement('div');
-            particle.classList.add('particle');
-            particle.style.backgroundColor = color;
-
-            // Başlangıç konumu: Hücrenin merkezi
-            particle.style.top = `${startTop}px`;
-            particle.style.left = `${startLeft}px`;
-
-            // 1. DOM'a ekle (görünmez)
-            gameBoardContainer.appendChild(particle);
-
-            // 2. Tarayıcının 'fark etmesini' sağla (force reflow)
-            // Bu, CSS geçişinin çalışması için kritik bir hiledir.
-            void particle.offsetWidth;
-
-            // 3. Şimdi hedef sınıfı ekle (animasyon başlar)
-            particle.classList.add(dir);
-
-            // 4. Animasyon bitince parçacığı DOM'dan kaldır
-            setTimeout(() => {
-                if (particle.parentElement) {
-                    particle.parentElement.removeChild(particle);
-                }
-            }, 400); // CSS transition süresiyle eşleşmeli
+            for (const dir of directions) {
+                const particle = document.createElement('div');
+                particle.classList.add('particle');
+                particle.style.backgroundColor = color;
+                particle.style.top = `${startTop}px`;
+                particle.style.left = `${startLeft}px`;
+                gameBoardContainer.appendChild(particle);
+                void particle.offsetWidth; // Force reflow
+                particle.classList.add(dir);
+                setTimeout(() => {
+                    if (particle.parentElement) {
+                        particle.parentElement.removeChild(particle);
+                    }
+                }, 400);
+            }
         }
-    }
+
+        // --- TAHTA GİTMİŞ ÇÖZÜMÜ ---
+        // Sayfa yüklendiğinde ilk tahtayı 'view'den gelen
+        // 'initialBoardState' (boş {} bile olsa) ile çiz.
+        console.log("İlk tahta çiziliyor...", initialBoardState);
+        renderBoard(initialBoardState);
+
     </script>
 {% endblock %}
