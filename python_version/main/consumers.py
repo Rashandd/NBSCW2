@@ -40,69 +40,66 @@ def get_valid_neighbors(row, col):
             print(f"-> Geçersiz komşu atlandı: ({r}, {c})")
 
     return valid_neighbors
+
+
 def find_critical_cells(board_state):
     """
-    Verilen 5x5'lik board_state'i tarar.
-    'count' değeri 4 olan hücrelerin (satır, sütun) koordinatlarını
-    bir liste içinde döndürür.
-
-    Args:
-        board_state (list[list[dict|None]]): Oyun tahtasının mevcut durumu.
-
-    Returns:
-        list[tuple(int, int)]: 'count' == 4 olan hücrelerin (row, col) listesi.
+    SÖZLÜK (dict) tabanlı tahtada patlamaya hazır hücreleri bulur.
+    (Sizin 2-kişilik oyun mantığınızın N-kişilik ve sözlük uyarlaması)
     """
+    # Kendi oyun mantığınızı (komşu sayısı vb.) buraya uyarlamalısınız.
+    # Bu, Dice Wars'ın "atom" mantığına göre basitleştirilmiş bir örnektir.
+    # ÖNEMLİ: Gerçek Dice Wars mantığı çok daha karmaşıktır.
 
-    # 5x5'lik bir tahta olduğunu varsayıyoruz
-    ROWS = 5
-    COLS = 5
-
-    # 'count' değeri 4 olan hücrelerin koordinatlarını (r, c)
-    # depolayacağımız liste.
+    # Şimdilik, 3 taşı olanları patlat (Siz bunu 4, 5 vb. yapmalısınız)
     critical_cells = []
+    if not board_state: return critical_cells
 
-    for row in range(ROWS):
-        for col in range(COLS):
-            # O anki hücreyi al
-            cell = board_state[row][col]
-
-            # 1. Hücre dolu mu? (None değil mi?): 'if cell:'
-            # 2. Doluysa 'count' değeri 4 mü?: 'cell['count'] == 4'
-            if cell and cell.get('count') == 4:
-                # Eğer iki koşul da doğruysa, koordinatları listeye ekle
-                critical_cells.append((row, col))
-
-    # Listeyi döndür
+    for r_str, row in board_state.items():
+        for c_str, cell in row.items():
+            if cell and cell.get('count', 0) >= 3:  # Veya 4
+                # String'leri int'e geri çevir
+                critical_cells.append((int(r_str), int(c_str)))
     return critical_cells
+
+
 def bum(game, row, col, username):
     """
-    (row, col) koordinatındaki hücreyi patlatır.
-    1. Patlayan hücrenin sayısını 0 yapar.
-    2. Komşu hücreleri bulur.
-    3. Komşu hücrelerin sayısını 1 artırır (eğer boşsa 1 yapar).
+    SÖZLÜK (dict) tabanlı tahtada bir hücreyi patlatır.
+    (row, col) INT olarak gelir.
     """
 
-    # 1. Patlayan hücrenin kendisini sıfırla
-    # (Bu hücrenin 'None' olmadığını ve 'count' == 4 olduğunu varsayıyoruz,
-    # çünkü bu fonksiyonu 'while' döngüsü çağırdı)
-    exploding_cell = game.board_state[row][col]
-    exploding_cell['count'] = 0
-    # Opsiyonel: Patlayan hücre sahipsiz kalabilir
-    # exploding_cell['owner'] = None
+    # 1. Patlayan hücrenin kendisini sıfırla (string anahtarlarla)
+    r_str, c_str = str(row), str(col)
+    try:
+        exploding_cell = game.board_state[r_str][c_str]
+        exploding_cell['count'] = 0
+        exploding_cell['owner'] = None  # Sahipsiz kalsın
+    except KeyError:
+        print(f"HATA: bum() patlayacak hücreyi bulamadı: {r_str}, {c_str}")
+        return  # Hata varsa devam etme
 
-    # 2. Geçerli komşuları al
-    # (get_valid_neighbors fonksiyonunun tanımlı olduğunu varsayıyoruz)
+    # 2. Geçerli komşuları al (bu int döndürür, bu OK)
     valids = get_valid_neighbors(row, col)
 
     # 3. Komşuları güncelle
-    for r, c in valids:
-        # Komşu hücrenin mevcut durumunu al
-        current_cell = game.board_state[r][c]
+    for r_int, c_int in valids:
 
-        # --- ÖNCEKİ SORUNUN ÇÖZÜMÜ (None KONTROLÜ) ---
+        # Komşu koordinatlarını string'e çevir
+        r_neighbor_str, c_neighbor_str = str(r_int), str(c_int)
+
+        # --- GÜVENLİ SÖZLÜK GÜNCELLEME MANTIĞI ---
+
+        # Komşu satır (örn: '0') sözlükte var mı?
+        if r_neighbor_str not in game.board_state:
+            game.board_state[r_neighbor_str] = {}
+
+        # Komşu hücre (örn: '0') o satırda var mı?
+        current_cell = game.board_state[r_neighbor_str].get(c_neighbor_str)
+
         if current_cell is None:
-            # Hücre boşsa (NoneType), yeni hücre oluştur ve 1 yap
-            game.board_state[r][c] = {
+            # Hücre boşsa, yeni hücre oluştur
+            game.board_state[r_neighbor_str][c_neighbor_str] = {
                 'owner': username,
                 'count': 1
             }
@@ -111,69 +108,46 @@ def bum(game, row, col, username):
             current_cell['count'] += 1
             current_cell['owner'] = username
 
-    # Bu fonksiyon 'game' objesini doğrudan değiştirdi,
-    # bir şey döndürmesine gerek yok.
-
 
 def check_for_winner(game, current_player_user):
     """
-    Tüm patlamalar bittikten sonra, tahtada 1'den fazla oyuncunun
-    taşı kalıp kalmadığını kontrol eder.
-    N-Kişilik (2-4) oyunlar için güncellendi.
+    N-Kişilik kazanan kontrolü (Bunu zaten yapmıştık).
     """
-
-    # Tahtadaki tüm mevcut oyuncuların (sahiplerin)
-    # benzersiz bir listesini (set) tut
     owners_left = set()
-
     board_state = game.board_state
-    if not board_state:  # Tahta boşsa (olmamalı ama)
-        return
+    if not board_state: return
 
-    # Tahtayı tara
     for r_key, row in board_state.items():
         for c_key, cell in row.items():
-            # Eğer hücre doluysa ve bir sahibi varsa
             if cell and cell.get('owner'):
                 owners_left.add(cell.get('owner'))
 
-    # --- Kazanan Kontrolü ---
-
-    # 1. Sadece bir oyuncunun taşı kaldıysa (veya hiç kalmadıysa)
     if len(owners_left) <= 1:
-
         winner_user = None
-
         if len(owners_left) == 1:
-            # Tahtada kalan tek kişinin adını al
             winner_username = owners_left.pop()
             try:
-                # O kişinin User objesini bul
                 winner_user = User.objects.get(username=winner_username)
             except User.DoesNotExist:
-                # Bu olmamalı, ama olursa kazanan hamleyi yapandır
                 winner_user = current_player_user
-        else:
-            # Hiç taş kalmadıysa (rakibin son taşını patlattı)
-            # Kazanan, hamleyi yapan 'current_player_user'dır
+        else: # Hiç taş kalmadı
             winner_user = current_player_user
 
-        # Oyunu bitir ve kazananı ata
         game.status = 'finished'
         game.winner = winner_user
-
-    # 2. Birden fazla oyuncunun (len(owners_left) > 1) taşı varsa
-    # Oyun devam eder, hiçbir şey yapma.
     return
-def _count_player_pieces(board_state, username):
-        """Tahtadaki belirli bir oyuncuya ait taş sayısını döner."""
-        count = 0
-        for r in range(5):
-            for c in range(5):
-                cell = board_state[r][c]
-                if cell and cell.get('owner') == username:
-                    count += 1
-        return count
+def _count_player_pieces(board_state, player_username):
+    """
+    SÖZLÜK (dict) tabanlı tahtada bir oyuncunun kaç taşı olduğunu sayar.
+    """
+    count = 0
+    if not board_state: return 0
+    # board_state artık {'0': {'0': ...}, '1': ...}
+    for r_key, row in board_state.items():
+        for c_key, cell in row.items():
+            if cell and cell.get('owner') == player_username:
+                count += 1
+    return count
 
 class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
 
