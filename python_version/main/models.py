@@ -7,6 +7,8 @@ import uuid
 from django.db import models
 from django.contrib.auth.models import User
 from django.db.models import JSONField
+from django.utils.text import slugify
+
 
 class CustomUser(AbstractUser):
     # AbstractUser, username, first_name, last_name, email, is_staff, is_active, date_joined gibi alanları zaten içerir.
@@ -63,7 +65,23 @@ def default_board():
     return [[None for _ in range(5)] for _ in range(5)]
     # Her hücre: { 'owner': 'username', 'count': 2 } veya None olabilir
 
+class MiniGame(models.Model):
+    """
+    Sitede bulunan tüm mini oyunların listesini tutar.
+    (Örn: Lobi, oyun seçme ekranı için)
+    """
+    name = models.CharField(max_length=100, unique=True, verbose_name="Oyun Adı")
+    slug = models.SlugField(max_length=100, unique=True, editable=False, help_text="Oyunun URL'deki adı (örn: dice-wars)")
+    description = models.TextField(blank=True, null=True, verbose_name="Açıklama")
+    # icon = models.ImageField(upload_to='game_icons/', null=True, blank=True) # İsteğe bağlı
 
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name
 class GameSession(models.Model):
     STATUS_CHOICES = [
         ('waiting', 'Oyuncu Bekliyor'),

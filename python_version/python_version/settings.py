@@ -19,9 +19,9 @@ STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'), # Your main project's static folder
 ]
 CSRF_TRUSTED_ORIGINS = [
-    'https://python.ofenes.com',
+    'https://rashigo.com',
     # Eğer Nginx'e http ile ulaşıp içeride https'e dönüyorsa, http versiyonunu da ekleyin:
-    'http://python.ofenes.com',
+    'http://rashigo.com',
 ]
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

@@ -315,8 +315,21 @@
     const leaveButtonMobile = document.getElementById('leave-btn-mobile');
 
     // --- WEBRTC SUNUCU AYARLARI ---
-    const iceServers = { 'iceServers': [{'urls': 'stun:stun.l.google.com:19302'}] };
+    const iceServers = {
+    'iceServers': [
+        // 1. Önce kendi STUN sunucunuzu deneyin (coturn sağlar)
 
+        { 'urls': 'stun:31.58.244.167:3478' },
+
+        // 2. Gerekirse (bağlantı kurulamazsa) kendi TURN sunucunuzu kullanın
+        {
+            'urls': 'turn:31.58.244.167:3478',
+            'username': 'adem', // siktir git birader
+            'credential': 'fb1907'      // siktir git birader
+        },
+        { 'urls': 'stun:stun.l.google.com:19302' },
+    ]
+};
     // --- HARİTALAR VE DURUMLAR ---
     let peerConnections = {};
     let remoteAudioElements = {};
