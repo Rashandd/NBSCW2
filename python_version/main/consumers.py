@@ -349,7 +349,7 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
 # main/consumers.py
 
 
-class GameConsumer(AsyncJsonWebsocketConsumer):  # <-- DÜZELTME
+class GameConsumer(AsyncJsonWebsocketConsumer):
 
     async def connect(self):
         self.game_id = self.scope['url_route']['kwargs']['game_id']
@@ -385,7 +385,7 @@ class GameConsumer(AsyncJsonWebsocketConsumer):  # <-- DÜZELTME
                 await self.send_game_state_to_user(self.game)
 
         except Exception as e:
-            print(f"HATA (connect): {e}")
+            print(f"HATA (connect): {e}")  # Sunucu loglarını kontrol et
             await self.close()
 
     async def disconnect(self, close_code):
@@ -394,10 +394,7 @@ class GameConsumer(AsyncJsonWebsocketConsumer):  # <-- DÜZELTME
             self.channel_name
         )
 
-    async def receive_json(self, content, **kwargs):  # <-- DÜZELTME
-        """
-        'receive' yerine 'receive_json' kullanıyoruz.
-        """
+    async def receive_json(self, content, **kwargs):
         if not self.user.is_authenticated:
             await self.send_error("Giriş yapmalısınız.")
             return
@@ -420,6 +417,8 @@ class GameConsumer(AsyncJsonWebsocketConsumer):  # <-- DÜZELTME
                 row = content.get('row')
                 col = content.get('col')
                 piece_count = _count_player_pieces(game.board_state, player_username)
+
+                # 'str' anahtarları kullandığımız için 'str' ile erişmeliyiz
                 cell = game.board_state.get(str(row), {}).get(str(col))
 
                 exploded_cells_list = []
@@ -465,52 +464,28 @@ class GameConsumer(AsyncJsonWebsocketConsumer):  # <-- DÜZELTME
             self.send_error_to_user(f"Hamle yapılamadı: {e}")
 
     # --- Grup Yayını Metodları ---
-
     async def broadcast_game_state(self, game, message=None, exploded_cells=None):
-        """ ASENKRON: Gruptaki herkese oyun durumunu gönderir. """
         state_data = await self.get_game_state_data_async(game)
         state_data['message'] = message
         state_data['exploded_cells'] = exploded_cells if exploded_cells else []
-
-        await self.channel_layer.group_send(
-            self.game_group_name,
-            state_data
-        )
+        await self.channel_layer.group_send(self.game_group_name, state_data)
 
     def broadcast_game_state_sync(self, game, message=None, exploded_cells=None):
-        """ SENKRON: Gruptaki herkese yayın yapar. """
         state_data = self.get_game_state_data_sync(game)
         state_data['message'] = message
         state_data['exploded_cells'] = exploded_cells if exploded_cells else []
-
-        async_to_sync(self.channel_layer.group_send)(
-            self.game_group_name,
-            state_data
-        )
+        async_to_sync(self.channel_layer.group_send)(self.game_group_name, state_data)
 
     async def game_state(self, event):
-        """
-        Gruptan gelen 'game_state' mesajını WebSocket'e (JS) gönderir.
-        """
-        # 'self.send_json' kullanıyoruz
-        await self.send_json(event)  # <-- DÜZELTME
+        await self.send_json(event)
 
     async def send_error(self, message):
-        """Sadece bu kullanıcıya bir hata mesajı gönder. (Async)"""
-        await self.send_json({  # <-- DÜZELTME
-            'type': 'error',
-            'message': message
-        })
+        await self.send_json({'type': 'error', 'message': message})
 
     def send_error_to_user(self, message):
-        """Sadece bu kullanıcıya bir hata mesajı gönder. (Sync)"""
-        async_to_sync(self.send_json)({  # <-- DÜZELTME
-            'type': 'error',
-            'message': message
-        })
+        async_to_sync(self.send_json)({'type': 'error', 'message': message})
 
     # --- Veritabanı (Sync/Async) Metodları ---
-
     @database_sync_to_async
     def get_game(self, game_id):
         try:
@@ -527,15 +502,12 @@ class GameConsumer(AsyncJsonWebsocketConsumer):  # <-- DÜZELTME
     @database_sync_to_async
     def add_player_and_start_game(self, game, user):
         with transaction.atomic():
-            game_with_lock = GameSession.objects.get(game_id=game.id)
-
-            # Son bir kontrol (yarış durumları için)
+            game_with_lock = GameSession.objects.select_for_update().get(game_id=game.id)
             if game_with_lock.is_full or game_with_lock.status != 'waiting':
                 return game_with_lock
 
             game_with_lock.players.add(user)
 
-            # 'is_full' property'sini taze veritabanı objesi üzerinden kontrol et
             if game_with_lock.players.count() >= game_with_lock.game_type.max_players:
                 game_with_lock.status = 'in_progress'
                 players_list = list(game_with_lock.players.all())
@@ -550,12 +522,10 @@ class GameConsumer(AsyncJsonWebsocketConsumer):  # <-- DÜZELTME
         return self.get_game_state_data_sync(game_obj)
 
     def get_game_state_data_sync(self, game_obj):
-        # 'players.all()' M2M olduğu için taze veri gerekir
         players_list = list(game_obj.players.all())
         player_usernames = [p.username for p in players_list]
-
         return {
-            'type': 'game_state',  # 'game_message' değil, JS'in beklediği
+            'type': 'game_state',
             'state': game_obj.board_state,
             'turn': game_obj.current_turn.username if game_obj.current_turn else None,
             'players': player_usernames,
@@ -564,6 +534,5 @@ class GameConsumer(AsyncJsonWebsocketConsumer):  # <-- DÜZELTME
         }
 
     async def send_game_state_to_user(self, game_obj):
-        """ Sadece bağlanan kullanıcıya (async) oyun durumunu gönderir. """
         state_data = await self.get_game_state_data_async(game_obj)
-        await self.send_json(state_data)  # <-- DÜZELTME
+        await self.send_json(state_data)
