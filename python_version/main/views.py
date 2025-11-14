@@ -1,15 +1,17 @@
+import json
 import random
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.contrib import messages
 from django.db import models, transaction
+from django.db.models import Count
 from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
 
-from .models import VoiceChannel, GameSession, default_board
+from .models import VoiceChannel, GameSession, default_board, MiniGame
 
 
 @login_required
@@ -44,151 +46,184 @@ def settings_view(request):
 
 
 @login_required
-def game_lobby(request):
-    """
-    Açık masaları listeler ve yeni masa oluşturma butonu sunar.
-    """
-    # 1. Başkalarının P2 bekleyen masaları (Bunlara 'Katıl'ınır)
-    available_games = GameSession.objects.filter(
-        status='waiting',
-        player2__isnull=True
-    ).exclude(player1=request.user)  # Kendi masalarımı hariç tut
+def all_games_lobby(request):
+    all_minigames = MiniGame.objects.all()
+    context = {'minigames_list': all_minigames, }
+    return render(request, 'main/minigames_lobby.html', context)
 
-    # 2. Benim aktif (bitmemiş) masalarım (Bunlara 'Git'ilir)
+
+# 2. OYUNA ÖZEL LOBİ (Sorgular değişti)
+@login_required
+def game_specific_lobby(request, game_slug):
+    game_type = get_object_or_404(MiniGame, slug=game_slug)
+
+    # 1. Aktif Masalarım (İçinde olduğum masalar)
     my_games = GameSession.objects.filter(
-        models.Q(player1=request.user) | models.Q(player2=request.user)
-    ).exclude(status='finished').select_related('player1', 'player2')
+        game_type=game_type,
+        status__in=['waiting', 'in_progress'],
+        players=request.user  # M2M sorgusu: 'players' listesinde ben var mıyım?
+    ).select_related('game_type', 'host').order_by('-created_at')
 
-    return render(request, 'lobby.html', {
+    # 2. Katılınabilecek Masalar (Dolu olmayan, beklemede olan, içinde olmadığım)
+    max_p = game_type.max_players
+    available_games = GameSession.objects.filter(
+        game_type=game_type,
+        status='waiting'
+    ).annotate(
+        num_players=Count('players')  # Oyuncu sayısını hesapla
+    ).filter(
+        num_players__lt=max_p  # Dolu olmayanları filtrele
+    ).exclude(
+        players=request.user  # Zaten içinde olduklarımı gösterme
+    ).select_related('host').order_by('-created_at')
+
+    context = {
+        'game_type': game_type,
+        'my_games': my_games,
         'available_games': available_games,
-        'my_games': my_games
-    })
+    }
+    return render(request, 'main/game_specific_lobby.html', context)
 
 
 @login_required
-def create_game(request):
+def all_games_lobby(request):
     """
-    Yeni bir oyun masası oluşturur ve oyuncuyu odaya yönlendirir.
+    Sistemdeki tüm 'MiniGame' türlerini listeleyen ana oyun merkezi sayfası.
+    Örn: Dice Wars, Satranç, Ludo...
     """
-    # Oyuncunun zaten bekleyen bir masası var mı diye kontrol et
-    if GameSession.objects.filter(player1=request.user, status='waiting').exists():
-        messages.warning(request, "Zaten bekleyen bir masanız var. Lütfen onu kapatın veya devam edin.")
-        return redirect('game_lobby')
+    # Veritabanındaki tüm MiniGame nesnelerini al
+    all_minigames = MiniGame.objects.all()
 
-    # Başlangıç tahtasını hazırla (ilk 3'leri yerleştir)
-    initial_board = default_board()
+    context = {
+        'minigames_list': all_minigames,
+    }
+    # minigames.html adında yeni bir template render et
+    return render(request, 'main/minigames.html', context)
 
+# 3. ODA KURMA (Değişti)
+@login_required
+def create_game(request, game_slug):
+    game_type = get_object_or_404(MiniGame, slug=game_slug)
+
+    # Zaten bekleyen bir odası var mı?
+    if GameSession.objects.filter(game_type=game_type, host=request.user, status='waiting').exists():
+        messages.warning(request, f"{game_type.name} için zaten bekleyen bir masanız var.")
+        return redirect('game_specific_lobby', game_slug=game_slug)
+
+    # Oda kurucuyu 'host' olarak ata
     game = GameSession.objects.create(
-        player1=request.user,
+        game_type=game_type,
+        host=request.user,  # 'player1' yerine 'host'
         current_turn=None,
-        board_state=initial_board
+        board_state={}  # veya default_board()
     )
+    # Oda kurucuyu 'players' M2M listesine ekle
+    game.players.add(request.user)
+
     return redirect('game_room', game_id=game.game_id)
 
 
+# 4. ODAYA KATILMA (Tamamen Değişti)
 @login_required
 @transaction.atomic
 def join_game(request, game_id):
-    """
-    İsteği yapan kullanıcıyı P2 olarak ekler, kimin başlayacağını seçer
-    ve P1'e WebSocket üzerinden haber verir.
-    (GÜNCELLENDİ: Random başlama ve P1'e haber verme eklendi)
-    """
     game = get_object_or_404(GameSession.objects.select_for_update(), game_id=game_id)
+    game_slug = game.game_type.slug
 
-    # ... (standart kontrolleriniz: status != 'waiting', player2 is not None, vb.) ...
-    if game.status != 'waiting' or game.player2 is not None or game.player1 == request.user:
-        messages.error(request, "Bu masaya katılamazsınız.")
-        return redirect('game_lobby')
+    # Kontroller
+    if game.players.filter(id=request.user.id).exists():
+        messages.info(request, "Zaten bu odadasınız.")
+        return redirect('game_room', game_id=game.game_id)
+    if game.is_full:
+        messages.error(request, "Oda dolu.")
+        return redirect('game_specific_lobby', game_slug=game_slug)
+    if game.status != 'waiting':
+        messages.error(request, "Oyun çoktan başladı.")
+        return redirect('game_specific_lobby', game_slug=game_slug)
 
-    # 1. P2'yi ata
-    game.player2 = request.user
+    # Oyuncuyu 'players' M2M listesine ekle
+    game.players.add(request.user)
 
-    # 2. 50/50 Şansla kimin başlayacağını seç (İSTEK 3)
-    starter = random.choice([game.player1, game.player2])
-    game.current_turn = starter
-    game.status = 'in_progress'
-    game.save()
+    # Oda şimdi doldu mu? Dolduysa oyunu başlat.
+    if game.is_full:
+        game.status = 'in_progress'
 
-    # 3. P1'e HABER VER (İSTEK 1)
-    # P1'in (ve şimdi P2'nin) bağlı olduğu gruba "oyun başladı" mesajı gönder
-    channel_layer = get_channel_layer()
-    game_group_name = f"game_{game_id}"
+        # Başlayacak oyuncuyu seç (Tüm oyuncular arasından)
+        player_list = list(game.players.all())
+        starter = random.choice(player_list)
+        game.current_turn = starter
+        game.save()
 
-    async_to_sync(channel_layer.group_send)(
-        game_group_name,
-        {
-            'type': 'game_message',  # Consumer'daki 'game_message' handler'ını tetikler
-            'state': game.board_state,
-            'turn': game.current_turn.username,
-            'p1': game.player1.username,
-            'p2': game.player2.username,
-            'status': game.status,
-            'winner': None,
-            'message': f"{request.user.username} katıldı. Çark çevrildi ve {starter.username} başlıyor!",
-            'exploded_cells': [],
-            # JS'in çark animasyonunu tetiklemesi için özel event flag'i:
-            'special_event': 'game_start_roll'
-        }
-    )
+        # --- TÜM OYUNCULARA WEBSOCKET İLE HABER VER ---
+        channel_layer = get_channel_layer()
+        game_group_name = f"game_{game_id}"
+
+        player_usernames = [p.username for p in player_list]
+
+        async_to_sync(channel_layer.group_send)(
+            game_group_name,
+            {
+                'type': 'game_message',
+                'state': game.board_state,
+                'turn': game.current_turn.username,
+                'players': player_usernames,  # 'p1'/'p2' yerine tüm liste
+                'status': game.status,
+                'message': f"Oda doldu! {request.user.username} katıldı. Çark çevrildi ve {starter.username} başlıyor!",
+                'special_event': 'game_start_roll'
+            }
+        )
+    else:
+        # Oda dolmadı, sadece yeni oyuncuyu kaydet
+        game.save()
+        # --- DİĞER OYUNCULARA HABER VER (Opsiyonel) ---
+        # (WebSocket'e "Ahmet katıldı. (3/4)" mesajı gönder...)
+        pass
 
     return redirect('game_room', game_id=game.game_id)
 
 
+# 5. OYUN ODASI (İzleyici mantığı değişti)
 @login_required
 def game_room(request, game_id):
-    """
-    Asıl oyunun oynandığı WebSocket'in bağlanacağı HTML sayfasını sunar.
-    (Otomatik katılma (auto-join) mantığı kaldırıldı)
-    """
-    try:
-        # Oyunu al
-        game = get_object_or_404(GameSession.objects.select_related('player1', 'player2', 'current_turn', 'winner'),
-                                 game_id=game_id)
+    game = get_object_or_404(GameSession.objects.select_related('game_type', 'host', 'current_turn', 'winner'),
+                             game_id=game_id)
 
-        # Oyuncu olmayan biri mi girmeye çalışıyor?
-        is_player = (request.user == game.player1) or (request.user == game.player2)
+    # Oyuncu mu? (M2M listesinde var mı?)
+    is_player = game.players.filter(id=request.user.id).exists()
+    is_spectator = not is_player
 
-        # Eğer P1 veya P2 değilseniz, izleyicisiniz.
-        is_spectator = not is_player
+    # Eğer izleyiciyse, ama oda bekliyorsa ve dolu değilse,
+    # otomatik olarak 'join' (katıl) view'ine yönlendir.
+    if is_spectator and game.status == 'waiting' and not game.is_full:
+        return redirect('join_game', game_id=game.game_id)
 
-        # --- OTOMATİK KATILMA BLOĞU (SORUNLU YER) KALDIRILDI ---
-        # Artık 'join_game' linkine tıklamayan kimse P2 olamaz.
-        # Buraya gelen ve P1/P2 olmayan herkes 'is_spectator = True' olur.
-        # Bu, tam olarak istediğiniz "izleyici modu"dur.
-
-        return render(request, 'game_room.html', {
-            'game': game,
-            'is_spectator': is_spectator,
-            'game_id_json': str(game_id),
-            'username_json': request.user.username
-        })
-
-    except GameSession.DoesNotExist:
-        messages.error(request, "Oyun bulunamadı.")
-        return redirect('game_lobby')
+    return render(request, 'main/game_room.html', {
+        'game': game,
+        'is_spectator': is_spectator,
+        'game_id_json': str(game_id),
+        'username_json': request.user.username,
+        'initial_board_state_json': json.dumps(game.board_state or {})
+    })
 
 
+# 6. ODA SİLME (Kontroller değişti)
 @login_required
 def delete_game(request, game_id):
-    """
-    Player 1'in, beklemekte olan masasını silmesi (kapatması).
-    (Bu kodunuz doğruydu, değişikliğe gerek yok)
-    """
     game = get_object_or_404(GameSession, game_id=game_id)
+    game_slug = game.game_type.slug  # Lobiye dönmek için
 
-    if game.player1 != request.user:
+    # Sadece 'host' (kurucu) silebilir
+    if game.host != request.user:
         messages.error(request, "Bu masayı siz oluşturmadınız.")
-        return redirect('game_lobby')
-
+        return redirect('game_specific_lobby', game_slug=game_slug)
     if game.status != 'waiting':
         messages.error(request, "Oyun başladıktan sonra masa silinemez.")
-        return redirect('game_lobby')
-
-    if game.player2 is not None:
-        messages.error(request, "Masada 2. oyuncu varken silemezsiniz.")
-        return redirect('game_lobby')
+        return redirect('game_specific_lobby', game_slug=game_slug)
+    # Odada 1'den fazla kişi (yani kendinden başkası) varsa silemez
+    if game.player_count > 1:
+        messages.error(request, "Masada başkaları varken silemezsiniz.")
+        return redirect('game_specific_lobby', game_slug=game_slug)
 
     game.delete()
     messages.success(request, "Masa başarıyla kapatıldı.")
-    return redirect('game_lobby')
+    return redirect('game_specific_lobby', game_slug=game_slug)

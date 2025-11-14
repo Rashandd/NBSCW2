@@ -8,13 +8,16 @@ urlpatterns = [
     path('oda/<slug:slug>/', views.voice_channel_view, name='odasayfasi'),
     path('settings/', views.settings_view, name='settings'),
 
-    path('game/', views.game_lobby, name='game_lobby'),
+    path('game-lobby/', views.all_games_lobby, name='all_games_lobby'),
 
-    # örn: http://site.com/game/create/
-    path('create/', views.create_game, name='create_game'),
+    # 2. ÖZEL LOBİ (Bu, minigames.html'in yönlendirdiği yerdir)
+    # Örn: /dice-wars/lobby/
+    # -> views.game_specific_lobby
+    path('<slug:game_slug>/lobby/', views.game_specific_lobby, name='game_specific_lobby'),
 
-    # örn: http://site.com/game/room/UUID.../
-    path('room/<uuid:game_id>/', views.game_room, name='game_room'),
-    path('join/<uuid:game_id>/', views.join_game, name='join_game'),
-    path('delete/<uuid:game_id>/', views.delete_game, name='delete_game'),
+    # 3. ODA YÖNETİM URL'LERİ (Değişiklik yok)
+    path('<slug:game_slug>/create/', views.create_game, name='create_game'),
+    path('game/join/<uuid:game_id>/', views.join_game, name='join_game'),
+    path('game/play/<uuid:game_id>/', views.game_room, name='game_room'),
+    path('game/delete/<uuid:game_id>/', views.delete_game, name='delete_game'),
 ]

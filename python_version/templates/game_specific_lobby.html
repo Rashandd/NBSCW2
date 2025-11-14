@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ game_type.name }} Lobisi{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+
+        <div class="col-12 text-center mb-4">
+            <h1 class="display-4"><i class="fas fa-dice-d20 me-3"></i>{{ game_type.name }} Lobisi</h1>
+            <p class="lead text-muted">{{ game_type.description }}</p>
+            <p>
+                Bu oyun 
+                <strong>{{ game_type.min_players }}</strong> ile 
+                <strong>{{ game_type.max_players }}</strong> 
+                kişi arasında oynanır.
+            </p>
+        </div>
+
+        <div class="col-md-6">
+            <h2>Aktif Masalarım</h2>
+            <hr>
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+
+            <a href="{% url 'create_game' game_type.slug %}" class="btn btn-success mb-3 w-100">
+                <i class="fas fa-plus"></i> Yeni Masa Kur
+            </a>
+
+            {% if my_games %}
+                <div class="list-group">
+                    {% for game in my_games %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>
+                                    (
+                                    {% for p in game.players.all %}
+                                        {{ p.username }}{% if not forloop.last %}, {% endif %}
+                                    {% endfor %}
+                                    )
+                                </strong>
+                                <br>
+                                <span class="badge bg-secondary">
+                                    {{ game.player_count }} / {{ game.game_type.max_players }} Oyuncu
+                                </span>
+                                <small class="text-muted ms-2">ID: {{ game.game_id|truncatechars:8 }}</small>
+                            </div>
+                            <div>
+                                <a href="{% url 'game_room' game.game_id %}" class="btn btn-primary btn-sm">
+                                    <i class="fas fa-sign-in-alt"></i> Masaya Git
+                                </a>
+
+                                {% if game.host == user and game.status == 'waiting' and game.player_count == 1 %}
+                                    <a href="{% url 'delete_game' game.game_id %}" class="btn btn-danger btn-sm ms-2">
+                                        <i class="fas fa-trash"></i> Kapat
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p>Bu oyunda hiç aktif masanız yok.</p>
+            {% endif %}
+        </div>
+
+        <div class="col-md-6">
+            <h2>Katılınabilecek Masalar</h2>
+            <hr>
+
+            {% if available_games %}
+                <div class="list-group">
+                    {% for game in available_games %}
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>Masa Sahibi: {{ game.host.username }}</strong>
+                                <br>
+                                <small class="text-muted">ID: {{ game.game_id|truncatechars:8 }}</small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-info mb-1">
+                                    {{ game.player_count }} / {{ game.game_type.max_players }} oyuncu
+                                </span>
+                                <br>
+                                <a href="{% url 'join_game' game.game_id %}" class="btn btn-success btn-sm">
+                                    <i class="fas fa-play"></i> Masaya Katıl
+                                </a>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-secondary">
+                    Şu anda katılabileceğin bir masa bulunmuyor.
+                </div>
+            {% endif %}
+        </div>
+
+    </div>
+</div>
+{% endblock %}

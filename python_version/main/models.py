@@ -7,6 +7,7 @@ import uuid
 from django.db import models
 from django.contrib.auth.models import User
 from django.db.models import JSONField
+from django.template.defaultfilters import truncatechars
 from django.utils.text import slugify
 
 
@@ -65,15 +66,19 @@ def default_board():
     return [[None for _ in range(5)] for _ in range(5)]
     # Her hücre: { 'owner': 'username', 'count': 2 } veya None olabilir
 
+
 class MiniGame(models.Model):
-    """
-    Sitede bulunan tüm mini oyunların listesini tutar.
-    (Örn: Lobi, oyun seçme ekranı için)
-    """
     name = models.CharField(max_length=100, unique=True, verbose_name="Oyun Adı")
-    slug = models.SlugField(max_length=100, unique=True, editable=False, help_text="Oyunun URL'deki adı (örn: dice-wars)")
+    slug = models.SlugField(max_length=100, unique=True, editable=False)
     description = models.TextField(blank=True, null=True, verbose_name="Açıklama")
-    # icon = models.ImageField(upload_to='game_icons/', null=True, blank=True) # İsteğe bağlı
+
+    # --- YENİ ALANLAR ---
+    # Her oyunun kaç kişiyle oynandığını belirtmeliyiz
+    min_players = models.PositiveSmallIntegerField(default=2, verbose_name="Min. Oyuncu")
+    max_players = models.PositiveSmallIntegerField(default=2, verbose_name="Max. Oyuncu")
+
+    # (Dice Wars için 2, Ludo için 4 vb. admin panelden ayarlayabilirsiniz)
+    # ----------------------
 
     def save(self, *args, **kwargs):
         if not self.slug:
@@ -82,7 +87,17 @@ class MiniGame(models.Model):
 
     def __str__(self):
         return self.name
+
+
 class GameSession(models.Model):
+    game_type = models.ForeignKey(
+        MiniGame,
+        on_delete=models.PROTECT,
+        related_name='sessions',
+        default=None,
+        null=True
+    )
+
     STATUS_CHOICES = [
         ('waiting', 'Oyuncu Bekliyor'),
         ('in_progress', 'Devam Ediyor'),
@@ -90,17 +105,47 @@ class GameSession(models.Model):
     ]
 
     game_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    player1 = models.ForeignKey(User, related_name='games_as_player1', on_delete=models.CASCADE)
-    player2 = models.ForeignKey(User, related_name='games_as_player2', on_delete=models.CASCADE, null=True, blank=True)
 
-    # Oyun tahtasının anlık durumunu JSON olarak sakla
-    board_state = JSONField(default=default_board)
+    # --- TEMEL DEĞİŞİKLİK ---
+    # player1 yerine 'host' (Oda Kurucusu)
+    host = models.ForeignKey(
+        User,
+        related_name='hosted_games',
+        on_delete=models.CASCADE,
+        default=None,
+        null=True
+    )
+    # player2 yerine 'players' (Tüm oyuncular, M2M)
+    players = models.ManyToManyField(
+        User,
+        related_name='game_sessions',
+        blank=True
+    )
+    # --------------------------
 
-    # Sıranın kimde olduğunu request.user.username ile tutabiliriz
+    board_state = models.JSONField(default=dict)
     current_turn = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='waiting')
     winner = models.ForeignKey(User, related_name='games_won', on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
+    # --- YENİ YARDIMCI METOTLAR ---
+    @property
+    def player_count(self):
+        """O anki oyuncu sayısını döndürür."""
+        return self.players.count()
+
+    @property
+    def is_full(self):
+        """Oda dolu mu?"""
+        return self.players.count() >= self.game_type.max_players
+
+    @property
+    def is_ready_to_start(self):
+        """Oyunun başlaması için yeterli oyuncu var mı?"""
+        return self.players.count() >= self.game_type.min_players
+
+    # ------------------------------
+
     def __str__(self):
-        return f"Masa {self.game_id} ({self.status})"
+        return f"{self.game_type.name} Masası ({self.game_id | truncatechars:8})"

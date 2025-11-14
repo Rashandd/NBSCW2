@@ -1,10 +1,73 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Title</title>
-</head>
-<body>
+{% extends 'base.html' %}
+{% load static %}
 
-</body>
-</html>
+{% block title %}Oyun Merkezi{% endblock %}
+
+{% block extra_css %}
+<style>
+    .game-card {
+        transition: all 0.2s ease-in-out;
+        border: 1px solid #444;
+    }
+    .game-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        border-color: #888;
+    }
+    .game-card-body {
+        min-height: 150px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+    .player-count-badge {
+        font-size: 0.9rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="text-center mb-5">
+        <h1 class="display-4">Oyun Merkezi</h1>
+        <p class="lead text-muted">Oynamak istediğiniz oyunu seçin.</p>
+    </div>
+
+    <div class="row g-4 justify-content-center">
+
+        {% for game in minigames_list %}
+        <div class="col-lg-4 col-md-6">
+            <div class="card h-100 text-bg-dark game-card">
+                <div class="card-body game-card-body">
+                    <div>
+                        <h3 class="card-title">{{ game.name }}</h3>
+                        <p class="card-text text-muted">
+                            {{ game.description|default:"Bu oyun için bir açıklama bulunmuyor." }}
+                        </p>
+                    </div>
+
+                    <div>
+                        <span class="badge bg-secondary player-count-badge mb-3">
+                            <i class="fas fa-users"></i>
+                            {{ game.min_players }} - {{ game.max_players }} Oyuncu
+                        </span>
+
+                        <a href="{% url 'game_specific_lobby' game.slug %}" class="btn btn-primary w-100">
+                            {{ game.name }} Lobisine Git
+                            <i class="fas fa-arrow-right ms-1"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+            <div class="col-12">
+                <div class="alert alert-warning text-center">
+                    Sistemde henüz oynanabilir bir oyun bulunmuyor.
+                </div>
+            </div>
+        {% endfor %}
+
+    </div>
+</div>
+{% endblock %}
