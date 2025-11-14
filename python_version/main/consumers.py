@@ -168,8 +168,10 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
             return
 
         # 2. Oda adını/slug'ını al
-        query_params = parse_qs(self.scope["query_string"].decode())
-        self.channel_slug = query_params.get('channel_slug', [None])[0]
+        query_params = parse_qs(self.scope['query_string'].decode('utf-8'))
+        channel_slug = query_params.get('channel_slug', [None])[0]
+        
+        self.channel_slug = channel_slug
 
         if not self.channel_slug:
             await self.close()
