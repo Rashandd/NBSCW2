@@ -206,8 +206,7 @@
                     <label for="message-log" class="form-label">Oyun Kayıtları:</label>
                     <div id="message-log" class="p-2">
                         </div>
-
-                    <a href="{% url 'game_lobby' %}" class="btn btn-secondary mt-3 w-100">Lobiden Ayrıl</a>
+                    <a href="{% url 'game_specific_lobby' game_slug=game.game_type.slug %}" class="btn btn-secondary mt-3 w-100">Lobiden Ayrıl</a>
                 </div>
             </div>
         </div>
