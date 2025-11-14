@@ -148,6 +148,10 @@ class GameSession(models.Model):
     # ------------------------------
 
     def __str__(self):
-        # Eğer game_type (None) ise "Bilinmeyen Oyun" yaz
-        game_name = self.game_type.name if self.game_type else "BİLİNMEYEN OYUN"
-        return f"{game_name} Masası ({self.game_id|truncatechars:8})"
+        # 1. UUID'yi string'e çevir
+        id_str = str(self.game_id)
+
+        # 2. Fonksiyonu normal şekilde çağır
+        truncated_id = truncatechars(id_str, 8)
+
+        return f"Masa {truncated_id}"
