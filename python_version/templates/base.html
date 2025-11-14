@@ -38,13 +38,13 @@
                 <ul class="navbar-nav ms-auto">
                     {% if request.user.is_authenticated %}
                      <li class="nav-item">
-                            <a class="nav-link" href="{% url 'game_lobby' %}">Oyun</a>
+                            <a class="nav-link" href="{% url 'game_lobby' %}">Minigames</a>
                         </li>
                     <li class="nav-item">
-                            <a class="nav-link" href="{% url 'settings' %}">Ayarlar</a>
+                            <a class="nav-link" href="{% url 'settings' %}">Settings</a>
                         </li>
                         <li class="nav-item">
-                            <span class="nav-link text-warning">Merhaba, {{ request.user.username }}</span>
+                            <span class="nav-link text-warning">{{ request.user.username }}</span>
                         </li>
                     {% endif %}
                 </ul>
