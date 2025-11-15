@@ -12,17 +12,14 @@ class MiniGameAdmin(admin.ModelAdmin):
     """
     list_display = ['name', 'slug', 'min_players', 'max_players']
 
-    # 'prepopulated_fields' satırını kaldırın.
-    # prepopulated_fields = {'slug': ('name',)}  <-- BU SATIRI SİLİN
+    # Hata veren ('slug') yerine liste kullanın:
+    readonly_fields = ['slug']
 
-    # Bunun yerine, 'editable=False' olduğu için alanı salt okunur yapın
-    readonly_fields = ('slug')
 
 @admin.register(GameSession)
 class GameSessionAdmin(admin.ModelAdmin):
     """
     GameSession modeli için admin ayarları.
-    Daha kolay yönetim sağlar.
     """
     list_display = (
         '__str__', 'game_type', 'host', 'status',
@@ -31,35 +28,29 @@ class GameSessionAdmin(admin.ModelAdmin):
     list_filter = ('status', 'game_type', 'created_at')
     search_fields = ('game_id', 'host__username')
 
-    # Bu alanların admin panelinden değiştirilmesini engelle
     readonly_fields = (
         'game_id', 'created_at', 'player_count_display', 'players_list'
     )
 
-    # Oyuncuları M2M yerine düz metin olarak göster
     fields = (
         'game_id', 'game_type', 'host', 'status', 'board_size',
         'current_turn', 'winner', 'players_list', 'board_state'
     )
 
     def get_queryset(self, request):
-        # Performans için ilgili tabloları önden çek
         return super().get_queryset(request).select_related(
             'game_type', 'host'
         ).prefetch_related('players')
 
     def player_count_display(self, obj):
-        # Oyuncu sayısını (N / Max) formatında göster
         return f"{obj.player_count} / {obj.game_type.max_players}"
 
     player_count_display.short_description = "Oyuncular"
 
     def players_list(self, obj):
-        # Oyuncuları salt okunur bir listede göster
         return ", ".join([p.username for p in obj.players.all()])
 
     players_list.short_description = "Katılan Oyuncular"
-
 
 @admin.register(VoiceChannel)
 class VoiceChannelAdmin(admin.ModelAdmin):
