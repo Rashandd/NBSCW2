@@ -1,17 +1,15 @@
 import json
-import random
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.contrib import messages
-from django.db import models, transaction
-from django.db.models import Count
-from django.http import HttpResponse
-from django.shortcuts import render, redirect, get_object_or_404
-from django.shortcuts import render
 from django.contrib.auth.decorators import login_required
+from django.db import transaction
+from django.db.models import Count
+from django.shortcuts import redirect, get_object_or_404
+from django.shortcuts import render
 
-from .models import VoiceChannel, GameSession, default_board, MiniGame
+from .models import VoiceChannel, GameSession, MiniGame
 
 
 @login_required
@@ -145,8 +143,6 @@ def game_room(request, game_id):
 def join_game(request, game_id):
     game = get_object_or_404(GameSession.objects.select_for_update(), game_id=game_id)
     game_slug = game.game_type.slug
-    channel_layer = get_channel_layer()
-    game_group_name = f"game_{game_id}"
 
     # Kontroller
     if game.players.filter(id=request.user.id).exists():
@@ -161,64 +157,33 @@ def join_game(request, game_id):
 
     # Oyuncuyu 'players' M2M listesine ekle
     game.players.add(request.user)
+    game.save()  # Oyuncuyu kaydet
 
-    # --- DEĞİŞİKLİK 1: BAŞLATMA KURALI ---
-    # 'game.is_full' yerine 'min_players' kontrolü
-    if game.players.count() >= game.game_type.min_players and game.status == 'waiting':
-        game.status = 'in_progress'
+    # --- OTOMATİK BAŞLATMA MANTIĞI KALDIRILDI ---
 
-        # --- DEĞİŞİKLİK 2: TAHTA BOYUTU MANTIĞI ---
-        # Tahta boyutu, oyun başladığındaki gerçek oyuncu sayısına göre belirlenir
-        player_count = game.players.count()
-        if player_count <= 2:
-            game.board_size = 5
-        elif player_count == 3:
-            game.board_size = 6
-        else:  # 4 veya daha fazla
-            game.board_size = 7
+    # --- YENİ: Herkese haber ver ---
+    # Odaya yeni biri katıldığında, odadaki herkese
+    # güncel oyuncu listesini gönder (sayfa yenileme sorununu çözer)
+    channel_layer = get_channel_layer()
+    game_group_name = f"game_{game_id}"
 
-        player_list = list(game.players.all())
-        starter = random.choice(player_list)
-        game.current_turn = starter
-        game.save()
+    player_usernames = [p.username for p in game.players.all()]
 
-        # --- TÜM OYUNCULARA WEBSOCKET İLE HABER VER (Başlangıç) ---
-        player_usernames = [p.username for p in player_list]
-        async_to_sync(channel_layer.group_send)(
-            game_group_name,
-            {
-                'type': 'game_state',  # 'game_message' yerine 'game_state'
-                'state': game.board_state,
-                'turn': game.current_turn.username,
-                'players': player_usernames,
-                'status': game.status,
-                'board_size': game.board_size,  # YENİ boyutu gönder
-                'message': f"Oda doldu! {request.user.username} katıldı. Çark çevrildi ve {starter.username} başlıyor!",
-                'special_event': 'game_start_roll'
-            }
-        )
-    else:
-        # --- DEĞİŞİKLİK 3: SAYFA YENİLEME SORUNU ÇÖZÜMÜ ---
-        # Oyun başlamadı, ama yeni oyuncu katıldı.
-        # Herkese yeni oyuncu listesini ve durumu haber ver.
-        game.save()
-        player_usernames = [p.username for p in game.players.all()]
-        async_to_sync(channel_layer.group_send)(
-            game_group_name,
-            {
-                'type': 'game_state',
-                'state': game.board_state,
-                'turn': None,
-                'players': player_usernames,  # Güncellenmiş oyuncu listesi
-                'status': game.status,
-                'board_size': game.board_size,
-                'message': f"{request.user.username} masaya katıldı.",
-                'special_event': None
-            }
-        )
+    async_to_sync(channel_layer.group_send)(
+        game_group_name,
+        {
+            'type': 'game_state',
+            'state': game.board_state,
+            'turn': None,
+            'players': player_usernames,  # Güncellenmiş oyuncu listesi
+            'status': game.status,
+            'board_size': game.board_size,
+            'message': f"{request.user.username} masaya katıldı.",
+            'special_event': None
+        }
+    )
 
     return redirect('game_room', game_id=game.game_id)
-
 
 
 
