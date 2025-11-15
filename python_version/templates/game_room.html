@@ -1,6 +1,7 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
-{% block title %}Oyun Odası - {{ game.game_id|truncatechars:8 }}{% endblock %}
+{% block title %}{% trans "Game Room" %} - {{ game.game_id|truncatechars:8 }}{% endblock %}
 
 {% block extra_css %}
     <style>
@@ -34,6 +35,39 @@
             0% { transform: scale(1); opacity: 1; box-shadow: 0 0 10px 5px currentColor; }
             50% { transform: scale(1.1); opacity: 0.8; box-shadow: 0 0 20px 10px currentColor; }
             100% { transform: scale(1); opacity: 1; box-shadow: 0 0 10px 5px currentColor; }
+        }
+        /* Move highlight animation */
+        .cell.move-highlight {
+            animation: moveHighlight 0.8s ease-out forwards;
+            z-index: 10;
+        }
+        @keyframes moveHighlight {
+            0% { transform: scale(1); box-shadow: 0 0 15px 5px rgba(255, 255, 255, 0.8); }
+            50% { transform: scale(1.15); box-shadow: 0 0 30px 10px rgba(255, 255, 255, 1); }
+            100% { transform: scale(1); box-shadow: 0 0 10px 2px currentColor; }
+        }
+        /* Player move indicator */
+        .move-indicator {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, rgba(0, 123, 255, 0.95), rgba(0, 86, 179, 0.95));
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+            z-index: 999;
+            display: none;
+            text-align: center;
+            animation: moveIndicatorShow 0.4s ease-out;
+        }
+        .move-indicator.show {
+            display: block;
+        }
+        @keyframes moveIndicatorShow {
+            0% { transform: translateX(-50%) translateY(-100%); opacity: 0; }
+            100% { transform: translateX(-50%) translateY(0); opacity: 1; }
         }
         .particle {
             position: absolute; width: 12px; height: 12px; border-radius: 50%; z-index: 99;
@@ -93,13 +127,13 @@
             border: 2px solid #28a745 !important;
         }
         .player-box.eliminated::after {
-            content: '❌ ELENDİ';
+            content: '❌ ELIMINATED';
             position: absolute;
             right: 10px;
             color: #dc3545;
             font-weight: bold;
             font-size: 0.85rem;
-            animation: eliminationPulse 1s ease-in-out;
+            animation: eliminationPulse 0.6s ease-in-out;
         }
         @keyframes eliminationPulse {
             0%, 100% { transform: scale(1); opacity: 1; }
@@ -127,8 +161,12 @@
         }
         @keyframes eliminationShow {
             0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
-            50% { transform: translate(-50%, -50%) scale(1.1); }
+            50% { transform: translate(-50%, -50%) scale(1.15); }
             100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+        }
+        @keyframes eliminationHide {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
         }
         #elimination-overlay h3 {
             font-size: 2rem;
@@ -146,18 +184,18 @@
 
 
 {% block content %}
-    <h1 class="mb-4">Oyun Odası</h1>
+    <h1 class="mb-4">{% trans "Game Room" %}</h1>
     <div class="row">
         <div class="col-lg-7 col-md-8 mb-4">
             <div id="game-board-container">
                 <div id="game-over-overlay">
-                    <h2 class="mb-3">Oyun Bitti!</h2>
-                    <h4 class="mb-4">Kazanan: <span id="winner-name">...</span></h4>
-                    <a href="{% url 'game_specific_lobby' game_slug=game.game_type.slug %}" class="btn btn-primary btn-lg">Yeni Oyun</a>
+                    <h2 class="mb-3">{% trans "Game Over!" %}</h2>
+                    <h4 class="mb-4">{% trans "Winner:" %} <span id="winner-name">...</span></h4>
+                    <a href="{% url 'game_specific_lobby' game_slug=game.game_type.slug %}" class="btn btn-primary btn-lg">{% trans "New Game" %}</a>
                 </div>
                 <div id="wheel-overlay">
                     <div id="wheel-spinner"><i class="fas fa-compact-disc"></i></div>
-                    <h4>Başlangıç sırası belirleniyor...</h4>
+                    <h4>{% trans "Determining starting order..." %}</h4>
                     <h3 id="wheel-winner-name" class="mt-3" style="display: none;"></h3>
                 </div>
                 <div id="game-board">
@@ -165,33 +203,38 @@
             </div>
         </div>
         
+        <!-- Move Indicator -->
+        <div id="move-indicator" class="move-indicator">
+            <strong id="move-indicator-text"></strong>
+        </div>
+        
         <!-- YENİ: Elenme Bildirimi Overlay -->
         <div id="elimination-overlay">
-            <h3><i class="fas fa-skull"></i> OYUNCU ELENDİ</h3>
+            <h3><i class="fas fa-skull"></i> {% trans "PLAYER ELIMINATED" %}</h3>
             <div id="eliminated-players-list"></div>
         </div>
 
         <div class="col-lg-5 col-md-4">
             <div class="card shadow-sm text-bg-dark border-secondary">
                 <div class="card-header fs-5 border-secondary">
-                    Oyun Bilgileri
+                    {% trans "Game Information" %}
                 </div>
                 <div class="card-body">
                     <h5 id="turn-indicator" class="card-title mb-3">
-                        Sıra: {{ game.current_turn.username|default:"Oyuncular bekleniyor..." }}
+                        {% trans "Turn:" %} {{ game.current_turn.username|default:_("Waiting for players...") }}
                     </h5>
 
                     <div id="player-list-container">
                         </div>
 
-                    <div classR="alert alert-info mt-3" id="waiting-alert" style="display: none;">
+                    <div class="alert alert-info mt-3" id="waiting-alert" style="display: none;">
                         <i class="fas fa-spinner fa-spin me-1"></i>
-                        Oyuncular bekleniyor... (<span id="player-count-span">1</span>/<span id="max-player-span">{{ game.game_type.max_players }}</span>)
+                        {% trans "Waiting for players..." %} (<span id="player-count-span">1</span>/<span id="max-player-span">{{ game.game_type.max_players }}</span>)
                     </div>
 
                     {% if is_spectator %}
                     <div class="alert alert-dark border-warning text-warning mt-3" role="alert">
-                        <strong>İzleyici modundasınız.</strong> Hamle yapamazsınız.
+                        <strong>{% trans "You are in spectator mode." %}</strong> {% trans "You cannot make moves." %}
                     </div>
                     {% endif %}
 
@@ -200,17 +243,17 @@
                     {% if game.host == request.user and game.status == 'waiting' %}
                     <div id="host-controls">
                         <button id="start-game-btn" class="btn btn-success w-100" disabled>
-                            <i class="fas fa-play me-1"></i> Oyunu Başlat
+                            <i class="fas fa-play me-1"></i> {% trans "Start Game" %}
                         </button>
                         <small id="start-game-helper" class="form-text text-muted d-block mt-1">
-                            Başlamak için en az {{ game.game_type.min_players }} oyuncu gerekli.
+                            {% trans "At least" %} {{ game.game_type.min_players }} {% trans "players required to start." %}
                         </small>
                     </div>
                     {% endif %}
 
-                    <label for="message-log" class="form-label mt-3">Oyun Kayıtları:</label>
+                    <label for="message-log" class="form-label mt-3">{% trans "Game Log:" %}</label>
                     <div id="message-log" class="p-2"></div>
-                    <a href="{% url 'game_specific_lobby' game_slug=game.game_type.slug %}" class="btn btn-secondary mt-3 w-100">Lobiden Ayrıl</a>
+                    <a href="{% url 'game_specific_lobby' game_slug=game.game_type.slug %}" class="btn btn-secondary mt-3 w-100">{% trans "Leave Lobby" %}</a>
                 </div>
             </div>
         </div>
@@ -272,10 +315,34 @@
             wsProtocol + window.location.host + '/ws/dice-wars/' + gameId + '/'
         );
 
-        // Sunucudan Mesaj Alma (DEĞİŞTİ)
+        // Translation strings (will be replaced by Django i18n in production)
+        const translations = {
+            'waiting': '{% trans "Waiting for players..." %}',
+            'turn': '{% trans "Turn:" %}',
+            'gameOver': '{% trans "Game Over!" %}',
+            'winner': '{% trans "Winner:" %}',
+            'eliminated': '{% trans "eliminated" %}',
+            'madeMove': '{% trans "made a move" %}',
+            'youEliminated': '{% trans "You were eliminated! You can no longer make moves, but you can continue watching the game." %}',
+            'spectatorNoMove': '{% trans "Spectators cannot make moves." %}',
+            'eliminatedNoMove': '{% trans "Eliminated players cannot make moves." %}',
+            'connectionLost': '{% trans "Connection to server lost. Please refresh the page." %}',
+            'connected': '{% trans "Successfully connected to game table." %}',
+            'kicked': '{% trans "You were kicked from the game by the host." %}',
+            'gameReady': '{% trans "Game is ready to start!" %}',
+            'playersRequired': '{% trans "At least" %}',
+            'playersRequiredEnd': '{% trans "players required to start." %}',
+            'startGameConfirm': '{% trans "Are you sure you want to start the game? No new players will be accepted." %}',
+            'kickPlayerConfirm': '{% trans "Are you sure you want to kick" %}',
+            'kickPlayerConfirmEnd': '{% trans "from the game?" %}',
+            'startingOrder': '{% trans "Determining starting order..." %}',
+            'starts': '{% trans "starts!" %}'
+        };
+
+        // Sunucudan Mesaj Alma (IMPROVED ANIMATION SEQUENCING)
         gameSocket.onmessage = async function(e) {
             const data = JSON.parse(e.data);
-            console.log("Sunucudan alındı:", data);
+            console.log("Received from server:", data);
 
             if (data.type === 'error') {
                 logMessage(data.message, 'danger');
@@ -283,72 +350,76 @@
             }
 
             if (data.type === 'game_state') {
-
-                // 1. Oyuncu Bilgilerini Güncelle
+                // 1. Update player info first
                 if (data.players) {
                     playerUsernames = data.players;
-                    // Elenmiş oyuncuları güncelle
                     if (data.eliminated_players) {
                         eliminatedPlayers = data.eliminated_players;
                     }
                     updatePlayerList(data.players, eliminatedPlayers, data.winner);
 
-                    // --- YENİ: Atılma Kontrolü ---
-                    // Eğer oyun hala beklemedeyse VE ben listede yoksam VE izleyici değilsem
                     if (data.status === 'waiting' && !data.players.includes(myUsername) && !isSpectator) {
-                        alert('Kurucu tarafından oyundan atıldınız.');
-                        // Lobinin URL'ini dinamik olarak al
+                        alert(translations.kicked);
                         const lobbyUrl = "{% url 'game_specific_lobby' game_slug=game.game_type.slug %}";
                         window.location.href = lobbyUrl;
-                        return; // Diğer işlemleri yapma
+                        return;
                     }
                 }
 
-                // 2. Tahta Boyutunu Güncelle
+                // 2. Update board size
                 if (data.board_size && data.board_size !== boardSize) {
                     boardSize = data.board_size;
                     document.documentElement.style.setProperty('--board-size', boardSize);
                 }
 
-                // 3. Sıra/Durum Göstergesini Güncelle
+                // 3. Show move indicator if message contains move info
+                if (data.message) {
+                    // Check for move messages in different languages
+                    const movePatterns = ['made a move', 'tıkladı', 'made a move'];
+                    const hasMove = movePatterns.some(pattern => data.message.toLowerCase().includes(pattern.toLowerCase()));
+                    if (hasMove) {
+                        // Extract username (usually first word before the move text)
+                        const parts = data.message.split(' ');
+                        if (parts.length > 0) {
+                            showMoveIndicator(parts[0]);
+                        }
+                    }
+                }
+
+                // 4. Update turn indicator
                 updateTurnIndicator(data.turn, data.status, data.winner);
 
-                // 4. Başlangıç Çarkı
+                // 5. Game start wheel
                 if (data.special_event === 'game_start_roll') {
                     wheelWinnerText.style.display = 'none';
                     wheelOverlay.classList.remove('finished');
                     wheelOverlay.style.display = 'flex';
-                    await sleep(2500);
-                    wheelWinnerText.innerHTML = `<i class="fas fa-check-circle"></i> ${data.turn} başlıyor!`;
+                    await sleep(2000);
+                    wheelWinnerText.innerHTML = `<i class="fas fa-check-circle"></i> ${data.turn} ${translations.starts}`;
                     wheelWinnerText.style.display = 'block';
                     wheelOverlay.classList.add('finished');
-                    await sleep(2000);
+                    await sleep(1500);
                     wheelOverlay.style.display = 'none';
                     logMessage(data.message, 'success');
                 }
 
-                // 5. Patlama Animasyonu ve Tahta Çizimi
-                if (data.exploded_cells && data.exploded_cells.length > 0) {
-                    data.exploded_cells.forEach(([r, c]) => {
-                        const cellEl = boardElement.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
-                        if (cellEl) {
-                            cellEl.innerHTML = '';
-                            cellEl.className = 'cell';
-                        }
-                    });
-                    await sleep(50);
-                }
+                // 6. IMPROVED: Proper animation sequencing
+                // First, render board with new state
                 renderBoard(data.state);
+                
+                // Then, if there are explosions, wait a bit and show them sequentially
                 if (data.exploded_cells && data.exploded_cells.length > 0) {
-                    triggerSequentialExplosions(data.exploded_cells);
+                    await sleep(300); // Small delay to see the move
+                    await triggerSequentialExplosions(data.exploded_cells);
                 }
 
-                // 6. Elenmiş Oyuncular Animasyonu
+                // After explosions, handle eliminations (faster now)
                 if (data.eliminated_players && data.eliminated_players.length > 0) {
+                    await sleep(200); // Small gap after explosions
                     await handlePlayerElimination(data.eliminated_players);
                 }
 
-                // 7. Mesaj Logu
+                // Finally, log message if not game start
                 if (data.message && data.special_event !== 'game_start_roll') {
                     logMessage(data.message, 'info');
                 }
@@ -356,11 +427,11 @@
         };
 
         gameSocket.onclose = function(e) {
-            logMessage('Sunucuyla bağlantı koptu. Sayfayı yenileyin.', 'danger');
+            logMessage(translations.connectionLost, 'danger');
         };
 
         gameSocket.onopen = function(e) {
-            logMessage('Oyun masasına başarıyla bağlandınız.', 'success');
+            logMessage(translations.connected, 'success');
             // Sayfa yüklendiğinde gelen oyuncu listesini ve renkleri ayarla
             const initialPlayers = [{% for p in game.players.all %}"{{ p.username }}"{% if not forloop.last %}, {% endif %}{% endfor %}];
             updatePlayerList(initialPlayers, eliminatedPlayers, winnerUsername);
@@ -394,23 +465,23 @@
                 let statusBadge = '';
                 if (winner) {
                     if (username === winner) {
-                        statusBadge = `<span class="badge bg-success ms-1"><i class="fas fa-trophy"></i> Kazandı</span>`;
+                        statusBadge = `<span class="badge bg-success ms-1"><i class="fas fa-trophy"></i> {% trans "Won" %}</span>`;
                         playerBox.classList.add('winner');
                     } else if (eliminated.includes(username)) {
-                        statusBadge = `<span class="badge bg-danger ms-1"><i class="fas fa-skull"></i> Elendi</span>`;
+                        statusBadge = `<span class="badge bg-danger ms-1"><i class="fas fa-skull"></i> {% trans "Eliminated" %}</span>`;
                     } else {
-                        statusBadge = `<span class="badge bg-secondary ms-1">Kaybetti</span>`;
+                        statusBadge = `<span class="badge bg-secondary ms-1">{% trans "Lost" %}</span>`;
                     }
                 } else if (isEliminated) {
-                    statusBadge = `<span class="badge bg-danger ms-1"><i class="fas fa-skull"></i> Elendi</span>`;
+                    statusBadge = `<span class="badge bg-danger ms-1"><i class="fas fa-skull"></i> {% trans "Eliminated" %}</span>`;
                 }
 
                 let badges = '';
                 if (username === hostUsername) {
-                    badges += `<span class="badge bg-warning">Kurucu</span>`;
+                    badges += `<span class="badge bg-warning">{% trans "Host" %}</span>`;
                 }
                 if (username === myUsername) {
-                    badges += `<span class="badge bg-primary ms-1">Siz</span>`;
+                    badges += `<span class="badge bg-primary ms-1">{% trans "You" %}</span>`;
                 }
                 badges += statusBadge;
 
@@ -418,7 +489,7 @@
                 let kickButtonHtml = '';
                 if (amIHost && username !== myUsername && !isEliminated && !winner) {
                     kickButtonHtml = `
-                        <button class="kick-btn" data-username="${username}" title="Oyuncuyu At">
+                        <button class="kick-btn" data-username="${username}" title="{% trans 'Kick Player' %}">
                             <i class="fas fa-times"></i>
                         </button>`;
                 }
@@ -440,41 +511,54 @@
             if (amIHost && startGameBtn) {
                 if (players.length >= minPlayers) {
                     startGameBtn.disabled = false;
-                    startGameHelper.textContent = "Oyun başlatılmaya hazır!";
+                    startGameHelper.textContent = translations.gameReady;
                     startGameHelper.classList.remove('text-muted');
                     startGameHelper.classList.add('text-success');
                 } else {
                     startGameBtn.disabled = true;
-                    startGameHelper.textContent = `Başlamak için en az ${minPlayers} oyuncu gerekli.`;
+                    startGameHelper.textContent = `${translations.playersRequired} ${minPlayers} ${translations.playersRequiredEnd}`;
                     startGameHelper.classList.add('text-muted');
                     startGameHelper.classList.remove('text-success');
                 }
             }
         }
 
-        // --- DEĞİŞTİ: Sıra Göstergesi Güncelleme (Lobi UI mantığı eklendi) ---
+        // Show move indicator
+        function showMoveIndicator(username) {
+            const moveIndicator = document.getElementById('move-indicator');
+            const moveIndicatorText = document.getElementById('move-indicator-text');
+            if (moveIndicator && moveIndicatorText) {
+                moveIndicatorText.textContent = `${username} ${translations.madeMove}`;
+                moveIndicator.classList.add('show');
+                setTimeout(() => {
+                    moveIndicator.classList.remove('show');
+                }, 1500);
+            }
+        }
+
+        // --- IMPROVED: Turn Indicator Update ---
         function updateTurnIndicator(turnUsername, status, winnerUsername) {
             document.querySelectorAll('.player-box').forEach(box => {
                 box.classList.remove('active-turn');
             });
 
             if (status === 'finished') {
-                turnIndicator.textContent = "Oyun Bitti!";
-                logMessage("Kazanan: " + winnerUsername, 'success');
+                turnIndicator.textContent = translations.gameOver;
+                logMessage(translations.winner + " " + winnerUsername, 'success');
                 winnerNameEl.textContent = winnerUsername;
                 gameOverOverlay.style.display = 'flex';
                 if (waitingAlert) waitingAlert.style.display = 'none';
-                if (hostControls) hostControls.style.display = 'none'; // Host kontrolünü gizle
+                if (hostControls) hostControls.style.display = 'none';
 
             } else if (status === 'waiting') {
-                turnIndicator.textContent = "Oyuncular bekleniyor...";
+                turnIndicator.textContent = translations.waiting;
                 if (waitingAlert) waitingAlert.style.display = 'block';
-                if (hostControls) hostControls.style.display = 'block'; // Host kontrolünü göster
+                if (hostControls) hostControls.style.display = 'block';
 
             } else if (status === 'in_progress' && turnUsername) {
-                turnIndicator.textContent = "Sıra: " + turnUsername;
+                turnIndicator.textContent = translations.turn + " " + turnUsername;
                 if (waitingAlert) waitingAlert.style.display = 'none';
-                if (hostControls) hostControls.style.display = 'none'; // Host kontrolünü gizle
+                if (hostControls) hostControls.style.display = 'none';
 
                 const activePlayerBox = document.getElementById(`player-box-${turnUsername}`);
                 if (activePlayerBox) {
@@ -483,9 +567,9 @@
             }
         }
 
-        // ... (triggerSequentialExplosions ve renderBoard aynı) ...
+        // IMPROVED: Sequential explosions with better timing
         async function triggerSequentialExplosions(explodedCells) {
-            const EXPLOSION_DELAY = 200;
+            const EXPLOSION_DELAY = 150; // Faster explosions
             for (const coords of explodedCells) {
                 const [r, c] = coords;
                 const cellEl = boardElement.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
@@ -496,7 +580,7 @@
                     await sleep(EXPLOSION_DELAY);
                 }
             }
-            await sleep(400);
+            await sleep(300); // Shorter wait after all explosions
         }
         function renderBoard(boardState) {
             boardElement.innerHTML = '';
@@ -528,26 +612,31 @@
             }
         }
 
-        // --- DEĞİŞTİ: Hamle Gönderme (Event Listener) ---
+        // IMPROVED: Move handling with immediate visual feedback
         boardElement.addEventListener('click', function(e) {
             const cell = e.target.closest('.cell');
             if (!cell) return;
             if (isSpectator) {
-                logMessage("İzleyiciler hamle yapamaz.", 'warning');
+                logMessage(translations.spectatorNoMove, 'warning');
                 return;
             }
-            // YENİ: Elenmiş oyuncular hamle yapamaz
             if (!playerUsernames.includes(myUsername)) {
-                logMessage("Elenmiş oyuncular hamle yapamaz.", 'warning');
+                logMessage(translations.eliminatedNoMove, 'warning');
                 return;
             }
             if (gameOverOverlay.style.display === 'flex' || wheelOverlay.style.display === 'flex') {
                 return;
             }
-            // Sadece oyun başladıysa hamle yap
-            if (turnIndicator.textContent.startsWith("Sıra:")) {
+            if (turnIndicator.textContent.startsWith(translations.turn)) {
                 const row = cell.dataset.row;
                 const col = cell.dataset.col;
+                
+                // Immediate visual feedback
+                cell.classList.add('move-highlight');
+                setTimeout(() => {
+                    cell.classList.remove('move-highlight');
+                }, 800);
+                
                 gameSocket.send(JSON.stringify({
                     'type': 'make_move',
                     'row': parseInt(row),
@@ -556,10 +645,10 @@
             }
         });
 
-        // --- YENİ: Başlat Butonu Listener ---
+        // Start Game Button Listener
         if (startGameBtn) {
             startGameBtn.addEventListener('click', function() {
-                if (confirm('Oyunu başlatmak istediğinizden emin misiniz? Yeni oyuncu alınmayacak.')) {
+                if (confirm(translations.startGameConfirm)) {
                     gameSocket.send(JSON.stringify({
                         'type': 'start_game'
                     }));
@@ -567,12 +656,12 @@
             });
         }
 
-        // --- YENİ: Kick Butonu Listener (Event Delegation) ---
+        // Kick Button Listener
         playerListContainer.addEventListener('click', function(e) {
             const kickBtn = e.target.closest('.kick-btn');
             if (kickBtn) {
                 const usernameToKick = kickBtn.dataset.username;
-                if (confirm(`${usernameToKick} adlı oyuncuyu atmak istediğinizden emin misiniz?`)) {
+                if (confirm(`${translations.kickPlayerConfirm} ${usernameToKick} ${translations.kickPlayerConfirmEnd}`)) {
                     gameSocket.send(JSON.stringify({
                         'type': 'kick_player',
                         'username_to_kick': usernameToKick
@@ -582,43 +671,45 @@
         });
 
 
-        // --- YENİ: Elenme Animasyonu Fonksiyonu ---
+        // IMPROVED: Faster elimination animation
         async function handlePlayerElimination(eliminatedUsernames) {
             const eliminationOverlay = document.getElementById('elimination-overlay');
             const eliminatedPlayersList = document.getElementById('eliminated-players-list');
             
             if (!eliminationOverlay || !eliminatedPlayersList) return;
             
-            // Elenmiş oyuncuları göster
+            // Mark eliminated players in list immediately
+            eliminatedUsernames.forEach(username => {
+                const playerBox = document.getElementById(`player-box-${username}`);
+                if (playerBox) {
+                    playerBox.classList.add('eliminated');
+                    playerBox.style.animation = 'eliminationPulse 0.6s ease-in-out';
+                }
+            });
+            
+            // Show eliminated players in overlay
             eliminatedPlayersList.innerHTML = '';
             eliminatedUsernames.forEach((username, index) => {
                 const eliminatedDiv = document.createElement('div');
                 eliminatedDiv.className = 'eliminated-name';
                 eliminatedDiv.textContent = `❌ ${username}`;
-                eliminatedDiv.style.animationDelay = `${index * 0.2}s`;
+                eliminatedDiv.style.animationDelay = `${index * 0.1}s`;
                 eliminatedPlayersList.appendChild(eliminatedDiv);
             });
             
-            // Overlay'i göster
+            // Show overlay
             eliminationOverlay.classList.add('show');
             
-            // Oyuncu listesindeki elenmiş oyuncuları işaretle
-            eliminatedUsernames.forEach(username => {
-                const playerBox = document.getElementById(`player-box-${username}`);
-                if (playerBox) {
-                    playerBox.classList.add('eliminated');
-                    // Animasyon efekti ekle
-                    playerBox.style.animation = 'eliminationPulse 1s ease-in-out';
-                }
-            });
-            
-            // 2.5 saniye sonra overlay'i gizle
-            await sleep(2500);
+            // Faster: Hide after 1 second instead of 2.5
+            await sleep(1000);
+            eliminationOverlay.style.animation = 'eliminationHide 0.3s ease-out forwards';
+            await sleep(300);
             eliminationOverlay.classList.remove('show');
+            eliminationOverlay.style.animation = '';
             
-            // Eğer kullanıcı elenmişse, bilgilendir
+            // Inform user if eliminated
             if (eliminatedUsernames.includes(myUsername)) {
-                logMessage('Siz elendiniz! Artık hamle yapamazsınız, ancak oyunu izlemeye devam edebilirsiniz.', 'warning');
+                logMessage(translations.youEliminated, 'warning');
             }
         }
 
