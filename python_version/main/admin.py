@@ -9,12 +9,14 @@ from .models import MiniGame, GameSession, VoiceChannel
 class MiniGameAdmin(admin.ModelAdmin):
     """
     MiniGame modeli için admin ayarları.
-    Slug'ın otomatik dolmasını sağlar.
     """
     list_display = ['name', 'slug', 'min_players', 'max_players']
-    # 'name' alanını yazarken 'slug' alanını otomatik doldur
-    prepopulated_fields = {'slug': ('name',)}
 
+    # 'prepopulated_fields' satırını kaldırın.
+    # prepopulated_fields = {'slug': ('name',)}  <-- BU SATIRI SİLİN
+
+    # Bunun yerine, 'editable=False' olduğu için alanı salt okunur yapın
+    readonly_fields = ('slug')
 
 @admin.register(GameSession)
 class GameSessionAdmin(admin.ModelAdmin):
