@@ -72,7 +72,7 @@ class MiniGame(models.Model):
     min_players = models.PositiveSmallIntegerField(default=2, verbose_name="Min. Oyuncu")
     max_players = models.PositiveSmallIntegerField(default=2, verbose_name="Max. Oyuncu")
     is_active = models.BooleanField(default=True, verbose_name="Aktif")
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Oluşturulma Tarihi")
+    created_at = models.DateTimeField(auto_now=True, verbose_name="Oluşturulma Tarihi")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Güncellenme Tarihi")
 
     class Meta:
