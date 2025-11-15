@@ -30,11 +30,31 @@
         .cell.p2 { background-color: var(--p2-color); box-shadow: 0 0 10px 2px var(--p2-color); }
         .cell.p3 { background-color: var(--p3-color); box-shadow: 0 0 10px 2px var(--p3-color); }
         .cell.p4 { background-color: var(--p4-color); box-shadow: 0 0 10px 2px var(--p4-color); }
-        .cell.explode-flash { animation: explodeFlash 0.3s ease-out forwards; }
+        .cell.explode-flash { 
+            animation: explodeFlash 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+            z-index: 15;
+        }
         @keyframes explodeFlash {
-            0% { transform: scale(1); opacity: 1; box-shadow: 0 0 10px 5px currentColor; }
-            50% { transform: scale(1.1); opacity: 0.8; box-shadow: 0 0 20px 10px currentColor; }
-            100% { transform: scale(1); opacity: 1; box-shadow: 0 0 10px 5px currentColor; }
+            0% { 
+                transform: scale(1) rotate(0deg); 
+                opacity: 1; 
+                box-shadow: 0 0 15px 8px currentColor, 0 0 30px 15px currentColor;
+            }
+            30% { 
+                transform: scale(1.3) rotate(180deg); 
+                opacity: 0.9; 
+                box-shadow: 0 0 25px 15px currentColor, 0 0 50px 25px currentColor;
+            }
+            60% { 
+                transform: scale(1.1) rotate(360deg); 
+                opacity: 0.7; 
+                box-shadow: 0 0 20px 12px currentColor;
+            }
+            100% { 
+                transform: scale(1) rotate(360deg); 
+                opacity: 1; 
+                box-shadow: 0 0 10px 2px currentColor;
+            }
         }
         /* Move highlight animation */
         .cell.move-highlight {
@@ -70,19 +90,47 @@
             100% { transform: translateX(-50%) translateY(0); opacity: 1; }
         }
         .particle {
-            position: absolute; width: 12px; height: 12px; border-radius: 50%; z-index: 99;
-            transform: translate(-50%, -50%) scale(1); opacity: 1; background-color: currentColor;
-            box-shadow: 0 0 5px currentColor; font-size: 8px; display: flex;
-            align-items: center; justify-content: center; overflow: hidden; color: white;
+            position: absolute; 
+            width: 20px; 
+            height: 20px; 
+            border-radius: 3px; 
+            z-index: 99;
+            transform: translate(-50%, -50%) scale(1); 
+            opacity: 1; 
+            background: linear-gradient(135deg, currentColor, rgba(255, 255, 255, 0.3));
+            box-shadow: 0 0 10px currentColor, 0 0 20px currentColor, inset 0 0 5px rgba(255, 255, 255, 0.5); 
+            font-size: 12px; 
+            display: flex;
+            align-items: center; 
+            justify-content: center; 
+            overflow: hidden; 
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
         }
-        .particle.up    { animation: particleUp 0.6s ease-out forwards; }
-        .particle.down  { animation: particleDown 0.6s ease-out forwards; }
-        .particle.left  { animation: particleLeft 0.6s ease-out forwards; }
-        .particle.right { animation: particleRight 0.6s ease-out forwards; }
-        @keyframes particleUp { 0% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 50% { transform: translate(-50%, -200%) scale(0.8) rotate(90deg); opacity: 0.8; } 100% { transform: translate(-50%, -450%) scale(0.3) rotate(180deg); opacity: 0; } }
-        @keyframes particleDown { 0% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 50% { transform: translate(-50%, 200%) scale(0.8) rotate(-90deg); opacity: 0.8; } 100% { transform: translate(-50%, 450%) scale(0.3) rotate(-180deg); opacity: 0; } }
-        @keyframes particleLeft { 0% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 50% { transform: translate(-200%, -50%) scale(0.8) rotate(90deg); opacity: 0.8; } 100% { transform: translate(-450%, -50%) scale(0.3) rotate(180deg); opacity: 0; } }
-        @keyframes particleRight { 0% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 50% { transform: translate(200%, -50%) scale(0.8) rotate(-90deg); opacity: 0.8; } 100% { transform: translate(450%, -50%) scale(0.3) rotate(180deg); opacity: 0; } }
+        .particle.up    { animation: particleUp 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+        .particle.down  { animation: particleDown 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+        .particle.left  { animation: particleLeft 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+        .particle.right { animation: particleRight 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
+        @keyframes particleUp { 
+            0% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; } 
+            50% { transform: translate(-50%, -250%) scale(1.2) rotate(180deg); opacity: 0.9; } 
+            100% { transform: translate(-50%, -500%) scale(0.2) rotate(360deg); opacity: 0; } 
+        }
+        @keyframes particleDown { 
+            0% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; } 
+            50% { transform: translate(-50%, 250%) scale(1.2) rotate(-180deg); opacity: 0.9; } 
+            100% { transform: translate(-50%, 500%) scale(0.2) rotate(-360deg); opacity: 0; } 
+        }
+        @keyframes particleLeft { 
+            0% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; } 
+            50% { transform: translate(-250%, -50%) scale(1.2) rotate(180deg); opacity: 0.9; } 
+            100% { transform: translate(-500%, -50%) scale(0.2) rotate(360deg); opacity: 0; } 
+        }
+        @keyframes particleRight { 
+            0% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; } 
+            50% { transform: translate(250%, -50%) scale(1.2) rotate(-180deg); opacity: 0.9; } 
+            100% { transform: translate(500%, -50%) scale(0.2) rotate(-360deg); opacity: 0; } 
+        }
         #wheel-overlay, #game-over-overlay {
             position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.9);
             color: #fff; display: none; flex-direction: column; align-items: center;
@@ -306,7 +354,15 @@
 
         let playerColors = {};
         let playerUsernames = [];
-        const diceIcons = { 1: 'fa-dice-one', 2: 'fa-dice-two', 3: 'fa-dice-three' };
+        // Enhanced dice icons with better visual representation
+        const diceIcons = { 
+            1: 'fa-dice-one', 
+            2: 'fa-dice-two', 
+            3: 'fa-dice-three',
+            4: 'fa-dice-four',
+            5: 'fa-dice-five',
+            6: 'fa-dice-six'
+        };
         function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
         // WebSocket Bağlantısı
@@ -404,18 +460,32 @@
                 }
 
                 // 6. IMPROVED: Proper animation sequencing
-                // First, render board with new state
+                // First, show move animation on the moved cell (for all players)
+                if (data.move_cell && data.move_cell.length === 2) {
+                    const [moveRow, moveCol] = data.move_cell;
+                    const moveCell = boardElement.querySelector(`.cell[data-row="${moveRow}"][data-col="${moveCol}"]`);
+                    if (moveCell) {
+                        moveCell.classList.add('move-highlight');
+                        setTimeout(() => {
+                            moveCell.classList.remove('move-highlight');
+                        }, 800);
+                    }
+                }
+                
+                // Then, render board with new state
                 renderBoard(data.state);
                 
-                // Then, if there are explosions, wait a bit and show them sequentially
+                // Small delay to see the move before explosions
+                await sleep(200);
+                
+                // Then, if there are explosions, show them sequentially (faster)
                 if (data.exploded_cells && data.exploded_cells.length > 0) {
-                    await sleep(300); // Small delay to see the move
                     await triggerSequentialExplosions(data.exploded_cells);
                 }
 
                 // After explosions, handle eliminations (faster now)
                 if (data.eliminated_players && data.eliminated_players.length > 0) {
-                    await sleep(200); // Small gap after explosions
+                    await sleep(150); // Small gap after explosions
                     await handlePlayerElimination(data.eliminated_players);
                 }
 
@@ -567,9 +637,9 @@
             }
         }
 
-        // IMPROVED: Sequential explosions with better timing
+        // IMPROVED: Sequential explosions with better timing and visual effects
         async function triggerSequentialExplosions(explodedCells) {
-            const EXPLOSION_DELAY = 150; // Faster explosions
+            const EXPLOSION_DELAY = 100; // Much faster explosions
             for (const coords of explodedCells) {
                 const [r, c] = coords;
                 const cellEl = boardElement.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
@@ -580,7 +650,7 @@
                     await sleep(EXPLOSION_DELAY);
                 }
             }
-            await sleep(300); // Shorter wait after all explosions
+            await sleep(200); // Shorter wait after all explosions
         }
         function renderBoard(boardState) {
             boardElement.innerHTML = '';
@@ -593,13 +663,23 @@
                     const rowData = boardState[String(r)];
                     const cellData = rowData ? rowData[String(c)] : null;
                     if (cellData && cellData.count > 0) {
+                        // Enhanced dice design with better styling
+                        const diceContainer = document.createElement('div');
+                        diceContainer.style.cssText = 'display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; position: relative;';
+                        
                         if (diceIcons[cellData.count]) {
                             const icon = document.createElement('i');
                             icon.className = `fas ${diceIcons[cellData.count]}`;
-                            cellElement.appendChild(icon);
+                            icon.style.cssText = 'font-size: 1.5em; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); text-shadow: 0 1px 2px rgba(0,0,0,0.8);';
+                            diceContainer.appendChild(icon);
                         } else {
-                            cellElement.textContent = cellData.count;
+                            const countText = document.createElement('span');
+                            countText.textContent = cellData.count;
+                            countText.style.cssText = 'font-weight: bold; font-size: 1.3em; text-shadow: 0 2px 4px rgba(0,0,0,0.8);';
+                            diceContainer.appendChild(countText);
                         }
+                        cellElement.appendChild(diceContainer);
+                        
                         const playerClass = playerColors[cellData.owner];
                         if (playerClass) {
                             cellElement.classList.add(playerClass);
@@ -612,7 +692,7 @@
             }
         }
 
-        // IMPROVED: Move handling with immediate visual feedback
+        // IMPROVED: Move handling with immediate visual feedback (local only, server will broadcast to all)
         boardElement.addEventListener('click', function(e) {
             const cell = e.target.closest('.cell');
             if (!cell) return;
@@ -631,7 +711,7 @@
                 const row = cell.dataset.row;
                 const col = cell.dataset.col;
                 
-                // Immediate visual feedback
+                // Immediate local visual feedback (server will broadcast to all players)
                 cell.classList.add('move-highlight');
                 setTimeout(() => {
                     cell.classList.remove('move-highlight');
@@ -733,29 +813,47 @@
             const startTop = rect.top - containerRect.top + (rect.height / 2);
             const startLeft = rect.left - containerRect.left + (rect.width / 2);
             const directions = ['up', 'down', 'left', 'right'];
+            
+            // Enhanced explosion flash
             cellEl.style.setProperty('color', color);
             cellEl.classList.add('explode-flash');
             setTimeout(() => {
                 cellEl.classList.remove('explode-flash');
                 cellEl.style.removeProperty('color');
             }, 400);
-            for (const dir of directions) {
+            
+            // Create more dramatic dice particles
+            const diceCount = 8; // More particles for better effect
+            for (let i = 0; i < diceCount; i++) {
                 const particle = document.createElement('div');
                 particle.classList.add('particle');
+                
+                // Random dice icon
+                const diceValues = [1, 2, 3, 4, 5, 6];
+                const randomDice = diceValues[Math.floor(Math.random() * diceValues.length)];
                 const icon = document.createElement('i');
-                icon.className = `fas fa-dice-one`;
+                icon.className = `fas ${diceIcons[randomDice] || 'fa-dice'}`;
+                icon.style.cssText = 'font-size: 0.8em;';
                 particle.appendChild(icon);
+                
                 particle.style.color = color;
                 particle.style.top = `${startTop}px`;
                 particle.style.left = `${startLeft}px`;
+                
+                // Distribute particles in all directions
+                const dir = directions[i % directions.length];
+                
                 gameBoardContainer.appendChild(particle);
                 void particle.offsetWidth;
+                
+                // Use existing particle animations
                 particle.classList.add(dir);
+                
                 setTimeout(() => {
                     if (particle.parentElement) {
                         particle.parentElement.removeChild(particle);
                     }
-                }, 600);
+                }, 500);
             }
         }
 

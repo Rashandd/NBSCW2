@@ -465,7 +465,13 @@ class GameConsumer_DiceWars(AsyncJsonWebsocketConsumer):
                 await self.send_error(error_msg)
                 return
             player_username = self.user.username
-            await self.broadcast_game_state(game, message=_("{username} made a move.").format(username=player_username))
+            move_row = content.get('row')
+            move_col = content.get('col')
+            await self.broadcast_game_state(
+                game, 
+                message=_("{username} made a move.").format(username=player_username),
+                move_cell=[move_row, move_col] if move_row is not None and move_col is not None else None
+            )
             await asyncio.sleep(0.1)
 
             reaction_happened = False
@@ -773,12 +779,13 @@ class GameConsumer_DiceWars(AsyncJsonWebsocketConsumer):
             game.save()
             return game, eliminated_usernames
 
-    async def broadcast_game_state(self, game, message=None, exploded_cells=None, special_event=None, eliminated_players=None):
+    async def broadcast_game_state(self, game, message=None, exploded_cells=None, special_event=None, eliminated_players=None, move_cell=None):
         state_data = await self.get_game_state_data_async(game)
         state_data['message'] = message
         state_data['exploded_cells'] = exploded_cells if exploded_cells else []
         state_data['special_event'] = special_event # 'start_game' için eklendi
         state_data['eliminated_players'] = eliminated_players if eliminated_players else []
+        state_data['move_cell'] = move_cell  # [row, col] of the cell that was moved
         await self.channel_layer.group_send(self.game_group_name, state_data)
 
     def broadcast_game_state_sync(self, game, message=None, exploded_cells=None):
