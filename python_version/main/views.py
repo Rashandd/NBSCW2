@@ -9,6 +9,7 @@ from django.db.models import Count, Q, Case, When, FloatField, F
 from django.db import models
 from django.shortcuts import redirect, get_object_or_404
 from django.shortcuts import render
+from django.utils.translation import gettext_lazy as _
 
 from .models import CustomUser, VoiceChannel, GameSession, MiniGame
 
@@ -19,7 +20,7 @@ def index(request):
 
     context = {
         'channels': channels,
-        'title': 'Sesli Sohbet Odaları',
+        'title': _('Voice Chat Rooms'),
     }
     return render(request, 'index.html', context)
 
@@ -32,7 +33,7 @@ def voice_channel_view(request, slug):
 
     context = {
         'channel': channel,
-        'title': f'#{channel.name} Odası',
+        'title': _('#{channel_name} Room').format(channel_name=channel.name),
         # Kullanıcının oda slug'ını JavaScript'e aktarmak için
         'channel_slug': slug,
     }
@@ -41,7 +42,7 @@ def voice_channel_view(request, slug):
 @login_required
 def settings_view(request):
     """Kullanıcının mikrofon/hoparlör seçimi yapacağı ayarlar sayfası."""
-    return render(request, 'settings.html', {'title': 'Ayarlar'})
+    return render(request, 'settings.html', {'title': _('Settings')})
 
 @login_required
 def all_games_lobby(request):
@@ -134,7 +135,7 @@ def create_game(request, game_slug):
     game_type = get_object_or_404(MiniGame, slug=game_slug)
 
     if GameSession.objects.filter(game_type=game_type, host=request.user, status='waiting').exists():
-        messages.warning(request, f"{game_type.name} için zaten bekleyen bir masanız var.")
+        messages.warning(request, _("You already have a waiting table for {game_name}.").format(game_name=game_type.name))
         return redirect('game_specific_lobby', game_slug=game_slug)
 
     # --- TAHTA BOYUTU MANTIĞI BURADAN KALDIRILDI ---
@@ -184,13 +185,13 @@ def join_game(request, game_id):
 
     # Kontroller
     if game.players.filter(id=request.user.id).exists():
-        messages.info(request, "Zaten bu odadasınız.")
+        messages.info(request, _("You are already in this room."))
         return redirect('game_room', game_id=game.game_id)
     if game.is_full:
-        messages.error(request, "Oda dolu.")
+        messages.error(request, _("Room is full."))
         return redirect('game_specific_lobby', game_slug=game_slug)
     if game.status != 'waiting':
-        messages.error(request, "Oyun çoktan başladı.")
+        messages.error(request, _("Game has already started."))
         return redirect('game_specific_lobby', game_slug=game_slug)
 
     # Oyuncuyu 'players' M2M listesine ekle
@@ -216,7 +217,7 @@ def join_game(request, game_id):
             'players': player_usernames,  # Güncellenmiş oyuncu listesi
             'status': game.status,
             'board_size': game.board_size,
-            'message': f"{request.user.username} masaya katıldı.",
+            'message': _("{username} joined the table.").format(username=request.user.username),
             'special_event': None
         }
     )
@@ -234,18 +235,18 @@ def delete_game(request, game_id):
 
     # Sadece 'host' (kurucu) silebilir
     if game.host != request.user:
-        messages.error(request, "Bu masayı siz oluşturmadınız.")
+        messages.error(request, _("You did not create this table."))
         return redirect('game_specific_lobby', game_slug=game_slug)
     if game.status != 'waiting':
-        messages.error(request, "Oyun başladıktan sonra masa silinemez.")
+        messages.error(request, _("Table cannot be deleted after the game has started."))
         return redirect('game_specific_lobby', game_slug=game_slug)
     # Odada 1'den fazla kişi (yani kendinden başkası) varsa silemez
     if game.player_count > 1:
-        messages.error(request, "Masada başkaları varken silemezsiniz.")
+        messages.error(request, _("You cannot delete the table while others are present."))
         return redirect('game_specific_lobby', game_slug=game_slug)
 
     game.delete()
-    messages.success(request, "Masa başarıyla kapatıldı.")
+    messages.success(request, _("Table closed successfully."))
     return redirect('game_specific_lobby', game_slug=game_slug)
 
 
@@ -272,7 +273,7 @@ def leaderboard(request):
     # Kullanıcıları sırala
     if sort_by == 'win_rate':
         # Win rate için özel sorgu (property olduğu için)
-        users = User.objects.filter(total_games__gt=0).annotate(
+        users = CustomUser.objects.filter(total_games__gt=0).annotate(
             calculated_win_rate=Case(
                 When(total_games=0, then=0),
                 default=F('total_wins') * 100.0 / F('total_games'),
@@ -321,7 +322,7 @@ def game_leaderboard(request, game_slug):
     reverse = (order == 'desc')
 
     # JSONField içinden bu oyun için istatistiği olan kullanıcıları çek
-    users_qs = User.objects.filter(per_game_stats__has_key=game_type.slug)
+    users_qs = CustomUser.objects.filter(per_game_stats__has_key=game_type.slug)
     players = []
 
     for user in users_qs:

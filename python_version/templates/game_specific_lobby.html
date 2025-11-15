@@ -1,25 +1,25 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load i18n %}
 
-{% block title %}{{ game_type.name }} Lobisi{% endblock %}
+{% block title %}{{ game_type.name }} {% trans "Lobby" %}{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
     <div class="row">
 
         <div class="col-12 text-center mb-4">
-            <h1 class="display-4"><i class="fas fa-dice-d20 me-3"></i>{{ game_type.name }} Lobisi</h1>
+            <h1 class="display-4"><i class="fas fa-dice-d20 me-3"></i>{{ game_type.name }} {% trans "Lobby" %}</h1>
             <p class="lead text-muted">{{ game_type.description }}</p>
             <p>
-                Bu oyun
-                <strong>{{ game_type.min_players }}</strong> ile
-                <strong>{{ game_type.max_players }}</strong>
-                kişi arasında oynanır.
+                {% trans "This game is played between" %}
+                <strong>{{ game_type.min_players }}</strong> {% trans "and" %}
+                <strong>{{ game_type.max_players }}</strong> {% trans "players" %}.
             </p>
         </div>
 
         <div class="col-md-6">
-            <h2>Aktif Masalarım</h2>
+            <h2>{% trans "My Active Tables" %}</h2>
             <hr>
             {% if messages %}
                 {% for message in messages %}
@@ -28,7 +28,7 @@
             {% endif %}
 
             <a href="{% url 'create_game' game_type.slug %}" class="btn btn-success mb-3 w-100">
-                <i class="fas fa-plus"></i> Yeni Masa Kur
+                <i class="fas fa-plus"></i> {% trans "Create New Table" %}
             </a>
 
             {% if my_games %}
@@ -45,18 +45,18 @@
                                 </strong>
                                 <br>
                                 <span class="badge bg-secondary">
-                                    {{ game.players.count }} / {{ game.game_type.max_players }} Oyuncu
+                                    {{ game.players.count }} / {{ game.game_type.max_players }} {% trans "Players" %}
                                 </span>
                                 <small class="text-muted ms-2">ID: {{ game.game_id|truncatechars:8 }}</small>
                             </div>
                             <div>
                                 <a href="{% url 'game_room' game.game_id %}" class="btn btn-primary btn-sm">
-                                    <i class="fas fa-sign-in-alt"></i> Masaya Git
+                                    <i class="fas fa-sign-in-alt"></i> {% trans "Go to Table" %}
                                 </a>
 
                                 {% if game.host == user and game.status == 'waiting' and game.players.count == 1 %}
                                     <a href="{% url 'delete_game' game.game_id %}" class="btn btn-danger btn-sm ms-2">
-                                        <i class="fas fa-trash"></i> Kapat
+                                        <i class="fas fa-trash"></i> {% trans "Close" %}
                                     </a>
                                 {% endif %}
                             </div>
@@ -64,29 +64,29 @@
                     {% endfor %}
                 </div>
             {% else %}
-                <p>Bu oyunda hiç aktif masanız yok.</p>
+                <p>{% trans "You have no active tables in this game." %}</p>
             {% endif %}
         </div>
 
         <div class="col-md-6">
-            <h2>Katılınabilecek Masalar</h2>
+            <h2>{% trans "Available Tables to Join" %}</h2>
             <hr>
             {% if available_games %}
                 <div class="list-group">
                     {% for game in available_games %}
                         <div class="list-group-item d-flex justify-content-between align-items-center">
                             <div>
-                                <strong>Masa Sahibi: {{ game.host.username }}</strong>
+                                <strong>{% trans "Table Host" %}: {{ game.host.username }}</strong>
                                 <br>
                                 <small class="text-muted">ID: {{ game.game_id|truncatechars:8 }}</small>
                             </div>
                             <div class="text-end">
                                 <span class="badge bg-info mb-1">
-                                    {{ game.players.count }} / {{ game.game_type.max_players }} oyuncu
+                                    {{ game.players.count }} / {{ game.game_type.max_players }} {% trans "players" %}
                                 </span>
                                 <br>
                                 <a href="{% url 'join_game' game.game_id %}" class="btn btn-success btn-sm">
-                                    <i class="fas fa-play"></i> Masaya Katıl
+                                    <i class="fas fa-play"></i> {% trans "Join Table" %}
                                 </a>
                             </div>
                         </div>
@@ -94,7 +94,7 @@
                 </div>
             {% else %}
                 <div class="alert alert-secondary">
-                    Şu anda katılabileceğin bir masa bulunmuyor.
+                    {% trans "There are no tables available to join at the moment." %}
                 </div>
             {% endif %}
         </div>

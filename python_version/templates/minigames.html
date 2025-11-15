@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load i18n %}
 
-{% block title %}Oyun Merkezi{% endblock %}
+{% block title %}{% trans "Game Center" %}{% endblock %}
 
 {% block extra_css %}
 <style>
@@ -29,31 +30,31 @@
 {% block content %}
 <div class="container mt-4">
     <div class="text-center mb-5">
-        <h1 class="display-4">Oyun Merkezi</h1>
-        <p class="lead text-muted">Oynamak istediğiniz oyunu seçin.</p>
+        <h1 class="display-4">{% trans "Game Center" %}</h1>
+        <p class="lead text-muted">{% trans "Select the game you want to play." %}</p>
     </div>
 
-    <!-- Filtreleme ve Arama Bölümü -->
+    <!-- Filtering and Search Section -->
     <div class="card text-bg-dark mb-4 border-secondary">
         <div class="card-body">
             <form method="get" action="{% url 'all_games_lobby' %}" class="row g-3">
-                <!-- Arama -->
+                <!-- Search -->
                 <div class="col-md-4">
                     <label for="search" class="form-label">
-                        <i class="fas fa-search"></i> Oyun Ara
+                        <i class="fas fa-search"></i> {% trans "Search Game" %}
                     </label>
                     <input type="text" 
                            class="form-control bg-dark text-light border-secondary" 
                            id="search" 
                            name="search" 
-                           placeholder="Oyun adı veya açıklama..."
+                           placeholder="{% trans 'Game name or description...' %}"
                            value="{{ search_query }}">
                 </div>
 
-                <!-- Min Oyuncu -->
+                <!-- Min Players -->
                 <div class="col-md-2">
                     <label for="min_players" class="form-label">
-                        <i class="fas fa-users"></i> Min Oyuncu
+                        <i class="fas fa-users"></i> {% trans "Min Players" %}
                     </label>
                     <input type="number" 
                            class="form-control bg-dark text-light border-secondary" 
@@ -61,14 +62,14 @@
                            name="min_players" 
                            min="1" 
                            max="10"
-                           placeholder="Min"
+                           placeholder="{% trans 'Min' %}"
                            value="{{ min_players_filter }}">
                 </div>
 
-                <!-- Max Oyuncu -->
+                <!-- Max Players -->
                 <div class="col-md-2">
                     <label for="max_players" class="form-label">
-                        <i class="fas fa-users"></i> Max Oyuncu
+                        <i class="fas fa-users"></i> {% trans "Max Players" %}
                     </label>
                     <input type="number" 
                            class="form-control bg-dark text-light border-secondary" 
@@ -76,27 +77,27 @@
                            name="max_players" 
                            min="1" 
                            max="10"
-                           placeholder="Max"
+                           placeholder="{% trans 'Max' %}"
                            value="{{ max_players_filter }}">
                 </div>
 
-                <!-- Sıralama -->
+                <!-- Sort -->
                 <div class="col-md-2">
                     <label for="sort" class="form-label">
-                        <i class="fas fa-sort"></i> Sırala
+                        <i class="fas fa-sort"></i> {% trans "Sort" %}
                     </label>
                     <select class="form-select bg-dark text-light border-secondary" 
                             id="sort" 
                             name="sort">
-                        <option value="name" {% if sort_by == 'name' %}selected{% endif %}>İsme Göre</option>
-                        <option value="players" {% if sort_by == 'players' %}selected{% endif %}>Oyuncu Sayısına Göre</option>
+                        <option value="name" {% if sort_by == 'name' %}selected{% endif %}>{% trans "By Name" %}</option>
+                        <option value="players" {% if sort_by == 'players' %}selected{% endif %}>{% trans "By Player Count" %}</option>
                     </select>
                 </div>
 
-                <!-- Butonlar -->
+                <!-- Buttons -->
                 <div class="col-md-2 d-flex align-items-end">
                     <button type="submit" class="btn btn-primary w-100 me-2">
-                        <i class="fas fa-filter"></i> Filtrele
+                        <i class="fas fa-filter"></i> {% trans "Filter" %}
                     </button>
                     <a href="{% url 'all_games_lobby' %}" class="btn btn-secondary">
                         <i class="fas fa-times"></i>
@@ -104,27 +105,27 @@
                 </div>
             </form>
 
-            <!-- Aktif Filtreler Göstergesi -->
+            <!-- Active Filters Indicator -->
             {% if search_query or min_players_filter or max_players_filter %}
             <div class="mt-3">
-                <small class="text-muted">Aktif Filtreler: </small>
+                <small class="text-muted">{% trans "Active Filters:" %} </small>
                 {% if search_query %}
                     <span class="badge bg-info me-1">
-                        Arama: "{{ search_query }}"
+                        {% trans "Search" %}: "{{ search_query }}"
                         <a href="?{% if min_players_filter %}min_players={{ min_players_filter }}&{% endif %}{% if max_players_filter %}max_players={{ max_players_filter }}&{% endif %}{% if sort_by %}sort={{ sort_by }}{% endif %}" 
                            class="text-white ms-1" style="text-decoration: none;">×</a>
                     </span>
                 {% endif %}
                 {% if min_players_filter %}
                     <span class="badge bg-info me-1">
-                        Min: {{ min_players_filter }}
+                        {% trans "Min" %}: {{ min_players_filter }}
                         <a href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if max_players_filter %}max_players={{ max_players_filter }}&{% endif %}{% if sort_by %}sort={{ sort_by }}{% endif %}" 
                            class="text-white ms-1" style="text-decoration: none;">×</a>
                     </span>
                 {% endif %}
                 {% if max_players_filter %}
                     <span class="badge bg-info me-1">
-                        Max: {{ max_players_filter }}
+                        {% trans "Max" %}: {{ max_players_filter }}
                         <a href="?{% if search_query %}search={{ search_query }}&{% endif %}{% if min_players_filter %}min_players={{ min_players_filter }}&{% endif %}{% if sort_by %}sort={{ sort_by }}{% endif %}" 
                            class="text-white ms-1" style="text-decoration: none;">×</a>
                     </span>
@@ -134,10 +135,10 @@
         </div>
     </div>
 
-    <!-- Sonuç Sayısı -->
+    <!-- Result Count -->
     <div class="mb-3">
         <p class="text-muted">
-            <strong>{{ minigames_list|length }}</strong> oyun bulundu
+            <strong>{{ minigames_list|length }}</strong> {% trans "games found" %}
         </p>
     </div>
 
@@ -150,18 +151,18 @@
                     <div>
                         <h3 class="card-title">{{ game.name }}</h3>
                         <p class="card-text text-muted">
-                            {{ game.description|default:"Bu oyun için bir açıklama bulunmuyor." }}
+                            {{ game.description|default:_("No description available for this game.") }}
                         </p>
                     </div>
 
                     <div>
                         <span class="badge bg-secondary player-count-badge mb-3">
                             <i class="fas fa-users"></i>
-                            {{ game.min_players }} - {{ game.max_players }} Oyuncu
+                            {{ game.min_players }} - {{ game.max_players }} {% trans "Players" %}
                         </span>
 
                         <a href="{% url 'game_specific_lobby' game.slug %}" class="btn btn-primary w-100">
-                            {{ game.name }} Lobisine Git
+                            {% trans "Go to" %} {{ game.name }} {% trans "Lobby" %}
                             <i class="fas fa-arrow-right ms-1"></i>
                         </a>
                     </div>
@@ -171,7 +172,7 @@
         {% empty %}
             <div class="col-12">
                 <div class="alert alert-warning text-center">
-                    Sistemde henüz oynanabilir bir oyun bulunmuyor.
+                    {% trans "No playable games are available in the system yet." %}
                 </div>
             </div>
         {% endfor %}

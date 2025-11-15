@@ -1,7 +1,8 @@
 {% extends 'base.html' %}
+{% load i18n %}
 
 {% block title %}
-{% if game_type %}{{ game_type.name }} - Liderlik Tablosu{% else %}Genel Liderlik Tablosu{% endif %}
+{% if game_type %}{{ game_type.name }} - {% trans "Leaderboard" %}{% else %}{% trans "General Leaderboard" %}{% endif %}
 {% endblock %}
 
 {% block extra_css %}
@@ -51,49 +52,49 @@
         <h1 class="display-4">
             🏆
             {% if game_type %}
-                {{ game_type.name }} Liderlik Tablosu
+                {{ game_type.name }} {% trans "Leaderboard" %}
             {% else %}
-                Genel Liderlik Tablosu
+                {% trans "General Leaderboard" %}
             {% endif %}
         </h1>
         <p class="lead text-muted">
             {% if game_type %}
-                Bu oyun için en iyi oyuncuları keşfedin.
+                {% trans "Discover the best players for this game." %}
             {% else %}
-                Tüm oyunlar genelinde en iyi oyuncuları keşfedin.
+                {% trans "Discover the best players across all games." %}
             {% endif %}
         </p>
     </div>
 
-    <!-- Sıralama Filtreleri -->
+    <!-- Sorting Filters -->
     <div class="card text-bg-dark mb-4 border-secondary">
         <div class="card-body">
             <div class="row align-items-center">
                 <div class="col-md-6">
-                    <label class="form-label">Sıralama:</label>
+                    <label class="form-label">{% trans "Sort by:" %}</label>
                     <div class="btn-group" role="group">
                         <a href="?sort=rank_point&order=desc" 
                            class="btn btn-outline-primary {% if sort_by == 'rank_point' and order == 'desc' %}active{% endif %}">
-                            Rank Puanı
+                            {% trans "Rank Points" %}
                         </a>
                         <a href="?sort=total_wins&order=desc" 
                            class="btn btn-outline-primary {% if sort_by == 'total_wins' and order == 'desc' %}active{% endif %}">
-                            Kazanma
+                            {% trans "Wins" %}
                         </a>
                         <a href="?sort=win_rate&order=desc" 
                            class="btn btn-outline-primary {% if sort_by == 'win_rate' and order == 'desc' %}active{% endif %}">
-                            Kazanma Oranı
+                            {% trans "Win Rate" %}
                         </a>
                         <a href="?sort=total_games&order=desc" 
                            class="btn btn-outline-primary {% if sort_by == 'total_games' and order == 'desc' %}active{% endif %}">
-                            Toplam Oyun
+                            {% trans "Total Games" %}
                         </a>
                     </div>
                 </div>
                 <div class="col-md-6 text-end">
                     {% if user_rank %}
                     <div class="alert alert-info mb-0">
-                        <strong>Sıralamanız:</strong> #{{ user_rank }}
+                        <strong>{% trans "Your Rank:" %}</strong> #{{ user_rank }}
                     </div>
                     {% endif %}
                 </div>
@@ -101,19 +102,19 @@
         </div>
     </div>
 
-    <!-- Liderlik Tablosu -->
+    <!-- Leaderboard Table -->
     <div class="card text-bg-dark border-secondary leaderboard-table">
         <div class="card-body p-0">
             <table class="table table-dark table-hover mb-0">
                 <thead>
                     <tr>
-                        <th style="width: 80px;">Sıra</th>
-                        <th>Oyuncu</th>
-                        <th class="text-center">Rank Puanı</th>
-                        <th class="text-center">Kazanma</th>
-                        <th class="text-center">Kayıp</th>
-                        <th class="text-center">Toplam</th>
-                        <th class="text-center">Kazanma %</th>
+                        <th style="width: 80px;">{% trans "Rank" %}</th>
+                        <th>{% trans "Player" %}</th>
+                        <th class="text-center">{% trans "Rank Points" %}</th>
+                        <th class="text-center">{% trans "Wins" %}</th>
+                        <th class="text-center">{% trans "Losses" %}</th>
+                        <th class="text-center">{% trans "Total" %}</th>
+                        <th class="text-center">{% trans "Win %" %}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -133,7 +134,7 @@
                         <td>
                             <strong>{{ player.username }}</strong>
                             {% if player.id == current_user.id %}
-                                <span class="badge bg-primary ms-2">Siz</span>
+                                <span class="badge bg-primary ms-2">{% trans "You" %}</span>
                             {% endif %}
                         </td>
                         <td class="text-center">
@@ -188,7 +189,7 @@
                     {% empty %}
                     <tr>
                         <td colspan="7" class="text-center py-5">
-                            <p class="text-muted">Henüz oyun oynanmamış.</p>
+                            <p class="text-muted">{% trans "No games have been played yet." %}</p>
                         </td>
                     </tr>
                     {% endfor %}
@@ -197,41 +198,36 @@
         </div>
     </div>
 
-    <!-- Kullanıcı İstatistikleri (Eğer listede değilse) -->
+    <!-- User Statistics (If not in list) -->
     {% if current_user and user_rank and user_rank > 100 and not game_type %}
     <div class="card text-bg-dark mt-4 border-primary">
         <div class="card-header bg-primary">
-            <h5 class="mb-0">Sizin İstatistikleriniz</h5>
+            <h5 class="mb-0">{% trans "Your Statistics" %}</h5>
         </div>
         <div class="card-body">
             <div class="row text-center">
                 <div class="col-md-3">
                     <h4>{{ current_user.rank_point }}</h4>
-                    <p class="text-muted mb-0">Rank Puanı</p>
+                    <p class="text-muted mb-0">{% trans "Rank Points" %}</p>
                 </div>
                 <div class="col-md-3">
                     <h4>{{ current_user.total_wins }}</h4>
-                    <p class="text-muted mb-0">Kazanma</p>
+                    <p class="text-muted mb-0">{% trans "Wins" %}</p>
                 </div>
                 <div class="col-md-3">
                     <h4>{{ current_user.total_losses }}</h4>
-                    <p class="text-muted mb-0">Kayıp</p>
+                    <p class="text-muted mb-0">{% trans "Losses" %}</p>
                 </div>
                 <div class="col-md-3">
                     <h4>{{ current_user.win_rate }}%</h4>
-                    <p class="text-muted mb-0">Kazanma Oranı</p>
+                    <p class="text-muted mb-0">{% trans "Win Rate" %}</p>
                 </div>
             </div>
             <div class="text-center mt-3">
-                <p class="text-muted">Sıralamanız: #{{ user_rank }}</p>
+                <p class="text-muted">{% trans "Your Rank:" %} #{{ user_rank }}</p>
             </div>
         </div>
     </div>
     {% endif %}
 </div>
 {% endblock %}
-
-
-
-
-

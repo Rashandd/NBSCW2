@@ -1,0 +1,747 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2025-11-15 21:45+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: main/consumers.py:361
+#, python-brace-format
+msgid "{username} joined the room."
+msgstr ""
+
+#: main/consumers.py:371
+#, python-brace-format
+msgid "{username} left the room."
+msgstr ""
+
+#: main/consumers.py:429
+#, python-brace-format
+msgid "{username} joined the game."
+msgstr ""
+
+#: main/consumers.py:446
+msgid "You must be logged in."
+msgstr ""
+
+#: main/consumers.py:468
+#, python-brace-format
+msgid "{username} made a move."
+msgstr ""
+
+#: main/consumers.py:497
+#, python-brace-format
+msgid "❌ {player} eliminated! They will no longer take turns."
+msgstr ""
+
+#: main/consumers.py:499
+#, python-brace-format
+msgid "❌ {players} eliminated! They will no longer take turns."
+msgstr ""
+
+#: main/consumers.py:504
+msgid "Game Over!"
+msgstr ""
+
+#: main/consumers.py:508
+#, python-brace-format
+msgid "Turn: {username}"
+msgstr ""
+
+#: main/consumers.py:518
+#, python-brace-format
+msgid "Move could not be made: {error}"
+msgstr ""
+
+#: main/consumers.py:556
+msgid "Game has not started or has ended."
+msgstr ""
+
+#: main/consumers.py:558
+msgid "It is not your turn."
+msgstr ""
+
+#: main/consumers.py:579
+msgid "After the first round, you can only upgrade your own cells."
+msgstr ""
+
+#: main/consumers.py:583
+msgid "This cell belongs to your opponent."
+msgstr ""
+
+#: main/consumers.py:614
+msgid "Only the host can start the game."
+msgstr ""
+
+#: main/consumers.py:616 main/views.py:194
+msgid "Game has already started."
+msgstr ""
+
+#: main/consumers.py:618
+#, python-brace-format
+msgid "At least {min_players} players are required to start the game."
+msgstr ""
+
+#: main/consumers.py:638
+#, python-brace-format
+msgid "Game started! {username} begins."
+msgstr ""
+
+#: main/consumers.py:654
+msgid "Only the host can kick players."
+msgstr ""
+
+#: main/consumers.py:656
+msgid "You cannot kick anyone after the game has started."
+msgstr ""
+
+#: main/consumers.py:658
+msgid "You cannot kick yourself."
+msgstr ""
+
+#: main/views.py:23
+msgid "Voice Chat Rooms"
+msgstr ""
+
+#: main/views.py:36
+#, python-brace-format
+msgid "#{channel_name} Room"
+msgstr ""
+
+#: main/views.py:45 templates/base.html:48
+msgid "Settings"
+msgstr ""
+
+#: main/views.py:138
+#, python-brace-format
+msgid "You already have a waiting table for {game_name}."
+msgstr ""
+
+#: main/views.py:188
+msgid "You are already in this room."
+msgstr ""
+
+#: main/views.py:191
+msgid "Room is full."
+msgstr ""
+
+#: main/views.py:220
+#, python-brace-format
+msgid "{username} joined the table."
+msgstr ""
+
+#: main/views.py:238
+msgid "You did not create this table."
+msgstr ""
+
+#: main/views.py:241
+msgid "Table cannot be deleted after the game has started."
+msgstr ""
+
+#: main/views.py:245
+msgid "You cannot delete the table while others are present."
+msgstr ""
+
+#: main/views.py:249
+msgid "Table closed successfully."
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/_termui_impl.py:556
+#, python-brace-format
+msgid "{editor}: Editing failed"
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/_termui_impl.py:560
+#, python-brace-format
+msgid "{editor}: Editing failed: {e}"
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/core.py:1124
+msgid "Aborted!"
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/core.py:1349
+#: social_empires/venv/Lib/site-packages/click/core.py:1379
+#, python-brace-format
+msgid "(Deprecated) {text}"
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/core.py:1396
+msgid "Options"
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/core.py:1422
+#, python-brace-format
+msgid "Got unexpected extra argument ({args})"
+msgid_plural "Got unexpected extra arguments ({args})"
+msgstr[0] ""
+msgstr[1] ""
+
+#: social_empires/venv/Lib/site-packages/click/core.py:1438
+msgid "DeprecationWarning: The command {name!r} is deprecated."
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/core.py:1645
+msgid "Commands"
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/core.py:1677
+msgid "Missing command."
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/core.py:1755
+msgid "No such command {name!r}."
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/core.py:2313
+msgid "Value must be an iterable."
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/core.py:2334
+#, python-brace-format
+msgid "Takes {nargs} values but 1 was given."
+msgid_plural "Takes {nargs} values but {len} were given."
+msgstr[0] ""
+msgstr[1] ""
+
+#: social_empires/venv/Lib/site-packages/click/core.py:2783
+#, python-brace-format
+msgid "env var: {var}"
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/core.py:2813
+msgid "(dynamic)"
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/core.py:2828
+#, python-brace-format
+msgid "default: {default}"
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/core.py:2841
+msgid "required"
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/decorators.py:457
+#, python-format
+msgid "%(prog)s, version %(version)s"
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/decorators.py:520
+msgid "Show the version and exit."
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/decorators.py:541
+msgid "Show this message and exit."
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/exceptions.py:49
+#: social_empires/venv/Lib/site-packages/click/exceptions.py:88
+#, python-brace-format
+msgid "Error: {message}"
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/exceptions.py:80
+#, python-brace-format
+msgid "Try '{command} {option}' for help."
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/exceptions.py:129
+#, python-brace-format
+msgid "Invalid value: {message}"
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/exceptions.py:131
+#, python-brace-format
+msgid "Invalid value for {param_hint}: {message}"
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/exceptions.py:187
+msgid "Missing argument"
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/exceptions.py:189
+msgid "Missing option"
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/exceptions.py:191
+msgid "Missing parameter"
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/exceptions.py:193
+#, python-brace-format
+msgid "Missing {param_type}"
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/exceptions.py:200
+#, python-brace-format
+msgid "Missing parameter: {param_name}"
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/exceptions.py:220
+#, python-brace-format
+msgid "No such option: {name}"
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/exceptions.py:232
+#, python-brace-format
+msgid "Did you mean {possibility}?"
+msgid_plural "(Possible options: {possibilities})"
+msgstr[0] ""
+msgstr[1] ""
+
+#: social_empires/venv/Lib/site-packages/click/exceptions.py:270
+msgid "unknown error"
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/exceptions.py:277
+msgid "Could not open file {filename!r}: {message}"
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/parser.py:233
+msgid "Argument {name!r} takes {nargs} values."
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/parser.py:415
+msgid "Option {name!r} does not take a value."
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/parser.py:476
+msgid "Option {name!r} requires an argument."
+msgid_plural "Option {name!r} requires {nargs} arguments."
+msgstr[0] ""
+msgstr[1] ""
+
+#: social_empires/venv/Lib/site-packages/click/shell_completion.py:326
+msgid "Shell completion is not supported for Bash versions older than 4.4."
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/shell_completion.py:333
+msgid "Couldn't detect Bash version, shell completion is not supported."
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/termui.py:158
+msgid "Repeat for confirmation"
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/termui.py:174
+msgid "Error: The value you entered was invalid."
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/termui.py:176
+#, python-brace-format
+msgid "Error: {e.message}"
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/termui.py:187
+msgid "Error: The two entered values do not match."
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/termui.py:243
+msgid "Error: invalid input"
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/termui.py:773
+msgid "Press any key to continue..."
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/types.py:267
+#, python-brace-format
+msgid ""
+"Choose from:\n"
+"\t{choices}"
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/types.py:299
+msgid "{value!r} is not {choice}."
+msgid_plural "{value!r} is not one of {choices}."
+msgstr[0] ""
+msgstr[1] ""
+
+#: social_empires/venv/Lib/site-packages/click/types.py:393
+msgid "{value!r} does not match the format {format}."
+msgid_plural "{value!r} does not match the formats {formats}."
+msgstr[0] ""
+msgstr[1] ""
+
+#: social_empires/venv/Lib/site-packages/click/types.py:415
+msgid "{value!r} is not a valid {number_type}."
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/types.py:471
+#, python-brace-format
+msgid "{value} is not in the range {range}."
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/types.py:612
+msgid "{value!r} is not a valid boolean."
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/types.py:636
+msgid "{value!r} is not a valid UUID."
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/types.py:826
+msgid "file"
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/types.py:828
+msgid "directory"
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/types.py:830
+msgid "path"
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/types.py:881
+msgid "{name} {filename!r} does not exist."
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/types.py:890
+msgid "{name} {filename!r} is a file."
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/types.py:898
+msgid "{name} {filename!r} is a directory."
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/types.py:907
+msgid "{name} {filename!r} is not readable."
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/types.py:916
+msgid "{name} {filename!r} is not writable."
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/types.py:925
+msgid "{name} {filename!r} is not executable."
+msgstr ""
+
+#: social_empires/venv/Lib/site-packages/click/types.py:992
+#, python-brace-format
+msgid "{len_type} values are required, but {len_value} was given."
+msgid_plural "{len_type} values are required, but {len_value} were given."
+msgstr[0] ""
+msgstr[1] ""
+
+#: templates/base.html:8
+msgid "Django Project"
+msgstr ""
+
+#: templates/base.html:42
+msgid "Minigames"
+msgstr ""
+
+#: templates/base.html:45 templates/leaderboard.html:5
+#: templates/leaderboard.html:55
+msgid "Leaderboard"
+msgstr ""
+
+#: templates/base.html:56
+msgid "Language"
+msgstr ""
+
+#: templates/game_specific_lobby.html:5 templates/game_specific_lobby.html:12
+#: templates/minigames.html:165
+msgid "Lobby"
+msgstr ""
+
+#: templates/game_specific_lobby.html:15
+msgid "This game is played between"
+msgstr ""
+
+#: templates/game_specific_lobby.html:16
+msgid "and"
+msgstr ""
+
+#: templates/game_specific_lobby.html:17 templates/game_specific_lobby.html:85
+msgid "players"
+msgstr ""
+
+#: templates/game_specific_lobby.html:22
+msgid "My Active Tables"
+msgstr ""
+
+#: templates/game_specific_lobby.html:31
+msgid "Create New Table"
+msgstr ""
+
+#: templates/game_specific_lobby.html:48 templates/minigames.html:161
+msgid "Players"
+msgstr ""
+
+#: templates/game_specific_lobby.html:54
+msgid "Go to Table"
+msgstr ""
+
+#: templates/game_specific_lobby.html:59
+msgid "Close"
+msgstr ""
+
+#: templates/game_specific_lobby.html:67
+msgid "You have no active tables in this game."
+msgstr ""
+
+#: templates/game_specific_lobby.html:72
+msgid "Available Tables to Join"
+msgstr ""
+
+#: templates/game_specific_lobby.html:79
+msgid "Table Host"
+msgstr ""
+
+#: templates/game_specific_lobby.html:89
+msgid "Join Table"
+msgstr ""
+
+#: templates/game_specific_lobby.html:97
+msgid "There are no tables available to join at the moment."
+msgstr ""
+
+#: templates/index.html:10
+msgid "You are logged in. Please select a voice chat room to join."
+msgstr ""
+
+#: templates/index.html:21
+msgid "Private"
+msgstr ""
+
+#: templates/index.html:23
+msgid "Public"
+msgstr ""
+
+#: templates/index.html:25
+msgid "Join this room to communicate with other users via voice."
+msgstr ""
+
+#: templates/index.html:27
+msgid "Join Room"
+msgstr ""
+
+#: templates/index.html:34
+msgid "No rooms have been created yet."
+msgstr ""
+
+#: templates/leaderboard.html:5 templates/leaderboard.html:57
+msgid "General Leaderboard"
+msgstr ""
+
+#: templates/leaderboard.html:62
+msgid "Discover the best players for this game."
+msgstr ""
+
+#: templates/leaderboard.html:64
+msgid "Discover the best players across all games."
+msgstr ""
+
+#: templates/leaderboard.html:74
+msgid "Sort by:"
+msgstr ""
+
+#: templates/leaderboard.html:78 templates/leaderboard.html:113
+#: templates/leaderboard.html:211
+msgid "Rank Points"
+msgstr ""
+
+#: templates/leaderboard.html:82 templates/leaderboard.html:114
+#: templates/leaderboard.html:215
+msgid "Wins"
+msgstr ""
+
+#: templates/leaderboard.html:86 templates/leaderboard.html:223
+msgid "Win Rate"
+msgstr ""
+
+#: templates/leaderboard.html:90
+msgid "Total Games"
+msgstr ""
+
+#: templates/leaderboard.html:97 templates/leaderboard.html:227
+msgid "Your Rank:"
+msgstr ""
+
+#: templates/leaderboard.html:111
+msgid "Rank"
+msgstr ""
+
+#: templates/leaderboard.html:112
+msgid "Player"
+msgstr ""
+
+#: templates/leaderboard.html:115 templates/leaderboard.html:219
+msgid "Losses"
+msgstr ""
+
+#: templates/leaderboard.html:116
+msgid "Total"
+msgstr ""
+
+#: templates/leaderboard.html:117
+#, python-format
+msgid "Win %%"
+msgstr ""
+
+#: templates/leaderboard.html:137
+msgid "You"
+msgstr ""
+
+#: templates/leaderboard.html:192
+msgid "No games have been played yet."
+msgstr ""
+
+#: templates/leaderboard.html:205
+msgid "Your Statistics"
+msgstr ""
+
+#: templates/login.html:8 templates/login.html:47
+msgid "User Login"
+msgstr ""
+
+#: templates/login.html:51
+msgid "Invalid username or password. Please try again."
+msgstr ""
+
+#: templates/login.html:59
+msgid "Username"
+msgstr ""
+
+#: templates/login.html:64
+msgid "Password"
+msgstr ""
+
+#: templates/login.html:70
+msgid "Login"
+msgstr ""
+
+#: templates/login.html:74
+msgid "If you don't have an account, please contact an administrator."
+msgstr ""
+
+#: templates/minigames.html:5 templates/minigames.html:33
+msgid "Game Center"
+msgstr ""
+
+#: templates/minigames.html:34
+msgid "Select the game you want to play."
+msgstr ""
+
+#: templates/minigames.html:44
+msgid "Search Game"
+msgstr ""
+
+#: templates/minigames.html:50
+msgid "Game name or description..."
+msgstr ""
+
+#: templates/minigames.html:57
+msgid "Min Players"
+msgstr ""
+
+#: templates/minigames.html:65 templates/minigames.html:121
+msgid "Min"
+msgstr ""
+
+#: templates/minigames.html:72
+msgid "Max Players"
+msgstr ""
+
+#: templates/minigames.html:80 templates/minigames.html:128
+msgid "Max"
+msgstr ""
+
+#: templates/minigames.html:87
+msgid "Sort"
+msgstr ""
+
+#: templates/minigames.html:92
+msgid "By Name"
+msgstr ""
+
+#: templates/minigames.html:93
+msgid "By Player Count"
+msgstr ""
+
+#: templates/minigames.html:100
+msgid "Filter"
+msgstr ""
+
+#: templates/minigames.html:111
+msgid "Active Filters:"
+msgstr ""
+
+#: templates/minigames.html:114
+msgid "Search"
+msgstr ""
+
+#: templates/minigames.html:141
+msgid "games found"
+msgstr ""
+
+#: templates/minigames.html:154
+msgid "No description available for this game."
+msgstr ""
+
+#: templates/minigames.html:165
+msgid "Go to"
+msgstr ""
+
+#: templates/minigames.html:175
+msgid "No playable games are available in the system yet."
+msgstr ""
+
+#: templates/settings.html:10
+msgid "Configure your preferences for voice communication here."
+msgstr ""
+
+#: templates/settings.html:14
+msgid "Device Preferences"
+msgstr ""
+
+#: templates/settings.html:19
+msgid "Microphone Selection (Input)"
+msgstr ""
+
+#: templates/settings.html:24
+msgid "Speaker Selection (Output)"
+msgstr ""
+
+#: templates/settings.html:30
+msgid "Master Volume Level"
+msgstr ""
+
+#: templates/settings.html:35
+msgid "Microphone Test (Input Level)"
+msgstr ""
+
+#: templates/settings.html:39
+msgid "Save Preferences"
+msgstr ""
+
+#: templates/settings.html:40
+msgid "Your settings have been saved!"
+msgstr ""
+
+#: templates/settings.html:93
+msgid "Please allow microphone access."
+msgstr ""
+
+#: templates/settings.html:107
+msgid "Microphone"
+msgstr ""
+
+#: templates/settings.html:110
+msgid "Speaker"
+msgstr ""

@@ -6,6 +6,7 @@ import random
 from asgiref.sync import sync_to_async, async_to_sync
 from django.contrib.auth import get_user_model
 from django.db import transaction
+from django.utils.translation import gettext as _
 
 from .models import GameSession
 from django.utils import timezone
@@ -357,7 +358,7 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
             "event": "member_joined",
             "sender_id": event["sender_id"],
             "username": event["username"],
-            "message": f"{event['username']} odaya katıldı."
+            "message": _("{username} joined the room.").format(username=event['username'])
         })
 
     # Üye ayrılışını bildir
@@ -367,7 +368,7 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
             "event": "member_left",
             "sender_id": event["sender_id"],
             "username": event["username"],
-            "message": f"{event['username']} odadan ayrıldı."
+            "message": _("{username} left the room.").format(username=event['username'])
         })
 
     # WebRTC sinyallerini istemciye ilet
@@ -425,7 +426,7 @@ class GameConsumer_DiceWars(AsyncJsonWebsocketConsumer):
                 # Odaya yeni katılanı duyur
                 await self.broadcast_game_state(
                     self.game,
-                    message=f"{self.user.username} oyuna katıldı."
+                    message=_("{username} joined the game.").format(username=self.user.username)
                 )
             else:
                 # Odaya zaten katılmış olanlara mevcut durumu gönder
@@ -442,7 +443,7 @@ class GameConsumer_DiceWars(AsyncJsonWebsocketConsumer):
 
     async def receive_json(self, content, **kwargs):
         if not self.user.is_authenticated:
-            await self.send_error("Giriş yapmalısınız.")
+            await self.send_error(_("You must be logged in."))
             return
 
         command_type = content.get('type')
@@ -464,7 +465,7 @@ class GameConsumer_DiceWars(AsyncJsonWebsocketConsumer):
                 await self.send_error(error_msg)
                 return
             player_username = self.user.username
-            await self.broadcast_game_state(game, message=f"{player_username} tıkladı.")
+            await self.broadcast_game_state(game, message=_("{username} made a move.").format(username=player_username))
             await asyncio.sleep(0.1)
 
             reaction_happened = False
@@ -493,18 +494,18 @@ class GameConsumer_DiceWars(AsyncJsonWebsocketConsumer):
             elimination_message = None
             if eliminated_players:
                 if len(eliminated_players) == 1:
-                    elimination_message = f"❌ {eliminated_players[0]} elendi! Artık sıra almayacak."
+                    elimination_message = _("❌ {player} eliminated! They will no longer take turns.").format(player=eliminated_players[0])
                 else:
-                    elimination_message = f"❌ {', '.join(eliminated_players)} elendi! Artık sıra almayacaklar."
+                    elimination_message = _("❌ {players} eliminated! They will no longer take turns.").format(players=', '.join(eliminated_players))
             
             if final_game.status == 'finished':
                 await self.broadcast_game_state(
                     final_game, 
-                    message="Oyun Bitti!",
+                    message=_("Game Over!"),
                     eliminated_players=eliminated_players
                 )
             else:
-                turn_message = f"Sıra {final_game.current_turn.username} kullanıcısında."
+                turn_message = _("Turn: {username}").format(username=final_game.current_turn.username)
                 if elimination_message:
                     turn_message = f"{elimination_message} {turn_message}"
                 await self.broadcast_game_state(
@@ -514,7 +515,7 @@ class GameConsumer_DiceWars(AsyncJsonWebsocketConsumer):
                 )
         except Exception as e:
             print(f"HATA (handle_make_move ASYNC): {e}")
-            await self.send_error(f"Hamle yapılamadı: {e}")
+            await self.send_error(_("Move could not be made: {error}").format(error=str(e)))
 
     async def handle_start_game(self):
         game, message = await self._start_game_db()
@@ -552,9 +553,9 @@ class GameConsumer_DiceWars(AsyncJsonWebsocketConsumer):
         with transaction.atomic():
             game = GameSession.objects.select_for_update().get(game_id=self.game_id)
             if game.status != 'in_progress':
-                return game, False, "Oyun başlamadı veya bitti."
+                return game, False, _("Game has not started or has ended.")
             if game.current_turn != self.user:
-                return game, False, "Sıra sizde değil."
+                return game, False, _("It is not your turn.")
 
             row, col = content.get('row'), content.get('col')
             r_str, c_str = str(row), str(col)
@@ -575,11 +576,11 @@ class GameConsumer_DiceWars(AsyncJsonWebsocketConsumer):
                     }
                 else:
                     # Sonraki turlarda: Boş hücrelere yerleştirme yapılamaz
-                    return game, False, "İlk turdan sonra sadece kendi hücrelerinizi yükseltebilirsiniz."
+                    return game, False, _("After the first round, you can only upgrade your own cells.")
             else:
                 # Dolu hücreye tıklama
                 if cell.get('owner') != self.user.username:
-                    return game, False, "Bu hücre rakibinize ait."
+                    return game, False, _("This cell belongs to your opponent.")
                 # Kendi hücresini yükselt
                 cell['count'] += 1
             
@@ -610,11 +611,11 @@ class GameConsumer_DiceWars(AsyncJsonWebsocketConsumer):
         game = GameSession.objects.select_related('game_type').get(game_id=self.game_id)
 
         if self.user != game.host:
-            return None, "Oyunu sadece kurucu başlatabilir."
+            return None, _("Only the host can start the game.")
         if game.status != 'waiting':
-            return None, "Oyun zaten başladı."
+            return None, _("Game has already started.")
         if game.players.count() < game.game_type.min_players:
-            return None, f"Oyunu başlatmak için en az {game.game_type.min_players} oyuncu gerekiyor."
+            return None, _("At least {min_players} players are required to start the game.").format(min_players=game.game_type.min_players)
 
         # --- Başlatma Mantığı ---
         game.status = 'in_progress'
@@ -634,7 +635,7 @@ class GameConsumer_DiceWars(AsyncJsonWebsocketConsumer):
         # Hamle sayacını sıfırla (ilk tur için)
         game.move_count = 0
         game.save()
-        return game, f"Oyun başladı! {starter.username} başlıyor."
+        return game, _("Game started! {username} begins.").format(username=starter.username)
 
     @database_sync_to_async
     def apply_explosions(self, game_id, cells_to_explode, player_username):
@@ -650,11 +651,11 @@ class GameConsumer_DiceWars(AsyncJsonWebsocketConsumer):
     def _kick_player_db(self, username_to_kick):
         game = GameSession.objects.get(game_id=self.game_id)
         if self.user != game.host:
-            return None, "Sadece kurucu oyuncu atabilir."
+            return None, _("Only the host can kick players.")
         if game.status != 'waiting':
-            return None, "Oyun başladıktan sonra kimseyi atamazsınız."
+            return None, _("You cannot kick anyone after the game has started.")
         if self.user.username == username_to_kick:
-            return None, "Kendinizi atamazsınız."
+            return None, _("You cannot kick yourself.")
 
         try:
             user_to_kick = User.objects.get(username=username_to_kick)
