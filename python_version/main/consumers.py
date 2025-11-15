@@ -480,11 +480,28 @@ class GameConsumer_DiceWars(AsyncJsonWebsocketConsumer):
                 if not cells_to_explode:
                     break
                 reaction_happened = True
-                await asyncio.sleep(0.6)
+                
+                # IMPORTANT: Broadcast current state with cells that WILL explode
+                # This allows all players (including the one who started the reaction) to see explosions
+                # on the current board BEFORE it's updated
+                await self.broadcast_game_state(
+                    game,
+                    exploded_cells=cells_to_explode,  # Cells that WILL explode (for animation)
+                    move_cell=None
+                )
+                await asyncio.sleep(0.25)  # Delay for explosion animation to show
+                
+                # Then apply the explosions and broadcast updated state
                 game, exploded_cells_list = await self.apply_explosions(
                     game.game_id, cells_to_explode, player_username
                 )
-                await self.broadcast_game_state(game, exploded_cells=exploded_cells_list)
+                # Broadcast updated board state (cells are now cleared)
+                await self.broadcast_game_state(
+                    game, 
+                    exploded_cells=None,  # No explosions in this broadcast (already shown)
+                    move_cell=None
+                )
+                await asyncio.sleep(0.1)  # Small delay between explosion rounds
 
             final_game = None
             eliminated_players = []
@@ -494,21 +511,26 @@ class GameConsumer_DiceWars(AsyncJsonWebsocketConsumer):
                 # Patlama olmadıysa, kazananı kontrol etme (Oyun bitmez)
                 final_game, eliminated_players = await self.just_change_turn(game.game_id, self.user)
 
-            await asyncio.sleep(0.6)
+            await asyncio.sleep(0.3)  # Faster turn change delay
             
-            # Elenmiş oyuncular varsa mesaj ekle
+            # Only show elimination message if there are NEW eliminations (not already shown)
+            # Get previously eliminated players from the game state
+            previous_eliminated = set(final_game.eliminated_players) if final_game.eliminated_players else set()
+            new_eliminated = [p for p in eliminated_players if p not in previous_eliminated]
+            
             elimination_message = None
-            if eliminated_players:
-                if len(eliminated_players) == 1:
-                    elimination_message = _("❌ {player} eliminated! They will no longer take turns.").format(player=eliminated_players[0])
+            if new_eliminated:  # Only show message for NEW eliminations
+                if len(new_eliminated) == 1:
+                    elimination_message = _("❌ {player} eliminated! They will no longer take turns.").format(player=new_eliminated[0])
                 else:
-                    elimination_message = _("❌ {players} eliminated! They will no longer take turns.").format(players=', '.join(eliminated_players))
+                    elimination_message = _("❌ {players} eliminated! They will no longer take turns.").format(players=', '.join(new_eliminated))
             
             if final_game.status == 'finished':
                 await self.broadcast_game_state(
                     final_game, 
                     message=_("Game Over!"),
-                    eliminated_players=eliminated_players
+                    eliminated_players=eliminated_players,
+                    move_cell=None
                 )
             else:
                 turn_message = _("Turn: {username}").format(username=final_game.current_turn.username)
@@ -517,7 +539,8 @@ class GameConsumer_DiceWars(AsyncJsonWebsocketConsumer):
                 await self.broadcast_game_state(
                     final_game,
                     message=turn_message,
-                    eliminated_players=eliminated_players
+                    eliminated_players=eliminated_players,
+                    move_cell=None  # No move cell for turn change
                 )
         except Exception as e:
             print(f"HATA (handle_make_move ASYNC): {e}")

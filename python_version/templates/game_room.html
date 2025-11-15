@@ -354,6 +354,9 @@
 
         let playerColors = {};
         let playerUsernames = [];
+        // Track eliminated players that have already been shown (to avoid duplicate messages)
+        let shownEliminatedPlayers = new Set(eliminatedPlayers || []);
+        
         // Enhanced dice icons with better visual representation
         const diceIcons = { 
             1: 'fa-dice-one', 
@@ -409,8 +412,10 @@
                 // 1. Update player info first
                 if (data.players) {
                     playerUsernames = data.players;
-                    if (data.eliminated_players) {
+                    if (data.eliminated_players !== undefined) {
                         eliminatedPlayers = data.eliminated_players;
+                        // Update shown eliminated players set
+                        data.eliminated_players.forEach(p => shownEliminatedPlayers.add(p));
                     }
                     updatePlayerList(data.players, eliminatedPlayers, data.winner);
 
@@ -460,9 +465,12 @@
                 }
 
                 // 6. IMPROVED: Proper animation sequencing
-                // First, show move animation on the moved cell (for all players)
+                // IMPORTANT: Show animations on CURRENT board BEFORE rendering new state
+                
+                // First, show move animation on the moved cell (for all players) - BEFORE rendering new board
                 if (data.move_cell && data.move_cell.length === 2) {
                     const [moveRow, moveCol] = data.move_cell;
+                    // Find cell on CURRENT board (before render)
                     const moveCell = boardElement.querySelector(`.cell[data-row="${moveRow}"][data-col="${moveCol}"]`);
                     if (moveCell) {
                         moveCell.classList.add('move-highlight');
@@ -470,23 +478,44 @@
                             moveCell.classList.remove('move-highlight');
                         }, 800);
                     }
+                    // Small delay to see the move animation
+                    await sleep(150);
                 }
                 
-                // Then, render board with new state
-                renderBoard(data.state);
-                
-                // Small delay to see the move before explosions
-                await sleep(200);
-                
-                // Then, if there are explosions, show them sequentially (faster)
+                // IMPORTANT: Show explosions on CURRENT board BEFORE rendering new state
+                // This ensures explosions are visible on the cells that are about to be cleared
                 if (data.exploded_cells && data.exploded_cells.length > 0) {
+                    // Show explosions on current board state
                     await triggerSequentialExplosions(data.exploded_cells);
+                    // Small delay after explosions
+                    await sleep(100);
+                }
+                
+                // Then, render board with new state (this updates the board for all players)
+                // This happens AFTER animations so animations are visible on the old board
+                if (data.state) {
+                    renderBoard(data.state);
+                    // Small delay to see the updated board
+                    await sleep(50);
                 }
 
-                // After explosions, handle eliminations (faster now)
-                if (data.eliminated_players && data.eliminated_players.length > 0) {
-                    await sleep(150); // Small gap after explosions
-                    await handlePlayerElimination(data.eliminated_players);
+                // After explosions, handle eliminations (only NEW ones - avoid duplicate messages)
+                if (data.eliminated_players !== undefined && data.eliminated_players.length > 0) {
+                    // Check which players are newly eliminated (not shown before)
+                    const newlyEliminated = data.eliminated_players.filter(p => !shownEliminatedPlayers.has(p));
+                    
+                    // Update our tracking
+                    eliminatedPlayers = data.eliminated_players;
+                    newlyEliminated.forEach(p => shownEliminatedPlayers.add(p));
+                    
+                    // Only show animation for newly eliminated players
+                    if (newlyEliminated.length > 0) {
+                        await sleep(150); // Small gap after explosions
+                        await handlePlayerElimination(newlyEliminated);
+                    }
+                } else if (data.eliminated_players !== undefined) {
+                    // Update tracking even if empty array
+                    eliminatedPlayers = data.eliminated_players || [];
                 }
 
                 // Finally, log message if not game start
@@ -638,19 +667,22 @@
         }
 
         // IMPROVED: Sequential explosions with better timing and visual effects
+        // This function shows explosions on the CURRENT board state (before it's updated)
         async function triggerSequentialExplosions(explodedCells) {
-            const EXPLOSION_DELAY = 100; // Much faster explosions
+            const EXPLOSION_DELAY = 80; // Much faster explosions
             for (const coords of explodedCells) {
                 const [r, c] = coords;
+                // Find cell on CURRENT board (before new state is rendered)
                 const cellEl = boardElement.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
                 if (cellEl) {
-                    const playerClass = Array.from(cellEl.classList).find(c => c.startsWith('p'));
+                    // Get player color from current cell classes
+                    const playerClass = Array.from(cellEl.classList).find(cls => cls.startsWith('p'));
                     const color = playerClass ? `var(--${playerClass}-color)` : 'var(--cell-border)';
                     createExplosion(cellEl, color);
                     await sleep(EXPLOSION_DELAY);
                 }
             }
-            await sleep(200); // Shorter wait after all explosions
+            await sleep(150); // Shorter wait after all explosions
         }
         function renderBoard(boardState) {
             boardElement.innerHTML = '';
