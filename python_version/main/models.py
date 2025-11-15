@@ -4,8 +4,6 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 
 import uuid
-from django.db import models
-from django.contrib.auth.models import User
 from django.db.models import JSONField
 from django.template.defaultfilters import truncatechars
 from django.utils.text import slugify
@@ -98,14 +96,14 @@ class GameSession(models.Model):
     ]
     game_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     host = models.ForeignKey(
-        User,
+        settings.AUTH_USER_MODEL,
         related_name='hosted_games',
         on_delete=models.CASCADE,
         default=None,
         null=True
     )
     players = models.ManyToManyField(
-        User,
+        settings.AUTH_USER_MODEL,
         related_name='game_sessions',
         blank=True
     )
@@ -116,9 +114,9 @@ class GameSession(models.Model):
     board_size = models.PositiveSmallIntegerField(default=5, verbose_name="Tahta Boyutu (N x N)")
     # --------------------------
 
-    current_turn = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True)
+    current_turn = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='waiting')
-    winner = models.ForeignKey(User, related_name='games_won', on_delete=models.CASCADE, null=True, blank=True)
+    winner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='games_won', on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     @property

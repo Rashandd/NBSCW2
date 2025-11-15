@@ -5,7 +5,6 @@ import random
 
 from asgiref.sync import sync_to_async, async_to_sync
 from django.contrib.auth import get_user_model
-from django.contrib.auth import get_user_model
 from django.db import transaction
 
 from .models import GameSession
@@ -15,7 +14,6 @@ User = get_user_model()
 from channels.generic.websocket import AsyncJsonWebsocketConsumer, AsyncWebsocketConsumer
 from urllib.parse import parse_qs
 from channels.db import database_sync_to_async
-from django.contrib.auth import get_user_model
 from .models import VoiceChannel
 logger = logging.getLogger('main') # İstediğiniz bir isim verin
 
@@ -131,6 +129,31 @@ class DiceWars:
                 if cell and cell.get('owner') == player_username:
                     count += 1
         return count
+    
+    def check_and_get_eliminated_players(self, game):
+        """
+        Tahtada hiç taşı kalmayan oyuncuları bulur ve döndürür.
+        Returns: list of usernames who have no pieces left
+        """
+        eliminated = []
+        board_state = game.board_state
+        if not board_state:
+            return eliminated
+        
+        # Tüm aktif oyuncuları al
+        active_players = set(p.username for p in game.players.all())
+        
+        # Tahtada hala taşı olan oyuncuları bul
+        players_with_pieces = set()
+        for r_key, row in board_state.items():
+            for c_key, cell in row.items():
+                if cell and cell.get('owner'):
+                    players_with_pieces.add(cell.get('owner'))
+        
+        # Tahtada taşı olmayan ama hala oyunda olan oyuncuları bul
+        eliminated = list(active_players - players_with_pieces)
+        
+        return eliminated
 
 class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
 
@@ -393,19 +416,37 @@ class GameConsumer_DiceWars(AsyncJsonWebsocketConsumer):
                 await self.broadcast_game_state(game, exploded_cells=exploded_cells_list)
 
             final_game = None
+            eliminated_players = []
             if reaction_happened:
-                final_game = await self.check_winner_and_change_turn(game.game_id, self.user)
+                final_game, eliminated_players = await self.check_winner_and_change_turn(game.game_id, self.user)
             else:
                 # Patlama olmadıysa, kazananı kontrol etme (Oyun bitmez)
-                final_game = await self.just_change_turn(game.game_id, self.user)
+                final_game, eliminated_players = await self.just_change_turn(game.game_id, self.user)
 
             await asyncio.sleep(0.6)
+            
+            # Elenmiş oyuncular varsa mesaj ekle
+            elimination_message = None
+            if eliminated_players:
+                if len(eliminated_players) == 1:
+                    elimination_message = f"❌ {eliminated_players[0]} elendi! Artık sıra almayacak."
+                else:
+                    elimination_message = f"❌ {', '.join(eliminated_players)} elendi! Artık sıra almayacaklar."
+            
             if final_game.status == 'finished':
-                await self.broadcast_game_state(final_game, message="Oyun Bitti!")
+                await self.broadcast_game_state(
+                    final_game, 
+                    message="Oyun Bitti!",
+                    eliminated_players=eliminated_players
+                )
             else:
+                turn_message = f"Sıra {final_game.current_turn.username} kullanıcısında."
+                if elimination_message:
+                    turn_message = f"{elimination_message} {turn_message}"
                 await self.broadcast_game_state(
                     final_game,
-                    message=f"Sıra {final_game.current_turn.username} kullanıcısında."
+                    message=turn_message,
+                    eliminated_players=eliminated_players
                 )
         except Exception as e:
             print(f"HATA (handle_make_move ASYNC): {e}")
@@ -543,61 +584,102 @@ class GameConsumer_DiceWars(AsyncJsonWebsocketConsumer):
     @database_sync_to_async
     def check_winner_and_change_turn(self, game_id, user):
         """
-        Kazananı KONTROL EDER ve sırayı değiştirir.
+        Kazananı KONTROL EDER, elenmiş oyuncuları kontrol eder ve sırayı değiştirir.
+        Returns: (game, eliminated_players_list)
         """
         with transaction.atomic():
             game = GameSession.objects.get(game_id=game_id)
 
-            # --- DÜZELTME: KAZANAN KONTROLÜ ---
-            # check_for_winner fonksiyonunuzun doğru çalıştığını varsayıyoruz
-            # (Yani >1 oyuncu varken 1 sahibi kalırsa bitiriyor)
+            # --- ELENMİŞ OYUNCULARI KONTROL ET ---
+            eliminated_usernames = dw.check_and_get_eliminated_players(game)
+            eliminated_players = []
+            
+            if eliminated_usernames:
+                # Elenmiş oyuncuları User objelerine çevir
+                for username in eliminated_usernames:
+                    try:
+                        eliminated_user = User.objects.get(username=username)
+                        eliminated_players.append(eliminated_user)
+                        # Oyuncuyu players listesinden çıkar (artık sıra almayacak)
+                        game.players.remove(eliminated_user)
+                    except User.DoesNotExist:
+                        pass
 
-            # Toplam oyuncu sayısını al
-            players_list = list(game.players.all())
-            total_players = len(players_list)
-
-            # check_for_winner'a toplam oyuncu sayısını yolla
-            # (Eğer fonksiyonunuz 3 argüman almıyorsa, eski "check_for_winner(game, user)" satırını kullanın)
+            # --- KAZANAN KONTROLÜ ---
             try:
                 dw.check_for_winner(game, user)
             except TypeError:
-                # Önceki dersteki `check_for_winner` tanımını (2 argümanlı) kullan
                 dw.check_for_winner(game, user)
 
+            # --- SIRAYI DEĞİŞTİR (Elenmiş oyuncuları atla) ---
             if game.status != 'finished':
-                current_turn_index = players_list.index(user)
-                next_turn_index = (current_turn_index + 1) % len(players_list)
-                game.current_turn = players_list[next_turn_index]
+                players_list = list(game.players.all())
+                if players_list:  # Hala oyuncu varsa
+                    try:
+                        current_turn_index = players_list.index(user)
+                        # Sonraki oyuncuyu bul (elenmiş oyuncuları atla)
+                        next_turn_index = (current_turn_index + 1) % len(players_list)
+                        game.current_turn = players_list[next_turn_index]
+                    except ValueError:
+                        # Eğer mevcut oyuncu listede yoksa (elenmiş olabilir), ilk oyuncuyu al
+                        if players_list:
+                            game.current_turn = players_list[0]
+                else:
+                    # Hiç oyuncu kalmadıysa oyunu bitir
+                    game.status = 'finished'
 
             game.save()
-            return game
+            return game, eliminated_usernames
 
     # --- YENİ YARDIMCI FONKSİYON ---
     @database_sync_to_async
     def just_change_turn(self, game_id, user):
         """
         Kazananı KONTROL ETMEDEN sadece sırayı değiştirir.
+        Elenmiş oyuncuları kontrol eder ve atlar.
+        Returns: (game, eliminated_players_list)
         """
         with transaction.atomic():
             game = GameSession.objects.get(game_id=game_id)
 
-            # check_for_winner(game, user) <-- BU SATIR KASITLI OLARAK YOK
+            # --- ELENMİŞ OYUNCULARI KONTROL ET ---
+            eliminated_usernames = dw.check_and_get_eliminated_players(game)
+            eliminated_players = []
+            
+            if eliminated_usernames:
+                # Elenmiş oyuncuları User objelerine çevir
+                for username in eliminated_usernames:
+                    try:
+                        eliminated_user = User.objects.get(username=username)
+                        eliminated_players.append(eliminated_user)
+                        # Oyuncuyu players listesinden çıkar (artık sıra almayacak)
+                        game.players.remove(eliminated_user)
+                    except User.DoesNotExist:
+                        pass
 
             if game.status == 'in_progress':  # Sadece oyun sürüyorsa
                 players_list = list(game.players.all())
-                if user in players_list:
-                    current_turn_index = players_list.index(user)
-                    next_turn_index = (current_turn_index + 1) % len(players_list)
-                    game.current_turn = players_list[next_turn_index]
+                if players_list:  # Hala oyuncu varsa
+                    if user in players_list:
+                        current_turn_index = players_list.index(user)
+                        next_turn_index = (current_turn_index + 1) % len(players_list)
+                        game.current_turn = players_list[next_turn_index]
+                    else:
+                        # Eğer mevcut oyuncu listede yoksa (elenmiş olabilir), ilk oyuncuyu al
+                        game.current_turn = players_list[0]
+                else:
+                    # Hiç oyuncu kalmadıysa oyunu bitir
+                    game.status = 'finished'
 
             game.save()
-            return game
+            return game, eliminated_usernames
 
-    async def broadcast_game_state(self, game, message=None, exploded_cells=None, special_event=None):
+    async def broadcast_game_state(self, game, message=None, exploded_cells=None, special_event=None, eliminated_players=None):
         state_data = await self.get_game_state_data_async(game)
         state_data['message'] = message
         state_data['exploded_cells'] = exploded_cells if exploded_cells else []
         state_data['special_event'] = special_event # 'start_game' için eklendi
+        state_data['eliminated_players'] = eliminated_players if eliminated_players else []
         await self.channel_layer.group_send(self.game_group_name, state_data)
 
     def broadcast_game_state_sync(self, game, message=None, exploded_cells=None):

@@ -92,6 +92,9 @@ DATABASES = {
     }
 }
 
+# Custom User Model
+AUTH_USER_MODEL = 'main.CustomUser'
+
 LOGIN_REDIRECT_URL = '/' # Kök dizine (anasayfaya) yönlendir
 
 # Kullanıcının giriş yapması gerektiğinde yönlendirileceği URL'in adı
