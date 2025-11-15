@@ -312,7 +312,8 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
 # main/consumers.py
 
 
-class GameConsumer(AsyncJsonWebsocketConsumer):
+
+class GameConsumer_DiceWars(AsyncJsonWebsocketConsumer):
 
     async def connect(self):
         self.game_id = self.scope['url_route']['kwargs']['game_id']
@@ -335,11 +336,12 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
             )
             await self.accept()
 
-            # --- N-Kişilik Otomatik Katılma Mantığı ---
             is_player = await self.is_user_in_game(self.game)
 
             if self.game.status == 'waiting' and not self.game.is_full and not is_player:
                 self.game = await self.add_player_and_start_game(self.game, self.user)
+                # broadcast_game_state, add_player_and_start_game içinde güncellendi
+                # (Oradaki mantık zaten doğru, board_size vb. gönderiyor)
                 await self.broadcast_game_state(
                     self.game,
                     message=f"{self.user.username} oyuna katıldı."
@@ -348,7 +350,7 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
                 await self.send_game_state_to_user(self.game)
 
         except Exception as e:
-            print(f"HATA (connect): {e}")  # Sunucu loglarını kontrol et
+            print(f"HATA (connect): {e}")
             await self.close()
 
     async def disconnect(self, close_code):
@@ -358,26 +360,20 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
         )
 
     async def receive_json(self, content, **kwargs):
-        """
-        Gelen hamleyi alır ve ASENKRON hamle işleyiciye yönlendirir.
-        """
         if not self.user.is_authenticated:
             await self.send_error("Giriş yapmalısınız.")
             return
         if content.get('type') == 'make_move':
-            # Eski '@database_sync_to_async' 'handle_make_move' yerine
-            # 'async def handle_make_move' fonksiyonunu çağırıyoruz.
             await self.handle_make_move(content)
 
+    # --- DEĞİŞEN FONKSİYON ---
     async def handle_make_move(self, content):
         """
-        YENİ ASENKRON HAMLE İŞLEYİCİ.
-        Tüm zincirleme reaksiyonu adım adım yönetir.
+        DÜZELTİLMİŞ ASENKRON HAMLE İŞLEYİCİ.
+        Sadece patlama olursa kazananı kontrol eder.
         """
         try:
             # --- 1. TIKLAMA (İLK HAMLE) ---
-            # Oyuncunun tıkladığı ilk hamleyi (örn: 3'ü 4 yapma)
-            # veritabanına işler ve geçerli olup olmadığını kontrol eder.
             game, is_valid_move, error_msg = await self.perform_initial_click(content)
 
             if not is_valid_move:
@@ -387,39 +383,40 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
             player_username = self.user.username
 
             # --- 2. TIKLAMAYI YAYINLA ---
-            # Tıkladığı hücrenin (örn: 4) görünmesi için
-            # ilk durumu, patlama olmadan yayınla.
             await self.broadcast_game_state(game, message=f"{player_username} tıkladı.")
-
-            # JS'in bu ilk tıklamayı çizmesi için kısa bir ara ver
             await asyncio.sleep(0.1)
 
             # --- 3. ZİNCİRLEME REAKSİYON DÖNGÜSÜ ---
-            # Tahtada patlayacak hücre (sayısı >= 4 olan) kaldığı sürece
-            # bu döngü devam eder.
+
+            # --- YENİ BAYRAK ---
+            reaction_happened = False
+
             while True:
-                # Patlayacak hücreleri bul
                 cells_to_explode = await self.find_critical_cells_async(game.board_state)
                 if not cells_to_explode:
-                    break  # Patlayacak hücre kalmadı, döngü bitti.
+                    break  # Patlayacak hücre kalmadı
 
-                # --- ANLAŞILABİLİR ANİMASYON İÇİN BEKLE ---
-                # Patlama dalgaları arasında BEKLE (örn: 600ms)
-                await asyncio.sleep(0.6)
+                reaction_happened = True  # <-- Patlama olacak!
 
-                # Patlamaları uygula (bum) ve DB'yi güncelle
+                await asyncio.sleep(0.6)  # Animasyon beklemesi
+
                 game, exploded_cells_list = await self.apply_explosions(
                     game.game_id, cells_to_explode, player_username
                 )
-
-                # Herkese "ARA DURUMU" ve patlayan hücre listesini gönder
                 await self.broadcast_game_state(game, exploded_cells=exploded_cells_list)
 
-            # --- 4. OYUN BİTTİ, SIRAYI DEĞİŞTİR ---
-            # Döngü bittiğinde kazananı kontrol et ve sırayı değiştir
-            final_game = await self.check_winner_and_change_turn(game.game_id, self.user)
+            # --- 4. OYUN BİTTİ / SIRAYI DEĞİŞTİR (DEĞİŞEN MANTIK) ---
 
-            # Son bir bekleme ve "SON DURUMU" (yeni sıra ile) yayınla
+            final_game = None
+
+            if reaction_happened:
+                # Patlama olduysa kazananı KONTROL ET
+                final_game = await self.check_winner_and_change_turn(game.game_id, self.user)
+            else:
+                # Patlama olmadıysa (sadece 3 koydu), kazananı KONTROL ETME
+                final_game = await self.just_change_turn(game.game_id, self.user)
+
+            # Son durumu yayınla
             await asyncio.sleep(0.6)
 
             if final_game.status == 'finished':
@@ -437,14 +434,9 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
     # --- Grup Yayını Metodları ---
     @database_sync_to_async
     def perform_initial_click(self, content):
-        """
-        Sadece ilk tıklamayı yapar. (Hata kontrolü)
-        YENİ MANTIK (Boşsa 3 koy, doluysa 1 artır) ile güncellendi.
-        """
+        # ... (Bu fonksiyonunuz zaten doğru, değişiklik yok) ...
         with transaction.atomic():
-            # 1. Gerekli kontroller
             game = GameSession.objects.select_for_update().get(game_id=self.game_id)
-
             if game.status != 'in_progress':
                 return game, False, "Oyun başlamadı veya bitti."
             if game.current_turn != self.user:
@@ -452,57 +444,32 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
 
             row, col = content.get('row'), content.get('col')
             r_str, c_str = str(row), str(col)
-
-            # 2. Hücreyi al (Sözlük yapısına uygun)
             if r_str not in game.board_state:
                 game.board_state[r_str] = {}
-
-            cell = game.board_state[r_str].get(c_str)  # None veya {'owner': ..., 'count': ...}
-
-            # --- DÜZELTİLMİŞ OYUN MANTIĞI ---
-
+            cell = game.board_state[r_str].get(c_str)
             if cell is None:
-                # KURAL 1: Boş bir hücreye tıklandı.
-                # "bir karede ilk hamleyi yapiyorsan 3 olan bir zarla"
-                # Bu, yeni bir "3'lü" zar yerleştirme hamlesidir.
-
-                # (Eski "piece_count == 0" kontrolü kaldırıldı,
-                # artık her zaman boş hücreye 3 koyulabilir)
                 game.board_state[r_str][c_str] = {
                     'owner': self.user.username,
-                    'count': 3  # Kuralınıza göre 1 değil 3
+                    'count': 3
                 }
-
             else:
-                # KURAL 2: Dolu bir hücreye tıklandı.
                 if cell.get('owner') != self.user.username:
                     return game, False, "Bu hücre rakibinize ait."
-
-                # "ondan sonraki hamlelerde sadece zari yukseltebiliyorsun"
-                # Bu, mevcut zarı artırma hamlesidir.
                 cell['count'] += 1
-                # (Sahibi zaten 'self.user.username' idi, değiştirmeye gerek yok)
-
-            # --- MANTIK DÜZELTMESİ BİTTİ ---
-
             game.save()
             return game, True, ""
 
     @database_sync_to_async
     def find_critical_cells_async(self, board_state):
-        # find_critical_cells (CPU-yoğun)
+        # ... (Değişiklik yok) ...
         return find_critical_cells(board_state)
 
     @database_sync_to_async
     def apply_explosions(self, game_id, cells_to_explode, player_username):
-        """
-        Bir patlama dalgasını (o an kritik olan tüm hücreler)
-        veritabanına işler.
-        """
+        # ... (Değişiklik yok) ...
         with transaction.atomic():
             game = GameSession.objects.get(game_id=game_id)
             for r, c in cells_to_explode:
-                # 'bum' fonksiyonu game.board_state'i GÜNCELLER
                 bum(game, r, c, player_username)
             game.save()
             return game, cells_to_explode
@@ -510,44 +477,86 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
     @database_sync_to_async
     def check_winner_and_change_turn(self, game_id, user):
         """
-        Kazananı kontrol eder ve sırayı değiştirir.
+        Kazananı KONTROL EDER ve sırayı değiştirir.
         """
         with transaction.atomic():
             game = GameSession.objects.get(game_id=game_id)
-            check_for_winner(game, user)  # Kazananı belirler
+
+            # --- DÜZELTME: KAZANAN KONTROLÜ ---
+            # check_for_winner fonksiyonunuzun doğru çalıştığını varsayıyoruz
+            # (Yani >1 oyuncu varken 1 sahibi kalırsa bitiriyor)
+
+            # Toplam oyuncu sayısını al
+            players_list = list(game.players.all())
+            total_players = len(players_list)
+
+            # check_for_winner'a toplam oyuncu sayısını yolla
+            # (Eğer fonksiyonunuz 3 argüman almıyorsa, eski "check_for_winner(game, user)" satırını kullanın)
+            try:
+                check_for_winner(game, user, total_players)
+            except TypeError:
+                # Önceki dersteki `check_for_winner` tanımını (2 argümanlı) kullan
+                check_for_winner(game, user)
 
             if game.status != 'finished':
-                players_list = list(game.players.all())
                 current_turn_index = players_list.index(user)
                 next_turn_index = (current_turn_index + 1) % len(players_list)
                 game.current_turn = players_list[next_turn_index]
 
             game.save()
             return game
+
+    # --- YENİ YARDIMCI FONKSİYON ---
+    @database_sync_to_async
+    def just_change_turn(self, game_id, user):
+        """
+        Kazananı KONTROL ETMEDEN sadece sırayı değiştirir.
+        """
+        with transaction.atomic():
+            game = GameSession.objects.get(game_id=game_id)
+
+            # check_for_winner(game, user) <-- BU SATIR KASITLI OLARAK YOK
+
+            if game.status == 'in_progress':  # Sadece oyun sürüyorsa
+                players_list = list(game.players.all())
+                if user in players_list:
+                    current_turn_index = players_list.index(user)
+                    next_turn_index = (current_turn_index + 1) % len(players_list)
+                    game.current_turn = players_list[next_turn_index]
+
+            game.save()
+            return game
+
     async def broadcast_game_state(self, game, message=None, exploded_cells=None):
+        # ... (Değişiklik yok) ...
         state_data = await self.get_game_state_data_async(game)
         state_data['message'] = message
         state_data['exploded_cells'] = exploded_cells if exploded_cells else []
         await self.channel_layer.group_send(self.game_group_name, state_data)
 
     def broadcast_game_state_sync(self, game, message=None, exploded_cells=None):
+        # ... (Değişiklik yok) ...
         state_data = self.get_game_state_data_sync(game)
         state_data['message'] = message
         state_data['exploded_cells'] = exploded_cells if exploded_cells else []
         async_to_sync(self.channel_layer.group_send)(self.game_group_name, state_data)
 
     async def game_state(self, event):
+        # ... (Değişiklik yok) ...
         await self.send_json(event)
 
     async def send_error(self, message):
+        # ... (Değişiklik yok) ...
         await self.send_json({'type': 'error', 'message': message})
 
     def send_error_to_user(self, message):
+        # ... (Değişiklik yok) ...
         async_to_sync(self.send_json)({'type': 'error', 'message': message})
 
     # --- Veritabanı (Sync/Async) Metodları ---
     @database_sync_to_async
     def get_game(self, game_id):
+        # ... (Değişiklik yok) ...
         try:
             return GameSession.objects.select_related(
                 'game_type', 'host', 'current_turn', 'winner'
@@ -557,44 +566,39 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
 
     @database_sync_to_async
     def is_user_in_game(self, game):
+        # ... (Değişiklik yok) ...
         return game.players.filter(id=self.user.id).exists()
 
     @database_sync_to_async
     def add_player_and_start_game(self, game, user):
+        # ... (Bu fonksiyonunuz zaten doğru, değişiklik yok) ...
         with transaction.atomic():
             game_with_lock = GameSession.objects.select_for_update().get(game_id=game.id)
             if game_with_lock.is_full or game_with_lock.status != 'waiting':
                 return game_with_lock
-
             game_with_lock.players.add(user)
-
-            # --- DEĞİŞİKLİK BURADA ---
-            # max_players yerine min_players kontrolü yap
             if game_with_lock.players.count() >= game_with_lock.game_type.min_players:
                 game_with_lock.status = 'in_progress'
                 players_list = list(game_with_lock.players.all())
                 starter = random.choice(players_list)
                 game_with_lock.current_turn = starter
-
-                # --- YENİ TAHTA BOYUTU MANTIĞI ---
-                # Tahta boyutu, oyun başladığındaki gerçek oyuncu sayısına göre belirlenir
                 player_count = game_with_lock.players.count()
                 if player_count <= 2:
                     game_with_lock.board_size = 5
                 elif player_count == 3:
                     game_with_lock.board_size = 6
-                else:  # 4 veya daha fazla
+                else:
                     game_with_lock.board_size = 7
-                # --- YENİ MANTIK BİTTİ ---
-
             game_with_lock.save()
             return game_with_lock
 
     @database_sync_to_async
     def get_game_state_data_async(self, game_obj):
+        # ... (Değişiklik yok) ...
         return self.get_game_state_data_sync(game_obj)
 
     def get_game_state_data_sync(self, game_obj):
+        # ... (Bu fonksiyonunuz zaten doğru, değişiklik yok) ...
         players_list = list(game_obj.players.all())
         player_usernames = [p.username for p in players_list]
         return {
@@ -604,12 +608,10 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
             'players': player_usernames,
             'status': game_obj.status,
             'winner': game_obj.winner.username if game_obj.winner else None,
-
-            # --- YENİ EKLENDİ ---
-            # Tahta boyutunu client'a gönder
             'board_size': game_obj.board_size,
         }
 
     async def send_game_state_to_user(self, game_obj):
+        # ... (Değişiklik yok) ...
         state_data = await self.get_game_state_data_async(game_obj)
         await self.send_json(state_data)

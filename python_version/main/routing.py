@@ -6,6 +6,6 @@ websocket_urlpatterns = [
     re_path(r'ws/voice/$', consumers.VoiceChatConsumer.as_asgi()),
     re_path(
         r'ws/dice-wars/(?P<game_id>[0-9a-f-]+)/$',
-        consumers.GameConsumer.as_asgi()
+        consumers.GameConsumer_DiceWars.as_asgi()
     ),
 ]
