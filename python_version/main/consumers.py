@@ -8,10 +8,61 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 
 from .models import GameSession
+from django.utils import timezone
 
 User = get_user_model()
 
 from channels.generic.websocket import AsyncJsonWebsocketConsumer, AsyncWebsocketConsumer
+
+
+def update_player_rankings(game, winner):
+    """
+    Oyun bittiğinde oyuncuların istatistiklerini günceller (sync).
+    """
+    with transaction.atomic():
+        # Game'i yeniden yükle (fresh from DB)
+        game = GameSession.objects.get(game_id=game.game_id)
+        all_players = list(game.players.all())
+
+        # Bu oyunun slug'ı (oyun bazlı istatistikler için key)
+        game_slug = game.game_type.slug if game.game_type else "unknown"
+
+        for player in all_players:
+            # --- Global istatistikler ---
+            player.total_games += 1
+            if player == winner:
+                player.total_wins += 1
+                # Kazanan için global rank point (oyuncu sayısına göre)
+                global_points = len(all_players) * 10
+                player.rank_point += global_points
+            else:
+                player.total_losses += 1
+                # Kaybeden için küçük bir bonus (oyuna katıldığı için)
+                player.rank_point += 5
+
+            # --- Oyun bazlı istatistikler (per_game_stats JSONField) ---
+            stats = player.per_game_stats or {}
+            game_stats = stats.get(game_slug, {
+                "rank_point": 0,
+                "wins": 0,
+                "losses": 0,
+                "games": 0,
+            })
+
+            game_stats["games"] += 1
+            if player == winner:
+                game_stats["wins"] += 1
+                # Oyun bazlı rank point
+                game_points = len(all_players) * 10
+                game_stats["rank_point"] += game_points
+            else:
+                game_stats["losses"] += 1
+                game_stats["rank_point"] += 5
+
+            stats[game_slug] = game_stats
+            player.per_game_stats = stats
+
+            player.save()
 from urllib.parse import parse_qs
 from channels.db import database_sync_to_async
 from .models import VoiceChannel
@@ -116,6 +167,12 @@ class DiceWars:
 
                 game.status = 'finished'
                 game.winner = winner_user
+                # Oyun bittiğinde sıralamayı güncelle
+                game.finished_at = timezone.now()
+                game.save()
+                # Sıralama güncellemesini yap
+                if winner_user:
+                    update_player_rankings(game, winner_user)
         return
     def _count_player_pieces(self,board_state, player_username):
         """
@@ -623,15 +680,17 @@ class GameConsumer_DiceWars(AsyncJsonWebsocketConsumer):
             eliminated_players = []
             
             if eliminated_usernames:
-                # Elenmiş oyuncuları User objelerine çevir
+                # Elenmiş oyuncuları JSON field'a ekle (players listesinden çıkarma)
+                current_eliminated = list(game.eliminated_players) if game.eliminated_players else []
                 for username in eliminated_usernames:
-                    try:
-                        eliminated_user = User.objects.get(username=username)
-                        eliminated_players.append(eliminated_user)
-                        # Oyuncuyu players listesinden çıkar (artık sıra almayacak)
-                        game.players.remove(eliminated_user)
-                    except User.DoesNotExist:
-                        pass
+                    if username not in current_eliminated:
+                        current_eliminated.append(username)
+                        try:
+                            eliminated_user = User.objects.get(username=username)
+                            eliminated_players.append(eliminated_user)
+                        except User.DoesNotExist:
+                            pass
+                game.eliminated_players = current_eliminated
 
             # --- KAZANAN KONTROLÜ ---
             try:
@@ -641,19 +700,23 @@ class GameConsumer_DiceWars(AsyncJsonWebsocketConsumer):
 
             # --- SIRAYI DEĞİŞTİR (Elenmiş oyuncuları atla) ---
             if game.status != 'finished':
-                players_list = list(game.players.all())
-                if players_list:  # Hala oyuncu varsa
+                # Tüm oyuncuları al, ama elenmiş olanları filtrele
+                all_players = list(game.players.all())
+                eliminated_set = set(game.eliminated_players) if game.eliminated_players else set()
+                active_players = [p for p in all_players if p.username not in eliminated_set]
+                
+                if active_players:  # Hala aktif oyuncu varsa
                     try:
-                        current_turn_index = players_list.index(user)
-                        # Sonraki oyuncuyu bul (elenmiş oyuncuları atla)
-                        next_turn_index = (current_turn_index + 1) % len(players_list)
-                        game.current_turn = players_list[next_turn_index]
+                        current_turn_index = active_players.index(user)
+                        # Sonraki aktif oyuncuyu bul
+                        next_turn_index = (current_turn_index + 1) % len(active_players)
+                        game.current_turn = active_players[next_turn_index]
                     except ValueError:
-                        # Eğer mevcut oyuncu listede yoksa (elenmiş olabilir), ilk oyuncuyu al
-                        if players_list:
-                            game.current_turn = players_list[0]
+                        # Eğer mevcut oyuncu listede yoksa, ilk aktif oyuncuyu al
+                        if active_players:
+                            game.current_turn = active_players[0]
                 else:
-                    # Hiç oyuncu kalmadıysa oyunu bitir
+                    # Hiç aktif oyuncu kalmadıysa oyunu bitir
                     game.status = 'finished'
 
             game.save()
@@ -675,28 +738,35 @@ class GameConsumer_DiceWars(AsyncJsonWebsocketConsumer):
             eliminated_players = []
             
             if eliminated_usernames:
-                # Elenmiş oyuncuları User objelerine çevir
+                # Elenmiş oyuncuları JSON field'a ekle (players listesinden çıkarma)
+                current_eliminated = list(game.eliminated_players) if game.eliminated_players else []
                 for username in eliminated_usernames:
-                    try:
-                        eliminated_user = User.objects.get(username=username)
-                        eliminated_players.append(eliminated_user)
-                        # Oyuncuyu players listesinden çıkar (artık sıra almayacak)
-                        game.players.remove(eliminated_user)
-                    except User.DoesNotExist:
-                        pass
+                    if username not in current_eliminated:
+                        current_eliminated.append(username)
+                        try:
+                            eliminated_user = User.objects.get(username=username)
+                            eliminated_players.append(eliminated_user)
+                        except User.DoesNotExist:
+                            pass
+                game.eliminated_players = current_eliminated
 
             if game.status == 'in_progress':  # Sadece oyun sürüyorsa
-                players_list = list(game.players.all())
-                if players_list:  # Hala oyuncu varsa
-                    if user in players_list:
-                        current_turn_index = players_list.index(user)
-                        next_turn_index = (current_turn_index + 1) % len(players_list)
-                        game.current_turn = players_list[next_turn_index]
+                # Tüm oyuncuları al, ama elenmiş olanları filtrele
+                all_players = list(game.players.all())
+                eliminated_set = set(game.eliminated_players) if game.eliminated_players else set()
+                active_players = [p for p in all_players if p.username not in eliminated_set]
+                
+                if active_players:  # Hala aktif oyuncu varsa
+                    if user in active_players:
+                        current_turn_index = active_players.index(user)
+                        next_turn_index = (current_turn_index + 1) % len(active_players)
+                        game.current_turn = active_players[next_turn_index]
                     else:
-                        # Eğer mevcut oyuncu listede yoksa (elenmiş olabilir), ilk oyuncuyu al
-                        game.current_turn = players_list[0]
+                        # Eğer mevcut oyuncu listede yoksa, ilk aktif oyuncuyu al
+                        if active_players:
+                            game.current_turn = active_players[0]
                 else:
-                    # Hiç oyuncu kalmadıysa oyunu bitir
+                    # Hiç aktif oyuncu kalmadıysa oyunu bitir
                     game.status = 'finished'
 
             game.save()
@@ -768,6 +838,7 @@ class GameConsumer_DiceWars(AsyncJsonWebsocketConsumer):
         # ... (Bu fonksiyonunuz zaten doğru, değişiklik yok) ...
         players_list = list(game_obj.players.all())
         player_usernames = [p.username for p in players_list]
+        eliminated_players = game_obj.eliminated_players if game_obj.eliminated_players else []
         return {
             'type': 'game_state',
             'state': game_obj.board_state,
@@ -776,6 +847,7 @@ class GameConsumer_DiceWars(AsyncJsonWebsocketConsumer):
             'status': game_obj.status,
             'winner': game_obj.winner.username if game_obj.winner else None,
             'board_size': game_obj.board_size,
+            'eliminated_players': eliminated_players,
         }
 
     async def send_game_state_to_user(self, game_obj):

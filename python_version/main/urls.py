@@ -20,4 +20,6 @@ urlpatterns = [
     path('game/join/<uuid:game_id>/', views.join_game, name='join_game'),
     path('game/play/<uuid:game_id>/', views.game_room, name='game_room'),
     path('game/delete/<uuid:game_id>/', views.delete_game, name='delete_game'),
+    path('leaderboard/', views.leaderboard, name='leaderboard'),
+    path('<slug:game_slug>/leaderboard/', views.game_leaderboard, name='game_leaderboard'),
 ]

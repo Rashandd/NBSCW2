@@ -5,7 +5,8 @@ from channels.layers import get_channel_layer
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Case, When, FloatField, F
+from django.db import models
 from django.shortcuts import redirect, get_object_or_404
 from django.shortcuts import render
 
@@ -162,16 +163,16 @@ def game_room(request, game_id):
     if is_spectator and game.status == 'waiting' and not game.is_full:
         return redirect('join_game', game_id=game.game_id)
 
+    eliminated_players = game.eliminated_players if game.eliminated_players else []
     return render(request, 'game_room.html', {
         'game': game,
         'is_spectator': is_spectator,
         'game_id_json': str(game_id),
         'username_json': request.user.username,
         'initial_board_state_json': json.dumps(game.board_state or {}),
-
-        # --- YENİ EKLENDİ ---
-        # Mevcut tahta boyutunu template'e gönder
-        'board_size_json': game.board_size
+        'board_size_json': game.board_size,
+        'eliminated_players_json': json.dumps(eliminated_players),
+        'winner_json': game.winner.username if game.winner else None,
     })
 
 # 4. ODAYA KATILMA (Tamamen Değişti)
@@ -246,3 +247,124 @@ def delete_game(request, game_id):
     game.delete()
     messages.success(request, "Masa başarıyla kapatıldı.")
     return redirect('game_specific_lobby', game_slug=game_slug)
+
+
+@login_required
+def leaderboard(request):
+    """
+    Liderlik tablosu - En iyi oyuncuları gösterir.
+    """
+    # Sıralama seçenekleri
+    sort_by = request.GET.get('sort', 'rank_point')
+    
+    # Geçerli sıralama alanları
+    valid_sorts = ['rank_point', 'total_wins', 'win_rate', 'total_games']
+    if sort_by not in valid_sorts:
+        sort_by = 'rank_point'
+    
+    # Sıralama yönü
+    order = request.GET.get('order', 'desc')
+    if order == 'asc':
+        order_prefix = ''
+    else:
+        order_prefix = '-'
+    
+    # Kullanıcıları sırala
+    if sort_by == 'win_rate':
+        # Win rate için özel sorgu (property olduğu için)
+        users = User.objects.filter(total_games__gt=0).annotate(
+            calculated_win_rate=Case(
+                When(total_games=0, then=0),
+                default=F('total_wins') * 100.0 / F('total_games'),
+                output_field=FloatField()
+            )
+        ).order_by(f'{order_prefix}calculated_win_rate', '-rank_point')
+    else:
+        users = User.objects.all().order_by(f'{order_prefix}{sort_by}', '-rank_point')
+    
+    # İlk 100 oyuncuyu al
+    top_players = users[:100]
+    
+    # Kullanıcının sıralamasını bul
+    user_rank = None
+    if request.user.is_authenticated:
+        try:
+            user_rank = list(users.values_list('id', flat=True)).index(request.user.id) + 1
+        except ValueError:
+            pass
+    
+    context = {
+        'top_players': top_players,
+        'user_rank': user_rank,
+        'current_user': request.user,
+        'sort_by': sort_by,
+        'order': order,
+        'game_type': None,  # Global leaderboard
+    }
+    return render(request, 'leaderboard.html', context)
+
+
+@login_required
+def game_leaderboard(request, game_slug):
+    """
+    Belirli bir mini oyun için liderlik tablosu.
+    per_game_stats JSONField üzerinden hesaplanır.
+    """
+    game_type = get_object_or_404(MiniGame, slug=game_slug)
+
+    sort_by = request.GET.get('sort', 'rank_point')
+    valid_sorts = ['rank_point', 'total_wins', 'win_rate', 'total_games']
+    if sort_by not in valid_sorts:
+        sort_by = 'rank_point'
+
+    order = request.GET.get('order', 'desc')
+    reverse = (order == 'desc')
+
+    # JSONField içinden bu oyun için istatistiği olan kullanıcıları çek
+    users_qs = User.objects.filter(per_game_stats__has_key=game_type.slug)
+    players = []
+
+    for user in users_qs:
+        stats = user.per_game_stats.get(game_type.slug, {})
+        g_games = stats.get("games", 0)
+        g_wins = stats.get("wins", 0)
+        g_losses = stats.get("losses", 0)
+        g_rank = stats.get("rank_point", 0)
+        g_win_rate = round((g_wins * 100.0 / g_games), 2) if g_games > 0 else 0.0
+
+        # Runtime attribute'lar (template için)
+        user.game_rank_point = g_rank
+        user.game_total_wins = g_wins
+        user.game_total_losses = g_losses
+        user.game_total_games = g_games
+        user.game_win_rate = g_win_rate
+        players.append(user)
+
+    # Python tarafında sıralama
+    key_map = {
+        'rank_point': lambda u: u.game_rank_point,
+        'total_wins': lambda u: u.game_total_wins,
+        'total_games': lambda u: u.game_total_games,
+        'win_rate':   lambda u: u.game_win_rate,
+    }
+    players_sorted = sorted(players, key=key_map[sort_by], reverse=reverse)
+
+    top_players = players_sorted[:100]
+
+    user_rank = None
+    if request.user.is_authenticated:
+        try:
+            user_ids_sorted = [u.id for u in players_sorted]
+            user_rank = user_ids_sorted.index(request.user.id) + 1
+        except ValueError:
+            user_rank = None
+
+    context = {
+        'top_players': top_players,
+        'user_rank': user_rank,
+        'current_user': request.user,
+        'sort_by': sort_by,
+        'order': order,
+        'game_type': game_type,  # Per-game leaderboard
+    }
+    return render(request, 'leaderboard.html', context)

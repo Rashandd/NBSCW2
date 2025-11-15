@@ -12,7 +12,23 @@ from django.utils.text import slugify
 class CustomUser(AbstractUser):
     # AbstractUser, username, first_name, last_name, email, is_staff, is_active, date_joined gibi alanları zaten içerir.
 
-    rank_point = models.PositiveIntegerField(null=True, blank=True,default=0)
+    rank_point = models.PositiveIntegerField(null=True, blank=True, default=0)
+    total_wins = models.PositiveIntegerField(default=0, verbose_name="Toplam Kazanma")
+    total_losses = models.PositiveIntegerField(default=0, verbose_name="Toplam Kayıp")
+    total_games = models.PositiveIntegerField(default=0, verbose_name="Toplam Oyun")
+    # Oyun bazlı istatistikler:
+    # {
+    #   "dice-wars": {"rank_point": 120, "wins": 4, "losses": 2, "games": 6},
+    #   "another-game": {...}
+    # }
+    per_game_stats = JSONField(default=dict, verbose_name="Oyun Bazlı İstatistikler")
+    
+    @property
+    def win_rate(self):
+        """Kazanma oranını hesaplar (0-100)"""
+        if self.total_games == 0:
+            return 0.0
+        return round((self.total_wins / self.total_games) * 100, 2)
     groups = models.ManyToManyField(
         'auth.Group',
         related_name='custom_user_groups',  # Burayı değiştirdik
@@ -127,6 +143,8 @@ class GameSession(models.Model):
     winner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='games_won', on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     move_count = models.PositiveIntegerField(default=0, verbose_name="Hamle Sayısı")
+    eliminated_players = models.JSONField(default=list, verbose_name="Elenmiş Oyuncular")
+    finished_at = models.DateTimeField(null=True, blank=True, verbose_name="Bitiş Zamanı")
 
     @property
     def player_count(self):

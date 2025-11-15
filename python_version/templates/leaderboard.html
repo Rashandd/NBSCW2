@@ -1,0 +1,237 @@
+{% extends 'base.html' %}
+
+{% block title %}
+{% if game_type %}{{ game_type.name }} - Liderlik Tablosu{% else %}Genel Liderlik Tablosu{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .leaderboard-table {
+        background: #1a1a1a;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    .rank-badge {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 1.1rem;
+    }
+    .rank-1 { background: linear-gradient(135deg, #FFD700, #FFA500); color: #000; }
+    .rank-2 { background: linear-gradient(135deg, #C0C0C0, #808080); color: #000; }
+    .rank-3 { background: linear-gradient(135deg, #CD7F32, #8B4513); color: #fff; }
+    .rank-other { background: #2d2d2d; color: #fff; }
+    .player-row {
+        transition: all 0.2s ease;
+        border-bottom: 1px solid #333;
+    }
+    .player-row:hover {
+        background-color: #2a2a2a;
+        transform: translateX(5px);
+    }
+    .player-row.current-user {
+        background: linear-gradient(90deg, rgba(0, 123, 255, 0.2), transparent);
+        border-left: 4px solid #007bff;
+    }
+    .stat-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 15px;
+        font-size: 0.85rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="text-center mb-5">
+        <h1 class="display-4">
+            🏆
+            {% if game_type %}
+                {{ game_type.name }} Liderlik Tablosu
+            {% else %}
+                Genel Liderlik Tablosu
+            {% endif %}
+        </h1>
+        <p class="lead text-muted">
+            {% if game_type %}
+                Bu oyun için en iyi oyuncuları keşfedin.
+            {% else %}
+                Tüm oyunlar genelinde en iyi oyuncuları keşfedin.
+            {% endif %}
+        </p>
+    </div>
+
+    <!-- Sıralama Filtreleri -->
+    <div class="card text-bg-dark mb-4 border-secondary">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <label class="form-label">Sıralama:</label>
+                    <div class="btn-group" role="group">
+                        <a href="?sort=rank_point&order=desc" 
+                           class="btn btn-outline-primary {% if sort_by == 'rank_point' and order == 'desc' %}active{% endif %}">
+                            Rank Puanı
+                        </a>
+                        <a href="?sort=total_wins&order=desc" 
+                           class="btn btn-outline-primary {% if sort_by == 'total_wins' and order == 'desc' %}active{% endif %}">
+                            Kazanma
+                        </a>
+                        <a href="?sort=win_rate&order=desc" 
+                           class="btn btn-outline-primary {% if sort_by == 'win_rate' and order == 'desc' %}active{% endif %}">
+                            Kazanma Oranı
+                        </a>
+                        <a href="?sort=total_games&order=desc" 
+                           class="btn btn-outline-primary {% if sort_by == 'total_games' and order == 'desc' %}active{% endif %}">
+                            Toplam Oyun
+                        </a>
+                    </div>
+                </div>
+                <div class="col-md-6 text-end">
+                    {% if user_rank %}
+                    <div class="alert alert-info mb-0">
+                        <strong>Sıralamanız:</strong> #{{ user_rank }}
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liderlik Tablosu -->
+    <div class="card text-bg-dark border-secondary leaderboard-table">
+        <div class="card-body p-0">
+            <table class="table table-dark table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th style="width: 80px;">Sıra</th>
+                        <th>Oyuncu</th>
+                        <th class="text-center">Rank Puanı</th>
+                        <th class="text-center">Kazanma</th>
+                        <th class="text-center">Kayıp</th>
+                        <th class="text-center">Toplam</th>
+                        <th class="text-center">Kazanma %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for player in top_players %}
+                    <tr class="player-row {% if player.id == current_user.id %}current-user{% endif %}">
+                        <td>
+                            {% if forloop.counter <= 3 %}
+                                <div class="rank-badge rank-{{ forloop.counter }}">
+                                    {{ forloop.counter }}
+                                </div>
+                            {% else %}
+                                <div class="rank-badge rank-other">
+                                    {{ forloop.counter }}
+                                </div>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <strong>{{ player.username }}</strong>
+                            {% if player.id == current_user.id %}
+                                <span class="badge bg-primary ms-2">Siz</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <span class="stat-badge bg-warning text-dark">
+                                <i class="fas fa-star"></i>
+                                {% if game_type %}
+                                    {{ player.game_rank_point }}
+                                {% else %}
+                                    {{ player.rank_point }}
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <span class="stat-badge bg-success">
+                                <i class="fas fa-trophy"></i>
+                                {% if game_type %}
+                                    {{ player.game_total_wins }}
+                                {% else %}
+                                    {{ player.total_wins }}
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <span class="stat-badge bg-danger">
+                                <i class="fas fa-times"></i>
+                                {% if game_type %}
+                                    {{ player.game_total_losses }}
+                                {% else %}
+                                    {{ player.total_losses }}
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <span class="stat-badge bg-info">
+                                {% if game_type %}
+                                    {{ player.game_total_games }}
+                                {% else %}
+                                    {{ player.total_games }}
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <span class="stat-badge bg-secondary">
+                                {% if game_type %}
+                                    {{ player.game_win_rate }}%
+                                {% else %}
+                                    {{ player.win_rate }}%
+                                {% endif %}
+                            </span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center py-5">
+                            <p class="text-muted">Henüz oyun oynanmamış.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Kullanıcı İstatistikleri (Eğer listede değilse) -->
+    {% if current_user and user_rank and user_rank > 100 and not game_type %}
+    <div class="card text-bg-dark mt-4 border-primary">
+        <div class="card-header bg-primary">
+            <h5 class="mb-0">Sizin İstatistikleriniz</h5>
+        </div>
+        <div class="card-body">
+            <div class="row text-center">
+                <div class="col-md-3">
+                    <h4>{{ current_user.rank_point }}</h4>
+                    <p class="text-muted mb-0">Rank Puanı</p>
+                </div>
+                <div class="col-md-3">
+                    <h4>{{ current_user.total_wins }}</h4>
+                    <p class="text-muted mb-0">Kazanma</p>
+                </div>
+                <div class="col-md-3">
+                    <h4>{{ current_user.total_losses }}</h4>
+                    <p class="text-muted mb-0">Kayıp</p>
+                </div>
+                <div class="col-md-3">
+                    <h4>{{ current_user.win_rate }}%</h4>
+                    <p class="text-muted mb-0">Kazanma Oranı</p>
+                </div>
+            </div>
+            <div class="text-center mt-3">
+                <p class="text-muted">Sıralamanız: #{{ user_rank }}</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+
+
+
+

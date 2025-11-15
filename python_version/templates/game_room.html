@@ -84,10 +84,13 @@
         
         /* YENİ: Elenmiş Oyuncu Stili */
         .player-box.eliminated {
-            opacity: 0.4;
+            opacity: 0.6;
             background-color: rgba(108, 117, 125, 0.3) !important;
             position: relative;
-            text-decoration: line-through;
+        }
+        .player-box.winner {
+            background-color: rgba(40, 167, 69, 0.2) !important;
+            border: 2px solid #28a745 !important;
         }
         .player-box.eliminated::after {
             content: '❌ ELENDİ';
@@ -221,6 +224,8 @@
 
     {{ game.host.username|json_script:"host-username" }}
     {{ game.game_type.min_players|json_script:"min-players" }}
+    {{ eliminated_players_json|json_script:"eliminated-players-json" }}
+    {% if game.winner %}{{ game.winner.username|json_script:"winner-json" }}{% endif %}
 {% endblock %}
 
 {% block extra_js %}
@@ -237,6 +242,8 @@
         const hostUsername = JSON.parse(document.getElementById('host-username').textContent);
         const minPlayers = JSON.parse(document.getElementById('min-players').textContent);
         const amIHost = (myUsername === hostUsername);
+        let eliminatedPlayers = JSON.parse(document.getElementById('eliminated-players-json').textContent || '[]');
+        const winnerUsername = document.getElementById('winner-json') ? JSON.parse(document.getElementById('winner-json').textContent) : null;
 
         const boardElement = document.getElementById('game-board');
         const turnIndicator = document.getElementById('turn-indicator');
@@ -280,7 +287,11 @@
                 // 1. Oyuncu Bilgilerini Güncelle
                 if (data.players) {
                     playerUsernames = data.players;
-                    updatePlayerList(data.players);
+                    // Elenmiş oyuncuları güncelle
+                    if (data.eliminated_players) {
+                        eliminatedPlayers = data.eliminated_players;
+                    }
+                    updatePlayerList(data.players, eliminatedPlayers, data.winner);
 
                     // --- YENİ: Atılma Kontrolü ---
                     // Eğer oyun hala beklemedeyse VE ben listede yoksam VE izleyici değilsem
@@ -351,13 +362,14 @@
         gameSocket.onopen = function(e) {
             logMessage('Oyun masasına başarıyla bağlandınız.', 'success');
             // Sayfa yüklendiğinde gelen oyuncu listesini ve renkleri ayarla
-            updatePlayerList([{% for p in game.players.all %}"{{ p.username }}"{% if not forloop.last %}, {% endif %}{% endfor %}]);
+            const initialPlayers = [{% for p in game.players.all %}"{{ p.username }}"{% if not forloop.last %}, {% endif %}{% endfor %}];
+            updatePlayerList(initialPlayers, eliminatedPlayers, winnerUsername);
             // Sayfa yüklendiğinde durumu da güncelle (Örn. oyun bitmişse)
             updateTurnIndicator("{{ game.current_turn.username|default:'' }}", "{{ game.status }}", "{{ game.winner.username|default:'' }}");
         };
 
-        // --- DEĞİŞTİ: Oyuncu Listesi Güncelleme (Kick ve Start butonu mantığı eklendi) ---
-        function updatePlayerList(players) {
+        // --- DEĞİŞTİ: Oyuncu Listesi Güncelleme (Kick, Elenme ve Kazanma durumu eklendi) ---
+        function updatePlayerList(players, eliminated = [], winner = null) {
             playerListContainer.innerHTML = '';
             playerColors = {};
 
@@ -371,6 +383,27 @@
                 const playerBox = document.createElement('div');
                 playerBox.className = `player-box ${playerClass}`;
                 playerBox.id = `player-box-${username}`;
+                
+                // Elenmiş oyuncu kontrolü
+                const isEliminated = eliminated.includes(username);
+                if (isEliminated) {
+                    playerBox.classList.add('eliminated');
+                }
+                
+                // Kazanan/Kaybeden durumu
+                let statusBadge = '';
+                if (winner) {
+                    if (username === winner) {
+                        statusBadge = `<span class="badge bg-success ms-1"><i class="fas fa-trophy"></i> Kazandı</span>`;
+                        playerBox.classList.add('winner');
+                    } else if (eliminated.includes(username)) {
+                        statusBadge = `<span class="badge bg-danger ms-1"><i class="fas fa-skull"></i> Elendi</span>`;
+                    } else {
+                        statusBadge = `<span class="badge bg-secondary ms-1">Kaybetti</span>`;
+                    }
+                } else if (isEliminated) {
+                    statusBadge = `<span class="badge bg-danger ms-1"><i class="fas fa-skull"></i> Elendi</span>`;
+                }
 
                 let badges = '';
                 if (username === hostUsername) {
@@ -379,10 +412,11 @@
                 if (username === myUsername) {
                     badges += `<span class="badge bg-primary ms-1">Siz</span>`;
                 }
+                badges += statusBadge;
 
-                // --- YENİ: Kick Butonu HTML ---
+                // --- YENİ: Kick Butonu HTML (sadece beklemede ve elenmemiş oyuncular için) ---
                 let kickButtonHtml = '';
-                if (amIHost && username !== myUsername) {
+                if (amIHost && username !== myUsername && !isEliminated && !winner) {
                     kickButtonHtml = `
                         <button class="kick-btn" data-username="${username}" title="Oyuncuyu At">
                             <i class="fas fa-times"></i>
