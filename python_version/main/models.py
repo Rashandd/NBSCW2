@@ -71,6 +71,14 @@ class MiniGame(models.Model):
     description = models.TextField(blank=True, null=True, verbose_name="Açıklama")
     min_players = models.PositiveSmallIntegerField(default=2, verbose_name="Min. Oyuncu")
     max_players = models.PositiveSmallIntegerField(default=2, verbose_name="Max. Oyuncu")
+    is_active = models.BooleanField(default=True, verbose_name="Aktif")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Oluşturulma Tarihi")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Güncellenme Tarihi")
+
+    class Meta:
+        verbose_name = "Mini Oyun"
+        verbose_name_plural = "Mini Oyunlar"
+        ordering = ['name']
 
     def save(self, *args, **kwargs):
         if not self.slug:

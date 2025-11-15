@@ -1,21 +1,71 @@
 # main/admin.py
 
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin as BaseUserAdmin
 from django.db.models import Count
+from django.contrib.auth import get_user_model
 from .models import MiniGame, GameSession, VoiceChannel
+
+User = get_user_model()
 
 
 @admin.register(MiniGame)
 class MiniGameAdmin(admin.ModelAdmin):
     """
-    MiniGame modeli için admin ayarları.
+    MiniGame modeli için gelişmiş admin ayarları.
+    Oyunları dinamik olarak eklemek ve yönetmek için optimize edilmiş.
     """
-    list_display = ['name', 'slug', 'min_players', 'max_players']
+    list_display = ['name', 'slug', 'min_players', 'max_players', 'is_active', 'active_sessions_count', 'created_at']
+    list_filter = ['is_active', 'min_players', 'max_players', 'created_at']
+    search_fields = ['name', 'description', 'slug']
+    readonly_fields = ['slug', 'created_at', 'updated_at']
+    ordering = ['name']
+    
+    fieldsets = (
+        ('Temel Bilgiler', {
+            'fields': ('name', 'slug', 'description')
+        }),
+        ('Oyuncu Ayarları', {
+            'fields': ('min_players', 'max_players')
+        }),
+        ('Sistem Bilgileri', {
+            'fields': ('created_at', 'updated_at'),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def get_queryset(self, request):
+        from django.db.models import Q
+        qs = super().get_queryset(request)
+        return qs.annotate(
+            active_sessions=Count('sessions', filter=Q(sessions__status__in=['waiting', 'in_progress']))
+        )
+    
+    def active_sessions_count(self, obj):
+        """Aktif oyun sayısını gösterir"""
+        if hasattr(obj, 'active_sessions'):
+            return obj.active_sessions
+        return obj.sessions.filter(status__in=['waiting', 'in_progress']).count()
+    
+    active_sessions_count.short_description = 'Aktif Oyunlar'
+    active_sessions_count.admin_order_field = 'active_sessions'
 
-    # Hata veren ('slug') yerine liste kullanın:
-    readonly_fields = ['slug']
 
-
+@admin.register(User)
+class UserAdmin(BaseUserAdmin):
+    """
+    CustomUser modeli için özel admin ayarları.
+    """
+    list_display = ('username', 'email', 'first_name', 'last_name', 'rank_point', 'is_staff', 'date_joined')
+    list_filter = ('is_staff', 'is_superuser', 'is_active', 'groups')
+    search_fields = ('username', 'email', 'first_name', 'last_name')
+    ordering = ('-date_joined',)
+    
+    fieldsets = BaseUserAdmin.fieldsets + (
+        ('Oyun Bilgileri', {
+            'fields': ('rank_point',)
+        }),
+    )
 @admin.register(GameSession)
 class GameSessionAdmin(admin.ModelAdmin):
     """

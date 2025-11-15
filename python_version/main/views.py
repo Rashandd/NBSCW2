@@ -5,7 +5,7 @@ from channels.layers import get_channel_layer
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.shortcuts import redirect, get_object_or_404
 from django.shortcuts import render
 
@@ -46,15 +46,52 @@ def settings_view(request):
 def all_games_lobby(request):
     """
     Sistemdeki tüm 'MiniGame' türlerini listeleyen ana oyun merkezi sayfası.
-    Örn: Dice Wars, Satranç, Ludo...
+    Filtreleme ve arama desteği ile.
     """
-    # Veritabanındaki tüm MiniGame nesnelerini al
-    all_minigames = MiniGame.objects.all()
+    # Sadece aktif oyunları göster
+    minigames = MiniGame.objects.filter(is_active=True)
+    
+    # Arama filtresi
+    search_query = request.GET.get('search', '')
+    if search_query:
+        minigames = minigames.filter(
+            Q(name__icontains=search_query) |
+            Q(description__icontains=search_query)
+        )
+    
+    # Oyuncu sayısı filtresi
+    min_players_filter = request.GET.get('min_players')
+    if min_players_filter:
+        try:
+            min_players_filter = int(min_players_filter)
+            minigames = minigames.filter(min_players__lte=min_players_filter, max_players__gte=min_players_filter)
+        except ValueError:
+            pass
+    
+    max_players_filter = request.GET.get('max_players')
+    if max_players_filter:
+        try:
+            max_players_filter = int(max_players_filter)
+            minigames = minigames.filter(max_players__lte=max_players_filter)
+        except ValueError:
+            pass
+    
+    # Sıralama
+    sort_by = request.GET.get('sort', 'name')
+    if sort_by == 'players':
+        minigames = minigames.order_by('min_players', 'max_players')
+    elif sort_by == 'name':
+        minigames = minigames.order_by('name')
+    else:
+        minigames = minigames.order_by('name')
 
     context = {
-        'minigames_list': all_minigames,
+        'minigames_list': minigames,
+        'search_query': search_query,
+        'min_players_filter': min_players_filter,
+        'max_players_filter': max_players_filter,
+        'sort_by': sort_by,
     }
-    # minigames.html adında yeni bir template render et
     return render(request, 'minigames.html', context)
 
 
