@@ -822,6 +822,9 @@ class GameConsumer_DiceWars(AsyncJsonWebsocketConsumer):
         # ... (Değişiklik yok) ...
         await self.send_json(event)
 
+    async def rematch_invite(self, event):
+        await self.send_json(event)
+
     async def send_error(self, message):
         # ... (Değişiklik yok) ...
         await self.send_json({'type': 'error', 'message': message})

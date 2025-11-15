@@ -10,6 +10,8 @@ from django.db import models
 from django.shortcuts import redirect, get_object_or_404
 from django.shortcuts import render
 from django.utils.translation import gettext_lazy as _
+from django.http import JsonResponse
+from django.urls import reverse
 
 from .models import CustomUser, VoiceChannel, GameSession, MiniGame
 
@@ -174,6 +176,65 @@ def game_room(request, game_id):
         'board_size_json': game.board_size,
         'eliminated_players_json': json.dumps(eliminated_players),
         'winner_json': game.winner.username if game.winner else None,
+    })
+
+
+@login_required
+def rematch_request(request, game_id):
+    if request.method != 'POST':
+        return JsonResponse({'error': _('Invalid request method.')}, status=405)
+
+    game = get_object_or_404(
+        GameSession.objects.select_related('game_type', 'host').prefetch_related('players'),
+        game_id=game_id
+    )
+
+    if game.status != 'finished':
+        return JsonResponse({'error': _('Game has not finished yet.')}, status=400)
+
+    if not game.players.filter(id=request.user.id).exists():
+        return JsonResponse({'error': _('You are not part of this game.')}, status=403)
+
+    existing_waiting = GameSession.objects.filter(
+        game_type=game.game_type,
+        host=request.user,
+        status='waiting'
+    ).order_by('-created_at').first()
+
+    if existing_waiting:
+        return JsonResponse({
+            'new_game_id': str(existing_waiting.game_id),
+            'redirect_url': reverse('game_room', args=[existing_waiting.game_id])
+        })
+
+    new_game = GameSession.objects.create(
+        game_type=game.game_type,
+        host=request.user,
+        status='waiting',
+        board_state={},
+        board_size=game.board_size
+    )
+    new_game.players.add(request.user)
+
+    invited_players = [player.username for player in game.players.all() if player != request.user]
+
+    channel_layer = get_channel_layer()
+    async_to_sync(channel_layer.group_send)(
+        f"game_{game_id}",
+        {
+            'type': 'rematch_invite',
+            'new_game_id': str(new_game.game_id),
+            'host': request.user.username,
+            'invited_players': invited_players,
+            'game_room_url': reverse('game_room', args=[new_game.game_id]),
+            'join_url': reverse('join_game', args=[new_game.game_id]),
+            'message': _("Rematch requested by {username}.").format(username=request.user.username)
+        }
+    )
+
+    return JsonResponse({
+        'new_game_id': str(new_game.game_id),
+        'redirect_url': reverse('game_room', args=[new_game.game_id])
     })
 
 # 4. ODAYA KATILMA (Tamamen Değişti)

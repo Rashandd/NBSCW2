@@ -239,7 +239,15 @@
                 <div id="game-over-overlay">
                     <h2 class="mb-3">{% trans "Game Over!" %}</h2>
                     <h4 class="mb-4">{% trans "Winner:" %} <span id="winner-name">...</span></h4>
-                    <a href="{% url 'game_specific_lobby' game_slug=game.game_type.slug %}" class="btn btn-primary btn-lg">{% trans "New Game" %}</a>
+                    <div class="d-flex flex-column flex-md-row gap-2 w-100">
+                        <button id="rematch-button" class="btn btn-primary btn-lg flex-fill">
+                            <i class="fas fa-undo-alt me-2"></i> {% trans "Request Rematch" %}
+                        </button>
+                        <a href="{% url 'game_specific_lobby' game_slug=game.game_type.slug %}" class="btn btn-outline-light btn-lg flex-fill">
+                            <i class="fas fa-door-open me-2"></i> {% trans "Back to Lobby" %}
+                        </a>
+                    </div>
+                    <small class="text-muted d-block mt-2">{% trans "Rematch lobby keeps the same players. Others must accept to join." %}</small>
                 </div>
                 <div id="wheel-overlay">
                     <div id="wheel-spinner"><i class="fas fa-compact-disc"></i></div>
@@ -278,6 +286,18 @@
                     <div class="alert alert-info mt-3" id="waiting-alert" style="display: none;">
                         <i class="fas fa-spinner fa-spin me-1"></i>
                         {% trans "Waiting for players..." %} (<span id="player-count-span">1</span>/<span id="max-player-span">{{ game.game_type.max_players }}</span>)
+                    </div>
+
+                    <div class="alert alert-primary mt-3" id="rematch-invite-banner" style="display: none;">
+                        <div id="rematch-invite-text" class="fw-semibold mb-2"></div>
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-success btn-sm flex-fill" id="accept-rematch-btn">
+                                <i class="fas fa-check me-1"></i> {% trans "Join Rematch" %}
+                            </button>
+                            <button class="btn btn-outline-secondary btn-sm flex-fill" id="decline-rematch-btn">
+                                <i class="fas fa-times me-1"></i> {% trans "Maybe Later" %}
+                            </button>
+                        </div>
                     </div>
 
                     {% if is_spectator %}
@@ -395,11 +415,48 @@
             'kickPlayerConfirm': '{% trans "Are you sure you want to kick" %}',
             'kickPlayerConfirmEnd': '{% trans "from the game?" %}',
             'startingOrder': '{% trans "Determining starting order..." %}',
-            'starts': '{% trans "starts!" %}'
+            'starts': '{% trans "starts!" %}',
+            'rematchInvite': '{% trans "wants a rematch. Join?" %}',
+            'rematchRequested': '{% trans "Creating rematch lobby..." %}',
+            'rematchCreated': '{% trans "Rematch lobby created. Waiting for other players." %}',
+            'rematchJoin': '{% trans "Join Rematch" %}',
+            'rematchDeclined': '{% trans "You can join later from the lobby." %}',
+            'rematchError': '{% trans "Rematch could not be created. Please try again." %}'
         };
 
-        // Sunucudan Mesaj Alma (IMPROVED ANIMATION SEQUENCING)
-        gameSocket.onmessage = async function(e) {
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        const csrfToken = getCookie('csrftoken');
+        const originalGameId = "{{ game.game_id }}";
+        const currentGameRoomUrl = "{% url 'game_room' game_id=game.game_id %}";
+        const currentJoinGameUrl = "{% url 'join_game' game_id=game.game_id %}";
+        const rematchRequestUrl = "{% url 'rematch_request' game_id=game.game_id %}";
+        const buildGameRoomUrl = (gameId) => currentGameRoomUrl.replace(originalGameId, gameId);
+        const buildJoinGameUrl = (gameId) => currentJoinGameUrl.replace(originalGameId, gameId);
+
+        const rematchButton = document.getElementById('rematch-button');
+        const rematchInviteBanner = document.getElementById('rematch-invite-banner');
+        const rematchInviteText = document.getElementById('rematch-invite-text');
+        const acceptRematchBtn = document.getElementById('accept-rematch-btn');
+        const declineRematchBtn = document.getElementById('decline-rematch-btn');
+        let pendingRematchData = null;
+        let messageQueue = Promise.resolve();
+
+        // Sunucudan Mesaj Alma (IMPROVED ANIMATION SEQUENCING + MESSAGE QUEUE)
+        gameSocket.onmessage = function(e) {
             const data = JSON.parse(e.data);
             console.log("Received from server:", data);
 
@@ -408,122 +465,132 @@
                 return;
             }
 
+            if (data.type === 'rematch_invite') {
+                handleRematchInvite(data);
+                return;
+            }
+
             if (data.type === 'game_state') {
-                // 1. Update player info first
-                if (data.players) {
-                    playerUsernames = data.players;
-                    if (data.eliminated_players !== undefined) {
-                        eliminatedPlayers = data.eliminated_players;
-                        // Update shown eliminated players set
-                        data.eliminated_players.forEach(p => shownEliminatedPlayers.add(p));
-                    }
-                    updatePlayerList(data.players, eliminatedPlayers, data.winner);
-
-                    if (data.status === 'waiting' && !data.players.includes(myUsername) && !isSpectator) {
-                        alert(translations.kicked);
-                        const lobbyUrl = "{% url 'game_specific_lobby' game_slug=game.game_type.slug %}";
-                        window.location.href = lobbyUrl;
-                        return;
-                    }
-                }
-
-                // 2. Update board size
-                if (data.board_size && data.board_size !== boardSize) {
-                    boardSize = data.board_size;
-                    document.documentElement.style.setProperty('--board-size', boardSize);
-                }
-
-                // 3. Show move indicator if message contains move info
-                if (data.message) {
-                    // Check for move messages in different languages
-                    const movePatterns = ['made a move', 'tıkladı', 'made a move'];
-                    const hasMove = movePatterns.some(pattern => data.message.toLowerCase().includes(pattern.toLowerCase()));
-                    if (hasMove) {
-                        // Extract username (usually first word before the move text)
-                        const parts = data.message.split(' ');
-                        if (parts.length > 0) {
-                            showMoveIndicator(parts[0]);
-                        }
-                    }
-                }
-
-                // 4. Update turn indicator
-                updateTurnIndicator(data.turn, data.status, data.winner);
-
-                // 5. Game start wheel
-                if (data.special_event === 'game_start_roll') {
-                    wheelWinnerText.style.display = 'none';
-                    wheelOverlay.classList.remove('finished');
-                    wheelOverlay.style.display = 'flex';
-                    await sleep(2000);
-                    wheelWinnerText.innerHTML = `<i class="fas fa-check-circle"></i> ${data.turn} ${translations.starts}`;
-                    wheelWinnerText.style.display = 'block';
-                    wheelOverlay.classList.add('finished');
-                    await sleep(1500);
-                    wheelOverlay.style.display = 'none';
-                    logMessage(data.message, 'success');
-                }
-
-                // 6. IMPROVED: Proper animation sequencing
-                // IMPORTANT: Show animations on CURRENT board BEFORE rendering new state
-                
-                // First, show move animation on the moved cell (for all players) - BEFORE rendering new board
-                if (data.move_cell && data.move_cell.length === 2) {
-                    const [moveRow, moveCol] = data.move_cell;
-                    // Find cell on CURRENT board (before render)
-                    const moveCell = boardElement.querySelector(`.cell[data-row="${moveRow}"][data-col="${moveCol}"]`);
-                    if (moveCell) {
-                        moveCell.classList.add('move-highlight');
-                        setTimeout(() => {
-                            moveCell.classList.remove('move-highlight');
-                        }, 800);
-                    }
-                    // Small delay to see the move animation
-                    await sleep(150);
-                }
-                
-                // IMPORTANT: Show explosions on CURRENT board BEFORE rendering new state
-                // This ensures explosions are visible on the cells that are about to be cleared
-                if (data.exploded_cells && data.exploded_cells.length > 0) {
-                    // Show explosions on current board state
-                    await triggerSequentialExplosions(data.exploded_cells);
-                    // Small delay after explosions
-                    await sleep(100);
-                }
-                
-                // Then, render board with new state (this updates the board for all players)
-                // This happens AFTER animations so animations are visible on the old board
-                if (data.state) {
-                    renderBoard(data.state);
-                    // Small delay to see the updated board
-                    await sleep(50);
-                }
-
-                // After explosions, handle eliminations (only NEW ones - avoid duplicate messages)
-                if (data.eliminated_players !== undefined && data.eliminated_players.length > 0) {
-                    // Check which players are newly eliminated (not shown before)
-                    const newlyEliminated = data.eliminated_players.filter(p => !shownEliminatedPlayers.has(p));
-                    
-                    // Update our tracking
-                    eliminatedPlayers = data.eliminated_players;
-                    newlyEliminated.forEach(p => shownEliminatedPlayers.add(p));
-                    
-                    // Only show animation for newly eliminated players
-                    if (newlyEliminated.length > 0) {
-                        await sleep(150); // Small gap after explosions
-                        await handlePlayerElimination(newlyEliminated);
-                    }
-                } else if (data.eliminated_players !== undefined) {
-                    // Update tracking even if empty array
-                    eliminatedPlayers = data.eliminated_players || [];
-                }
-
-                // Finally, log message if not game start
-                if (data.message && data.special_event !== 'game_start_roll') {
-                    logMessage(data.message, 'info');
-                }
+                messageQueue = messageQueue.then(() => handleGameStateMessage(data))
+                    .catch(err => console.error('Game state processing error:', err));
             }
         };
+
+        async function handleGameStateMessage(data) {
+            // 1. Update player info first
+            if (data.players) {
+                playerUsernames = data.players;
+                if (data.eliminated_players !== undefined) {
+                    eliminatedPlayers = data.eliminated_players;
+                    // Update shown eliminated players set
+                    data.eliminated_players.forEach(p => shownEliminatedPlayers.add(p));
+                }
+                updatePlayerList(data.players, eliminatedPlayers, data.winner);
+
+                if (data.status === 'waiting' && !data.players.includes(myUsername) && !isSpectator) {
+                    alert(translations.kicked);
+                    const lobbyUrl = "{% url 'game_specific_lobby' game_slug=game.game_type.slug %}";
+                    window.location.href = lobbyUrl;
+                    return;
+                }
+            }
+
+            // 2. Update board size
+            if (data.board_size && data.board_size !== boardSize) {
+                boardSize = data.board_size;
+                document.documentElement.style.setProperty('--board-size', boardSize);
+            }
+
+            // 3. Show move indicator if message contains move info
+            if (data.message) {
+                // Check for move messages in different languages
+                const movePatterns = ['made a move', 'tıkladı'];
+                const hasMove = movePatterns.some(pattern => data.message.toLowerCase().includes(pattern.toLowerCase()));
+                if (hasMove) {
+                    // Extract username (usually first word before the move text)
+                    const parts = data.message.split(' ');
+                    if (parts.length > 0) {
+                        showMoveIndicator(parts[0]);
+                    }
+                }
+            }
+
+            // 4. Update turn indicator
+            updateTurnIndicator(data.turn, data.status, data.winner);
+
+            // 5. Game start wheel
+            if (data.special_event === 'game_start_roll') {
+                wheelWinnerText.style.display = 'none';
+                wheelOverlay.classList.remove('finished');
+                wheelOverlay.style.display = 'flex';
+                await sleep(2000);
+                wheelWinnerText.innerHTML = `<i class="fas fa-check-circle"></i> ${data.turn} ${translations.starts}`;
+                wheelWinnerText.style.display = 'block';
+                wheelOverlay.classList.add('finished');
+                await sleep(1500);
+                wheelOverlay.style.display = 'none';
+                logMessage(data.message, 'success');
+            }
+
+            // 6. IMPROVED: Proper animation sequencing
+            // IMPORTANT: Show animations on CURRENT board BEFORE rendering new state
+            
+            // First, show move animation on the moved cell (for all players) - BEFORE rendering new board
+            if (data.move_cell && data.move_cell.length === 2) {
+                const [moveRow, moveCol] = data.move_cell;
+                // Find cell on CURRENT board (before render)
+                const moveCell = boardElement.querySelector(`.cell[data-row="${moveRow}"][data-col="${moveCol}"]`);
+                if (moveCell) {
+                    moveCell.classList.add('move-highlight');
+                    setTimeout(() => {
+                        moveCell.classList.remove('move-highlight');
+                    }, 800);
+                }
+                // Small delay to see the move animation
+                await sleep(150);
+            }
+            
+            // IMPORTANT: Show explosions on CURRENT board BEFORE rendering new state
+            // This ensures explosions are visible on the cells that are about to be cleared
+            if (data.exploded_cells && data.exploded_cells.length > 0) {
+                // Show explosions on current board state
+                await triggerSequentialExplosions(data.exploded_cells);
+                // Small delay after explosions
+                await sleep(100);
+            }
+            
+            // Then, render board with new state (this updates the board for all players)
+            // This happens AFTER animations so animations are visible on the old board
+            if (data.state) {
+                renderBoard(data.state);
+                // Small delay to see the updated board
+                await sleep(50);
+            }
+
+            // After explosions, handle eliminations (only NEW ones - avoid duplicate messages)
+            if (data.eliminated_players !== undefined && data.eliminated_players.length > 0) {
+                // Check which players are newly eliminated (not shown before)
+                const newlyEliminated = data.eliminated_players.filter(p => !shownEliminatedPlayers.has(p));
+                
+                // Update our tracking
+                eliminatedPlayers = data.eliminated_players;
+                newlyEliminated.forEach(p => shownEliminatedPlayers.add(p));
+                
+                // Only show animation for newly eliminated players
+                if (newlyEliminated.length > 0) {
+                    await sleep(150); // Small gap after explosions
+                    await handlePlayerElimination(newlyEliminated);
+                }
+            } else if (data.eliminated_players !== undefined) {
+                // Update tracking even if empty array
+                eliminatedPlayers = data.eliminated_players || [];
+            }
+
+            // Finally, log message if not game start
+            if (data.message && data.special_event !== 'game_start_roll') {
+                logMessage(data.message, 'info');
+            }
+        }
 
         gameSocket.onclose = function(e) {
             logMessage(translations.connectionLost, 'danger');
@@ -537,6 +604,26 @@
             // Sayfa yüklendiğinde durumu da güncelle (Örn. oyun bitmişse)
             updateTurnIndicator("{{ game.current_turn.username|default:'' }}", "{{ game.status }}", "{{ game.winner.username|default:'' }}");
         };
+
+        if (rematchButton) {
+            rematchButton.addEventListener('click', requestRematch);
+        }
+        if (acceptRematchBtn) {
+            acceptRematchBtn.addEventListener('click', () => {
+                if (!pendingRematchData) return;
+                const joinUrl = pendingRematchData.join_url || buildJoinGameUrl(pendingRematchData.new_game_id);
+                window.location.href = joinUrl;
+            });
+        }
+        if (declineRematchBtn) {
+            declineRematchBtn.addEventListener('click', () => {
+                if (rematchInviteBanner) {
+                    rematchInviteBanner.style.display = 'none';
+                    logMessage(translations.rematchDeclined, 'info');
+                }
+                pendingRematchData = null;
+            });
+        }
 
         // --- DEĞİŞTİ: Oyuncu Listesi Güncelleme (Kick, Elenme ve Kazanma durumu eklendi) ---
         function updatePlayerList(players, eliminated = [], winner = null) {
@@ -663,6 +750,56 @@
                 if (activePlayerBox) {
                     activePlayerBox.classList.add('active-turn');
                 }
+            }
+        }
+
+        async function requestRematch() {
+            if (!rematchButton || rematchButton.dataset.loading === '1') return;
+            rematchButton.dataset.loading = '1';
+            rematchButton.disabled = true;
+            rematchButton.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>${translations.rematchRequested}`;
+            try {
+                const response = await fetch(rematchRequestUrl, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                if (!response.ok) {
+                    throw new Error('Rematch request failed');
+                }
+                const payload = await response.json();
+                logMessage(translations.rematchCreated, 'success');
+                setTimeout(() => {
+                    const redirectUrl = payload.redirect_url || buildGameRoomUrl(payload.new_game_id);
+                    window.location.href = redirectUrl;
+                }, 800);
+            } catch (err) {
+                console.error(err);
+                rematchButton.dataset.loading = '0';
+                rematchButton.disabled = false;
+                rematchButton.innerHTML = `<i class="fas fa-undo-alt me-2"></i> {% trans "Request Rematch" %}`;
+                logMessage(translations.rematchError, 'danger');
+            }
+        }
+
+        function handleRematchInvite(data) {
+            if (data.message) {
+                logMessage(data.message, 'info');
+            }
+            const invitedPlayers = Array.isArray(data.invited_players) ? data.invited_players : [];
+            if (invitedPlayers.includes(myUsername)) {
+                pendingRematchData = data;
+                if (rematchInviteBanner && rematchInviteText) {
+                    rematchInviteText.innerHTML = `<strong>${data.host}</strong> ${translations.rematchInvite}`;
+                    rematchInviteBanner.style.display = 'block';
+                }
+            }
+            if (data.host === myUsername && rematchButton) {
+                rematchButton.dataset.loading = '1';
+                rematchButton.disabled = true;
+                rematchButton.innerHTML = `<i class="fas fa-hourglass-half me-2"></i> ${translations.rematchCreated}`;
             }
         }
 
