@@ -145,6 +145,15 @@ class GameSession(models.Model):
     move_count = models.PositiveIntegerField(default=0, verbose_name="Hamle Sayısı")
     eliminated_players = models.JSONField(default=list, verbose_name="Elenmiş Oyuncular")
     finished_at = models.DateTimeField(null=True, blank=True, verbose_name="Bitiş Zamanı")
+    is_private = models.BooleanField(default=False, verbose_name="Özel Oda")
+    invited_players = models.JSONField(default=list, blank=True, verbose_name="Davetli Oyuncular")
+    rematch_parent = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='rematch_children'
+    )
 
     @property
     def player_count(self):

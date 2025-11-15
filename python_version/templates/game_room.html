@@ -376,6 +376,9 @@
         let playerUsernames = [];
         // Track eliminated players that have already been shown (to avoid duplicate messages)
         let shownEliminatedPlayers = new Set(eliminatedPlayers || []);
+        let lastLocalMoveCell = null;
+        let localChainActive = false;
+        let localChainResetHandle = null;
         
         // Enhanced dice icons with better visual representation
         const diceIcons = { 
@@ -421,7 +424,8 @@
             'rematchCreated': '{% trans "Rematch lobby created. Waiting for other players." %}',
             'rematchJoin': '{% trans "Join Rematch" %}',
             'rematchDeclined': '{% trans "You can join later from the lobby." %}',
-            'rematchError': '{% trans "Rematch could not be created. Please try again." %}'
+            'rematchError': '{% trans "Rematch could not be created. Please try again." %}',
+            'privateRematchInfo': '{% trans "Rematch lobby is private to previous players only." %}'
         };
 
         function getCookie(name) {
@@ -455,6 +459,18 @@
         let pendingRematchData = null;
         let messageQueue = Promise.resolve();
 
+        function activateLocalChain() {
+            localChainActive = true;
+            if (localChainResetHandle) {
+                clearTimeout(localChainResetHandle);
+            }
+            localChainResetHandle = setTimeout(() => {
+                localChainActive = false;
+                localChainResetHandle = null;
+                lastLocalMoveCell = null;
+            }, 4000);
+        }
+
         // Sunucudan Mesaj Alma (IMPROVED ANIMATION SEQUENCING + MESSAGE QUEUE)
         gameSocket.onmessage = function(e) {
             const data = JSON.parse(e.data);
@@ -477,6 +493,17 @@
         };
 
         async function handleGameStateMessage(data) {
+            let isLocalMove = false;
+            if (data.move_cell && lastLocalMoveCell) {
+                const [expectedRow, expectedCol] = lastLocalMoveCell;
+                if (data.move_cell[0] === expectedRow && data.move_cell[1] === expectedCol) {
+                    isLocalMove = true;
+                    lastLocalMoveCell = null;
+                    activateLocalChain();
+                }
+            }
+            const chainDelayFactor = localChainActive ? 0.6 : 1;
+
             // 1. Update player info first
             if (data.players) {
                 playerUsernames = data.players;
@@ -537,26 +564,28 @@
             
             // First, show move animation on the moved cell (for all players) - BEFORE rendering new board
             if (data.move_cell && data.move_cell.length === 2) {
-                const [moveRow, moveCol] = data.move_cell;
-                // Find cell on CURRENT board (before render)
-                const moveCell = boardElement.querySelector(`.cell[data-row="${moveRow}"][data-col="${moveCol}"]`);
-                if (moveCell) {
-                    moveCell.classList.add('move-highlight');
-                    setTimeout(() => {
-                        moveCell.classList.remove('move-highlight');
-                    }, 800);
+                if (!isLocalMove) {
+                    const [moveRow, moveCol] = data.move_cell;
+                    const moveCell = boardElement.querySelector(`.cell[data-row="${moveRow}"][data-col="${moveCol}"]`);
+                    if (moveCell) {
+                        moveCell.classList.add('move-highlight');
+                        setTimeout(() => {
+                            moveCell.classList.remove('move-highlight');
+                        }, 800);
+                    }
+                    await sleep(150 * chainDelayFactor);
+                } else {
+                    await sleep(30);
                 }
-                // Small delay to see the move animation
-                await sleep(150);
             }
             
             // IMPORTANT: Show explosions on CURRENT board BEFORE rendering new state
             // This ensures explosions are visible on the cells that are about to be cleared
             if (data.exploded_cells && data.exploded_cells.length > 0) {
                 // Show explosions on current board state
-                await triggerSequentialExplosions(data.exploded_cells);
+                await triggerSequentialExplosions(data.exploded_cells, localChainActive);
                 // Small delay after explosions
-                await sleep(100);
+                await sleep(localChainActive ? 50 : 100);
             }
             
             // Then, render board with new state (this updates the board for all players)
@@ -564,7 +593,7 @@
             if (data.state) {
                 renderBoard(data.state);
                 // Small delay to see the updated board
-                await sleep(50);
+                await sleep(localChainActive ? 30 : 60);
             }
 
             // After explosions, handle eliminations (only NEW ones - avoid duplicate messages)
@@ -589,6 +618,17 @@
             // Finally, log message if not game start
             if (data.message && data.special_event !== 'game_start_roll') {
                 logMessage(data.message, 'info');
+            }
+
+            if (localChainActive) {
+                if ((data.turn && data.turn !== myUsername) || data.status === 'finished') {
+                    localChainActive = false;
+                    if (localChainResetHandle) {
+                        clearTimeout(localChainResetHandle);
+                        localChainResetHandle = null;
+                    }
+                    lastLocalMoveCell = null;
+                }
             }
         }
 
@@ -792,7 +832,7 @@
             if (invitedPlayers.includes(myUsername)) {
                 pendingRematchData = data;
                 if (rematchInviteBanner && rematchInviteText) {
-                    rematchInviteText.innerHTML = `<strong>${data.host}</strong> ${translations.rematchInvite}`;
+                    rematchInviteText.innerHTML = `<strong>${data.host}</strong> ${translations.rematchInvite}<br><small class="text-light">${translations.privateRematchInfo}</small>`;
                     rematchInviteBanner.style.display = 'block';
                 }
             }
@@ -805,8 +845,8 @@
 
         // IMPROVED: Sequential explosions with better timing and visual effects
         // This function shows explosions on the CURRENT board state (before it's updated)
-        async function triggerSequentialExplosions(explodedCells) {
-            const EXPLOSION_DELAY = 80; // Much faster explosions
+        async function triggerSequentialExplosions(explodedCells, fastMode = false) {
+            const EXPLOSION_DELAY = fastMode ? 45 : 80;
             for (const coords of explodedCells) {
                 const [r, c] = coords;
                 // Find cell on CURRENT board (before new state is rendered)
@@ -819,7 +859,7 @@
                     await sleep(EXPLOSION_DELAY);
                 }
             }
-            await sleep(150); // Shorter wait after all explosions
+            await sleep(fastMode ? 80 : 150);
         }
         function renderBoard(boardState) {
             boardElement.innerHTML = '';
@@ -877,19 +917,20 @@
                 return;
             }
             if (turnIndicator.textContent.startsWith(translations.turn)) {
-                const row = cell.dataset.row;
-                const col = cell.dataset.col;
+                const row = parseInt(cell.dataset.row, 10);
+                const col = parseInt(cell.dataset.col, 10);
                 
                 // Immediate local visual feedback (server will broadcast to all players)
                 cell.classList.add('move-highlight');
                 setTimeout(() => {
                     cell.classList.remove('move-highlight');
                 }, 800);
+                lastLocalMoveCell = [row, col];
                 
                 gameSocket.send(JSON.stringify({
                     'type': 'make_move',
-                    'row': parseInt(row),
-                    'col': parseInt(col)
+                    'row': row,
+                    'col': col
                 }));
             }
         });

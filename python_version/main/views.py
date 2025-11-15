@@ -7,8 +7,7 @@ from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Count, Q, Case, When, FloatField, F
 from django.db import models
-from django.shortcuts import redirect, get_object_or_404
-from django.shortcuts import render
+from django.shortcuts import redirect, get_object_or_404, render
 from django.utils.translation import gettext_lazy as _
 from django.http import JsonResponse
 from django.urls import reverse
@@ -107,15 +106,17 @@ def game_specific_lobby(request, game_slug):
     # 1. Aktif Masalarım (İçinde olduğum masalar)
     my_games = GameSession.objects.filter(
         game_type=game_type,
-        status__in=['waiting', 'in_progress'],
-        players=request.user  # M2M sorgusu: 'players' listesinde ben var mıyım?
+        status__in=['waiting', 'in_progress']
+    ).filter(
+        Q(players=request.user) | Q(invited_players__contains=[request.user.username])
     ).select_related('game_type', 'host').order_by('-created_at')
 
     # 2. Katılınabilecek Masalar (Dolu olmayan, beklemede olan, içinde olmadığım)
     max_p = game_type.max_players
     available_games = GameSession.objects.filter(
         game_type=game_type,
-        status='waiting'
+        status='waiting',
+        is_private=False
     ).annotate(
         num_players=Count('players')  # Oyuncu sayısını hesapla
     ).filter(
@@ -207,16 +208,19 @@ def rematch_request(request, game_id):
             'redirect_url': reverse('game_room', args=[existing_waiting.game_id])
         })
 
+    invited_players = [player.username for player in game.players.all() if player != request.user]
+
     new_game = GameSession.objects.create(
         game_type=game.game_type,
         host=request.user,
         status='waiting',
         board_state={},
-        board_size=game.board_size
+        board_size=game.board_size,
+        is_private=True,
+        invited_players=invited_players,
+        rematch_parent=game
     )
     new_game.players.add(request.user)
-
-    invited_players = [player.username for player in game.players.all() if player != request.user]
 
     channel_layer = get_channel_layer()
     async_to_sync(channel_layer.group_send)(
@@ -248,6 +252,11 @@ def join_game(request, game_id):
     if game.players.filter(id=request.user.id).exists():
         messages.info(request, _("You are already in this room."))
         return redirect('game_room', game_id=game.game_id)
+    if game.is_private:
+        allowed = request.user.username in (game.invited_players or []) or request.user == game.host
+        if not allowed:
+            messages.error(request, _("This table is private and you are not invited."))
+            return redirect('game_specific_lobby', game_slug=game_slug)
     if game.is_full:
         messages.error(request, _("Room is full."))
         return redirect('game_specific_lobby', game_slug=game_slug)
@@ -257,6 +266,11 @@ def join_game(request, game_id):
 
     # Oyuncuyu 'players' M2M listesine ekle
     game.players.add(request.user)
+    if game.is_private and game.invited_players:
+        updated_invites = list(game.invited_players)
+        if request.user.username in updated_invites:
+            updated_invites.remove(request.user.username)
+        game.invited_players = updated_invites
     game.save()  # Oyuncuyu kaydet
 
     # --- OTOMATİK BAŞLATMA MANTIĞI KALDIRILDI ---
