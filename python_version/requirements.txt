@@ -22,5 +22,7 @@ Twisted==25.5.0
 txaio==25.9.2
 typing_extensions==4.15.0
 zope.interface==8.0.1
+psycopg2-binary==2.9.9
+python-dotenv==1.0.0
 
 
