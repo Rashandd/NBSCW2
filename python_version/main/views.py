@@ -97,32 +97,20 @@ def game_specific_lobby(request, game_slug):
 def create_game(request, game_slug):
     game_type = get_object_or_404(MiniGame, slug=game_slug)
 
-    # Zaten bekleyen bir odası var mı?
     if GameSession.objects.filter(game_type=game_type, host=request.user, status='waiting').exists():
         messages.warning(request, f"{game_type.name} için zaten bekleyen bir masanız var.")
         return redirect('game_specific_lobby', game_slug=game_slug)
 
-    # --- YENİ MANTIK: Tahta Boyutunu Ayarla ---
-    # Kural: 2P=5x5, 3P=6x6, 4P=7x7
-    max_p = game_type.max_players
+    # --- TAHTA BOYUTU MANTIĞI BURADAN KALDIRILDI ---
+    # Artık 'board_size' varsayılan (default=5) değeriyle oluşturulacak
+    # ve oyun başladığında güncellenecek.
 
-    if max_p <= 2:
-        board_size = 5
-    elif max_p == 3:
-        board_size = 6
-    else:  # 4 veya daha fazlası için
-        board_size = 7
-    # -----------------------------------------
-
-    # Oda kurucuyu 'host' olarak ata ve YENİ board_size'ı kaydet
     game = GameSession.objects.create(
         game_type=game_type,
         host=request.user,
         current_turn=None,
-        board_state={},
-        board_size=board_size  # --- YENİ ALAN ---
+        board_state={}
     )
-    # Oda kurucuyu 'players' M2M listesine ekle
     game.players.add(request.user)
 
     return redirect('game_room', game_id=game.game_id)
@@ -133,13 +121,9 @@ def create_game(request, game_slug):
 def game_room(request, game_id):
     game = get_object_or_404(GameSession.objects.select_related('game_type', 'host', 'current_turn', 'winner'),
                              game_id=game_id)
-
-    # Oyuncu mu? (M2M listesinde var mı?)
     is_player = game.players.filter(id=request.user.id).exists()
     is_spectator = not is_player
 
-    # Eğer izleyiciyse, ama oda bekliyorsa ve dolu değilse,
-    # otomatik olarak 'join' (katıl) view'ine yönlendir.
     if is_spectator and game.status == 'waiting' and not game.is_full:
         return redirect('join_game', game_id=game.game_id)
 
@@ -151,7 +135,7 @@ def game_room(request, game_id):
         'initial_board_state_json': json.dumps(game.board_state or {}),
 
         # --- YENİ EKLENDİ ---
-        # Tahta boyutunu template'e JSON olarak gönder
+        # Mevcut tahta boyutunu template'e gönder
         'board_size_json': game.board_size
     })
 
@@ -161,6 +145,8 @@ def game_room(request, game_id):
 def join_game(request, game_id):
     game = get_object_or_404(GameSession.objects.select_for_update(), game_id=game_id)
     game_slug = game.game_type.slug
+    channel_layer = get_channel_layer()
+    game_group_name = f"game_{game_id}"
 
     # Kontroller
     if game.players.filter(id=request.user.id).exists():
@@ -176,40 +162,60 @@ def join_game(request, game_id):
     # Oyuncuyu 'players' M2M listesine ekle
     game.players.add(request.user)
 
-    # Oda şimdi doldu mu? Dolduysa oyunu başlat.
-    if game.is_full:
+    # --- DEĞİŞİKLİK 1: BAŞLATMA KURALI ---
+    # 'game.is_full' yerine 'min_players' kontrolü
+    if game.players.count() >= game.game_type.min_players and game.status == 'waiting':
         game.status = 'in_progress'
 
-        # Başlayacak oyuncuyu seç (Tüm oyuncular arasından)
+        # --- DEĞİŞİKLİK 2: TAHTA BOYUTU MANTIĞI ---
+        # Tahta boyutu, oyun başladığındaki gerçek oyuncu sayısına göre belirlenir
+        player_count = game.players.count()
+        if player_count <= 2:
+            game.board_size = 5
+        elif player_count == 3:
+            game.board_size = 6
+        else:  # 4 veya daha fazla
+            game.board_size = 7
+
         player_list = list(game.players.all())
         starter = random.choice(player_list)
         game.current_turn = starter
         game.save()
 
-        # --- TÜM OYUNCULARA WEBSOCKET İLE HABER VER ---
-        channel_layer = get_channel_layer()
-        game_group_name = f"game_{game_id}"
-
+        # --- TÜM OYUNCULARA WEBSOCKET İLE HABER VER (Başlangıç) ---
         player_usernames = [p.username for p in player_list]
-
         async_to_sync(channel_layer.group_send)(
             game_group_name,
             {
-                'type': 'game_message',
+                'type': 'game_state',  # 'game_message' yerine 'game_state'
                 'state': game.board_state,
                 'turn': game.current_turn.username,
-                'players': player_usernames,  # 'p1'/'p2' yerine tüm liste
+                'players': player_usernames,
                 'status': game.status,
+                'board_size': game.board_size,  # YENİ boyutu gönder
                 'message': f"Oda doldu! {request.user.username} katıldı. Çark çevrildi ve {starter.username} başlıyor!",
                 'special_event': 'game_start_roll'
             }
         )
     else:
-        # Oda dolmadı, sadece yeni oyuncuyu kaydet
+        # --- DEĞİŞİKLİK 3: SAYFA YENİLEME SORUNU ÇÖZÜMÜ ---
+        # Oyun başlamadı, ama yeni oyuncu katıldı.
+        # Herkese yeni oyuncu listesini ve durumu haber ver.
         game.save()
-        # --- DİĞER OYUNCULARA HABER VER (Opsiyonel) ---
-        # (WebSocket'e "Ahmet katıldı. (3/4)" mesajı gönder...)
-        pass
+        player_usernames = [p.username for p in game.players.all()]
+        async_to_sync(channel_layer.group_send)(
+            game_group_name,
+            {
+                'type': 'game_state',
+                'state': game.board_state,
+                'turn': None,
+                'players': player_usernames,  # Güncellenmiş oyuncu listesi
+                'status': game.status,
+                'board_size': game.board_size,
+                'message': f"{request.user.username} masaya katıldı.",
+                'special_event': None
+            }
+        )
 
     return redirect('game_room', game_id=game.game_id)
 

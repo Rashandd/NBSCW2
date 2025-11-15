@@ -568,11 +568,24 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
 
             game_with_lock.players.add(user)
 
-            if game_with_lock.players.count() >= game_with_lock.game_type.max_players:
+            # --- DEĞİŞİKLİK BURADA ---
+            # max_players yerine min_players kontrolü yap
+            if game_with_lock.players.count() >= game_with_lock.game_type.min_players:
                 game_with_lock.status = 'in_progress'
                 players_list = list(game_with_lock.players.all())
                 starter = random.choice(players_list)
                 game_with_lock.current_turn = starter
+
+                # --- YENİ TAHTA BOYUTU MANTIĞI ---
+                # Tahta boyutu, oyun başladığındaki gerçek oyuncu sayısına göre belirlenir
+                player_count = game_with_lock.players.count()
+                if player_count <= 2:
+                    game_with_lock.board_size = 5
+                elif player_count == 3:
+                    game_with_lock.board_size = 6
+                else:  # 4 veya daha fazla
+                    game_with_lock.board_size = 7
+                # --- YENİ MANTIK BİTTİ ---
 
             game_with_lock.save()
             return game_with_lock
@@ -591,6 +604,10 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
             'players': player_usernames,
             'status': game_obj.status,
             'winner': game_obj.winner.username if game_obj.winner else None,
+
+            # --- YENİ EKLENDİ ---
+            # Tahta boyutunu client'a gönder
+            'board_size': game_obj.board_size,
         }
 
     async def send_game_state_to_user(self, game_obj):

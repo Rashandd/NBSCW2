@@ -252,7 +252,7 @@
 
         // --- YENİ: Dinamik Tahta Boyutu ---
         // View'den gelen tahta boyutunu (5, 6, veya 7) al
-        const boardSize = JSON.parse(document.getElementById('board-size-json').textContent);
+        let boardSize = JSON.parse(document.getElementById('board-size-json').textContent);
         // CSS'in kullanabilmesi için root değişkene ata
         document.documentElement.style.setProperty('--board-size', boardSize);
         // ---------------------------------
@@ -293,7 +293,12 @@
                 // 1. Oyuncu Bilgilerini Güncelle (Aynı)
                 if (data.players) {
                     playerUsernames = data.players;
-                    updatePlayerList(data.players);
+                    updatePlayerList(data.players); // HTML'i yeniden çiz
+                }
+                if (data.board_size && data.board_size !== boardSize) {
+                    console.log(`Tahta boyutu ${boardSize}'dan ${data.board_size}'a güncellendi.`);
+                    boardSize = data.board_size; // Global değişkeni güncelle
+                    document.documentElement.style.setProperty('--board-size', boardSize);
                 }
 
                 // 2. Sıra Göstergesini Güncelle (Aynı)
@@ -312,7 +317,7 @@
                     wheelOverlay.style.display = 'none';
                     logMessage(data.message, 'success');
                 }
-
+            
                 // --- 4. Sıralı Patlama Animasyonu (GÜNCELLENDİ) ---
 
                 // --- YENİ (Animasyon İyileştirmesi): Patlama Öncesi Temizlik ---
