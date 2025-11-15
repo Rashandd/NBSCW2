@@ -133,11 +133,18 @@ class DiceWars:
     def check_and_get_eliminated_players(self, game):
         """
         Tahtada hiç taşı kalmayan oyuncuları bulur ve döndürür.
+        İlk tur tamamlanmadan elenme kontrolü yapmaz.
         Returns: list of usernames who have no pieces left
         """
         eliminated = []
         board_state = game.board_state
         if not board_state:
+            return eliminated
+        
+        # İlk tur tamamlanmadan elenme kontrolü yapma
+        # Her oyuncunun en az bir hamle yapması gerekir
+        player_count = game.players.count()
+        if game.move_count < player_count:
             return eliminated
         
         # Tüm aktif oyuncuları al
@@ -480,7 +487,11 @@ class GameConsumer_DiceWars(AsyncJsonWebsocketConsumer):
     # --- Grup Yayını Metodları ---
     @database_sync_to_async
     def perform_initial_click(self, content):
-        # ... (Bu fonksiyonunuz zaten doğru, değişiklik yok) ...
+        """
+        Hamle yapma fonksiyonu.
+        İlk turda: Boş hücrelere yerleştirme yapılabilir
+        Sonraki turlarda: Sadece kendi hücrelerini yükseltme yapılabilir
+        """
         with transaction.atomic():
             game = GameSession.objects.select_for_update().get(game_id=self.game_id)
             if game.status != 'in_progress':
@@ -493,15 +504,30 @@ class GameConsumer_DiceWars(AsyncJsonWebsocketConsumer):
             if r_str not in game.board_state:
                 game.board_state[r_str] = {}
             cell = game.board_state[r_str].get(c_str)
+            
+            player_count = game.players.count()
+            is_first_round = game.move_count < player_count
+            
             if cell is None:
-                game.board_state[r_str][c_str] = {
-                    'owner': self.user.username,
-                    'count': 3
-                }
+                # Boş hücreye tıklama
+                if is_first_round:
+                    # İlk turda: Boş hücrelere yerleştirme yapılabilir
+                    game.board_state[r_str][c_str] = {
+                        'owner': self.user.username,
+                        'count': 3
+                    }
+                else:
+                    # Sonraki turlarda: Boş hücrelere yerleştirme yapılamaz
+                    return game, False, "İlk turdan sonra sadece kendi hücrelerinizi yükseltebilirsiniz."
             else:
+                # Dolu hücreye tıklama
                 if cell.get('owner') != self.user.username:
                     return game, False, "Bu hücre rakibinize ait."
+                # Kendi hücresini yükselt
                 cell['count'] += 1
+            
+            # Hamle sayısını artır
+            game.move_count += 1
             game.save()
             return game, True, ""
 
@@ -548,6 +574,8 @@ class GameConsumer_DiceWars(AsyncJsonWebsocketConsumer):
         else:  # 4+
             game.board_size = 7
 
+        # Hamle sayacını sıfırla (ilk tur için)
+        game.move_count = 0
         game.save()
         return game, f"Oyun başladı! {starter.username} başlıyor."
 

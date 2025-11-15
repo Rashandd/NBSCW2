@@ -126,6 +126,7 @@ class GameSession(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='waiting')
     winner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name='games_won', on_delete=models.CASCADE, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+    move_count = models.PositiveIntegerField(default=0, verbose_name="Hamle Sayısı")
 
     @property
     def player_count(self):
