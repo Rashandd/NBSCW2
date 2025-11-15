@@ -581,11 +581,13 @@
             
             // IMPORTANT: Show explosions on CURRENT board BEFORE rendering new state
             // This ensures explosions are visible on the cells that are about to be cleared
+            // For local moves, we need to ensure explosions show even if board was updated optimistically
             if (data.exploded_cells && data.exploded_cells.length > 0) {
-                // Show explosions on current board state
+                // If this is a local move chain, make sure we show explosions immediately
+                // Don't wait for board update - show on current board state
                 await triggerSequentialExplosions(data.exploded_cells, localChainActive);
                 // Small delay after explosions
-                await sleep(localChainActive ? 50 : 100);
+                await sleep(localChainActive ? 30 : 100);
             }
             
             // Then, render board with new state (this updates the board for all players)
@@ -593,11 +595,12 @@
             if (data.state) {
                 renderBoard(data.state);
                 // Small delay to see the updated board
-                await sleep(localChainActive ? 30 : 60);
+                await sleep(localChainActive ? 20 : 60);
             }
 
-            // After explosions, handle eliminations (only NEW ones - avoid duplicate messages)
-            if (data.eliminated_players !== undefined && data.eliminated_players.length > 0) {
+            // After explosions and board update, handle eliminations IMMEDIATELY
+            // Check for eliminations in this message
+            if (data.eliminated_players !== undefined) {
                 // Check which players are newly eliminated (not shown before)
                 const newlyEliminated = data.eliminated_players.filter(p => !shownEliminatedPlayers.has(p));
                 
@@ -605,14 +608,11 @@
                 eliminatedPlayers = data.eliminated_players;
                 newlyEliminated.forEach(p => shownEliminatedPlayers.add(p));
                 
-                // Only show animation for newly eliminated players
+                // Show elimination animation IMMEDIATELY for newly eliminated players
                 if (newlyEliminated.length > 0) {
-                    await sleep(150); // Small gap after explosions
+                    // Don't wait - show immediately after board update
                     await handlePlayerElimination(newlyEliminated);
                 }
-            } else if (data.eliminated_players !== undefined) {
-                // Update tracking even if empty array
-                eliminatedPlayers = data.eliminated_players || [];
             }
 
             // Finally, log message if not game start
@@ -846,10 +846,12 @@
         // IMPROVED: Sequential explosions with better timing and visual effects
         // This function shows explosions on the CURRENT board state (before it's updated)
         async function triggerSequentialExplosions(explodedCells, fastMode = false) {
-            const EXPLOSION_DELAY = fastMode ? 45 : 80;
+            const EXPLOSION_DELAY = fastMode ? 30 : 80; // Faster for local moves
             for (const coords of explodedCells) {
                 const [r, c] = coords;
                 // Find cell on CURRENT board (before new state is rendered)
+                // For local moves, the board might have been updated optimistically,
+                // but we still need to find and explode the cells
                 const cellEl = boardElement.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
                 if (cellEl) {
                     // Get player color from current cell classes
@@ -857,9 +859,34 @@
                     const color = playerClass ? `var(--${playerClass}-color)` : 'var(--cell-border)';
                     createExplosion(cellEl, color);
                     await sleep(EXPLOSION_DELAY);
+                } else if (fastMode) {
+                    // If cell not found in fast mode (local move), create explosion at expected position
+                    // This handles the case where board was updated optimistically
+                    const gameBoardContainer = document.getElementById('game-board-container');
+                    const boardRect = boardElement.getBoundingClientRect();
+                    const containerRect = gameBoardContainer.getBoundingClientRect();
+                    const cellSize = boardRect.width / boardSize;
+                    const x = (c + 0.5) * cellSize;
+                    const y = (r + 0.5) * cellSize;
+                    
+                    // Create a temporary element for explosion
+                    const tempEl = document.createElement('div');
+                    tempEl.style.position = 'absolute';
+                    tempEl.style.left = `${x}px`;
+                    tempEl.style.top = `${y}px`;
+                    tempEl.style.width = `${cellSize}px`;
+                    tempEl.style.height = `${cellSize}px`;
+                    boardElement.appendChild(tempEl);
+                    createExplosion(tempEl, 'var(--cell-border)');
+                    await sleep(EXPLOSION_DELAY);
+                    setTimeout(() => {
+                        if (tempEl.parentElement) {
+                            tempEl.parentElement.removeChild(tempEl);
+                        }
+                    }, 500);
                 }
             }
-            await sleep(fastMode ? 80 : 150);
+            await sleep(fastMode ? 50 : 150);
         }
         function renderBoard(boardState) {
             boardElement.innerHTML = '';
@@ -961,12 +988,15 @@
         });
 
 
-        // IMPROVED: Faster elimination animation
+        // IMPROVED: Faster elimination animation - shows immediately
         async function handlePlayerElimination(eliminatedUsernames) {
             const eliminationOverlay = document.getElementById('elimination-overlay');
             const eliminatedPlayersList = document.getElementById('eliminated-players-list');
             
-            if (!eliminationOverlay || !eliminatedPlayersList) return;
+            if (!eliminationOverlay || !eliminatedPlayersList) {
+                console.warn('Elimination overlay elements not found');
+                return;
+            }
             
             // Mark eliminated players in list immediately
             eliminatedUsernames.forEach(username => {
@@ -987,11 +1017,16 @@
                 eliminatedPlayersList.appendChild(eliminatedDiv);
             });
             
-            // Show overlay
+            // Show overlay IMMEDIATELY - don't wait
+            // Remove any existing animation first
+            eliminationOverlay.style.animation = '';
             eliminationOverlay.classList.add('show');
             
-            // Faster: Hide after 1 second instead of 2.5
-            await sleep(1000);
+            // Force a reflow to ensure the show class is applied
+            void eliminationOverlay.offsetWidth;
+            
+            // Faster: Hide after 1.2 seconds
+            await sleep(1200);
             eliminationOverlay.style.animation = 'eliminationHide 0.3s ease-out forwards';
             await sleep(300);
             eliminationOverlay.classList.remove('show');

@@ -496,12 +496,14 @@ class GameConsumer_DiceWars(AsyncJsonWebsocketConsumer):
                     game.game_id, cells_to_explode, player_username
                 )
                 # Broadcast updated board state (cells are now cleared)
+                # Include current eliminated players in case eliminations happened
                 await self.broadcast_game_state(
                     game, 
                     exploded_cells=None,  # No explosions in this broadcast (already shown)
-                    move_cell=None
+                    move_cell=None,
+                    eliminated_players=game.eliminated_players if game.eliminated_players else []
                 )
-                await asyncio.sleep(0.1)  # Small delay between explosion rounds
+                await asyncio.sleep(0.05)  # Very small delay between explosion rounds
 
             final_game = None
             eliminated_players = []

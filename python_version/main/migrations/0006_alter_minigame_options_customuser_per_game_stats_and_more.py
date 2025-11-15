@@ -11,6 +11,40 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
+        migrations.AlterModelOptions(
+            name='minigame',
+            options={'ordering': ['name'], 'verbose_name': 'Mini Oyun', 'verbose_name_plural': 'Mini Oyunlar'},
+        ),
+        migrations.AddField(
+            model_name='customuser',
+            name='per_game_stats',
+            field=models.JSONField(default=dict, verbose_name='Oyun Bazlı İstatistikler'),
+        ),
+        migrations.AddField(
+            model_name='customuser',
+            name='total_games',
+            field=models.PositiveIntegerField(default=0, verbose_name='Toplam Oyun'),
+        ),
+        migrations.AddField(
+            model_name='customuser',
+            name='total_losses',
+            field=models.PositiveIntegerField(default=0, verbose_name='Toplam Kayıp'),
+        ),
+        migrations.AddField(
+            model_name='customuser',
+            name='total_wins',
+            field=models.PositiveIntegerField(default=0, verbose_name='Toplam Kazanma'),
+        ),
+        migrations.AddField(
+            model_name='gamesession',
+            name='eliminated_players',
+            field=models.JSONField(default=list, verbose_name='Elenmiş Oyuncular'),
+        ),
+        migrations.AddField(
+            model_name='gamesession',
+            name='finished_at',
+            field=models.DateTimeField(blank=True, null=True, verbose_name='Bitiş Zamanı'),
+        ),
         migrations.AddField(
             model_name='gamesession',
             name='invited_players',
@@ -23,7 +57,27 @@ class Migration(migrations.Migration):
         ),
         migrations.AddField(
             model_name='gamesession',
+            name='move_count',
+            field=models.PositiveIntegerField(default=0, verbose_name='Hamle Sayısı'),
+        ),
+        migrations.AddField(
+            model_name='gamesession',
             name='rematch_parent',
             field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='rematch_children', to='main.gamesession'),
+        ),
+        migrations.AddField(
+            model_name='minigame',
+            name='created_at',
+            field=models.DateTimeField(auto_now=True, verbose_name='Oluşturulma Tarihi'),
+        ),
+        migrations.AddField(
+            model_name='minigame',
+            name='is_active',
+            field=models.BooleanField(default=True, verbose_name='Aktif'),
+        ),
+        migrations.AddField(
+            model_name='minigame',
+            name='updated_at',
+            field=models.DateTimeField(auto_now=True, verbose_name='Güncellenme Tarihi'),
         ),
     ]
