@@ -10,7 +10,7 @@ from django.db import models
 from django.shortcuts import redirect, get_object_or_404
 from django.shortcuts import render
 
-from .models import VoiceChannel, GameSession, MiniGame
+from .models import CustomUser, VoiceChannel, GameSession, MiniGame
 
 
 @login_required
@@ -280,7 +280,7 @@ def leaderboard(request):
             )
         ).order_by(f'{order_prefix}calculated_win_rate', '-rank_point')
     else:
-        users = User.objects.all().order_by(f'{order_prefix}{sort_by}', '-rank_point')
+        users = CustomUser.objects.all().order_by(f'{order_prefix}{sort_by}', '-rank_point')
     
     # İlk 100 oyuncuyu al
     top_players = users[:100]
