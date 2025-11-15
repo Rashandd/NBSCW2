@@ -9,54 +9,54 @@ from .models import MiniGame, GameSession, VoiceChannel
 class MiniGameAdmin(admin.ModelAdmin):
     """
     MiniGame modeli için admin ayarları.
+    Slug'ın otomatik dolmasını sağlar.
     """
     list_display = ['name', 'slug', 'min_players', 'max_players']
+    # 'name' alanını yazarken 'slug' alanını otomatik doldur
     prepopulated_fields = {'slug': ('name',)}
 
 
 @admin.register(GameSession)
 class GameSessionAdmin(admin.ModelAdmin):
     """
-    GameSession modeli için admin ayarları (YENİ MODELE UYGUN).
+    GameSession modeli için admin ayarları.
+    Daha kolay yönetim sağlar.
     """
-    list_display = [
-        'game_id',
-        'game_type',
-        'host',
-        'get_player_count',  # Özel fonksiyon
-        'status',
-        'created_at'
-    ]
+    list_display = (
+        '__str__', 'game_type', 'host', 'status',
+        'player_count_display', 'board_size', 'created_at'
+    )
+    list_filter = ('status', 'game_type', 'created_at')
+    search_fields = ('game_id', 'host__username')
 
-    list_filter = ['status', 'game_type', 'created_at']
-    search_fields = [
-        'game_id',
-        'host__username',
-        'players__username'
-    ]
+    # Bu alanların admin panelinden değiştirilmesini engelle
+    readonly_fields = (
+        'game_id', 'created_at', 'player_count_display', 'players_list'
+    )
 
-    def get_player_count(self, obj):
-        """
-        Her masadaki güncel oyuncu sayısını döndürür.
-        """
-        # --- DÜZELTME ---
-        # 'obj.players.count()' yerine, 'get_queryset'te 'annotate'
-        # ettiğimiz 'player_count_admin' değerini kullanıyoruz.
-        # Bu, N+1 sorgu sorununu çözer.
-        return obj.player_count_admin
+    # Oyuncuları M2M yerine düz metin olarak göster
+    fields = (
+        'game_id', 'game_type', 'host', 'status', 'board_size',
+        'current_turn', 'winner', 'players_list', 'board_state'
+    )
 
-    # Admin panelindeki sütun başlığı
-    get_player_count.short_description = 'Oyuncu Sayısı'
-
-    # YENİ: Sütunu sıralanabilir yapar
-    get_player_count.admin_order_field = 'player_count_admin'
-
-    # Admin listesi sorgusunu optimize etmek için
     def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        # 'player_count_admin' adıyla bir 'Count' ekle
-        qs = qs.annotate(player_count_admin=Count('players'))
-        return qs
+        # Performans için ilgili tabloları önden çek
+        return super().get_queryset(request).select_related(
+            'game_type', 'host'
+        ).prefetch_related('players')
+
+    def player_count_display(self, obj):
+        # Oyuncu sayısını (N / Max) formatında göster
+        return f"{obj.player_count} / {obj.game_type.max_players}"
+
+    player_count_display.short_description = "Oyuncular"
+
+    def players_list(self, obj):
+        # Oyuncuları salt okunur bir listede göster
+        return ", ".join([p.username for p in obj.players.all()])
+
+    players_list.short_description = "Katılan Oyuncular"
 
 
 @admin.register(VoiceChannel)

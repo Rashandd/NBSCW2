@@ -19,26 +19,26 @@ from django.contrib.auth import get_user_model
 from .models import VoiceChannel
 logger = logging.getLogger('main') # İstediğiniz bir isim verin
 
-def get_valid_neighbors(row, col):
-    # Olası komşu hamleleri (Yukarı, Aşağı, Sol, Sağ)
-    # (n_row2, n_row, n_col2, n_col mantığınız)
+
+def get_valid_neighbors(row, col, board_size):
+    """
+    Belirtilen boyuttaki (board_size x board_size) bir tahta için
+    geçerli komşuları döndürür.
+    """
     potential_moves = [
         (row - 1, col),  # Yukarı
         (row + 1, col),  # Aşağı
         (row, col - 1),  # Sol
         (row, col + 1)  # Sağ
     ]
-
     valid_neighbors = []
 
     for r, c in potential_moves:
-        # Ana kontrolümüz:
-        if 0 <= r < 5 and 0 <= c < 5:
-            # Sınırların içindeyse listeye ekle
+        # --- DEĞİŞTİ: 5 yerine board_size ---
+        if 0 <= r < board_size and 0 <= c < board_size:
             valid_neighbors.append((r, c))
-        else:
-            # Sınır dışındaysa uyarı ver (isteğe bağlı)
-            print(f"-> Geçersiz komşu atlandı: ({r}, {c})")
+        # else:
+        # print(f"-> Geçersiz komşu atlandı: ({r}, {c})")
 
     return valid_neighbors
 
@@ -65,44 +65,35 @@ def find_critical_cells(board_state):
 def bum(game, row, col, username):
     """
     SÖZLÜK (dict) tabanlı tahtada bir hücreyi patlatır.
-    KURAL: Hücre 4 kaybeder, etrafa 1'er tane dağıtır.
+    'game' objesinden dinamik 'board_size' alır.
     """
     r_str, c_str = str(row), str(col)
-
-    # Patlayan hücredeki zar sayısını al (4, 5, 6... olabilir)
     try:
         current_count = game.board_state[r_str][c_str].get('count', 0)
     except KeyError:
-        return  # Patlayacak hücre yoksa çık
+        return
 
-    # KURAL: Patlayan hücre 4 zar kaybeder
     new_count = current_count - 4
-
     if new_count <= 0:
-        game.board_state[r_str][c_str] = None  # Hücre boşalır
+        game.board_state[r_str][c_str] = None
     else:
-        # Kalan zarlar hücrede kalır
         game.board_state[r_str][c_str]['count'] = new_count
-        # Sahibi değişmez (çünkü içinde hâlâ zar var)
 
-    # 4 zarı etrafa dağıt
-    valids = get_valid_neighbors(row, col)
+    # --- DEĞİŞTİ: game.board_size parametresi eklendi ---
+    valids = get_valid_neighbors(row, col, game.board_size)
+    # ---------------------------------------------------
 
     for r_int, c_int in valids:
         r_neighbor_str, c_neighbor_str = str(r_int), str(c_int)
-
         if r_neighbor_str not in game.board_state:
             game.board_state[r_neighbor_str] = {}
 
         current_cell = game.board_state[r_neighbor_str].get(c_neighbor_str)
-
         if current_cell is None:
-            # Hücre boşsa, 1 zar ile yeni hücre oluştur
             game.board_state[r_neighbor_str][c_neighbor_str] = {
                 'owner': username, 'count': 1
             }
         else:
-            # Hücre doluysa, 1 zar ekle ve sahibini güncelle
             current_cell['count'] += 1
             current_cell['owner'] = username
 
@@ -448,9 +439,10 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
     def perform_initial_click(self, content):
         """
         Sadece ilk tıklamayı yapar. (Hata kontrolü)
-        (Eski 'handle_make_move' kodunuzun sadeleştirilmiş hali)
+        YENİ MANTIK (Boşsa 3 koy, doluysa 1 artır) ile güncellendi.
         """
         with transaction.atomic():
+            # 1. Gerekli kontroller
             game = GameSession.objects.select_for_update().get(game_id=self.game_id)
 
             if game.status != 'in_progress':
@@ -460,21 +452,38 @@ class GameConsumer(AsyncJsonWebsocketConsumer):
 
             row, col = content.get('row'), content.get('col')
             r_str, c_str = str(row), str(col)
-            piece_count = _count_player_pieces(game.board_state, self.user.username)
-            cell = game.board_state.get(r_str, {}).get(c_str)
 
-            if piece_count == 0:  # İlk hamle
-                if cell is not None:
-                    return game, False, "İlk hamleniz boş bir hücreye olmalı."
-                if r_str not in game.board_state: game.board_state[r_str] = {}
-                game.board_state[r_str][c_str] = {'owner': self.user.username, 'count': 1}
-            else:  # Normal hamle
-                if not cell:
-                    return game, False, "Boş bir hücreye oynayamazsınız."
+            # 2. Hücreyi al (Sözlük yapısına uygun)
+            if r_str not in game.board_state:
+                game.board_state[r_str] = {}
+
+            cell = game.board_state[r_str].get(c_str)  # None veya {'owner': ..., 'count': ...}
+
+            # --- DÜZELTİLMİŞ OYUN MANTIĞI ---
+
+            if cell is None:
+                # KURAL 1: Boş bir hücreye tıklandı.
+                # "bir karede ilk hamleyi yapiyorsan 3 olan bir zarla"
+                # Bu, yeni bir "3'lü" zar yerleştirme hamlesidir.
+
+                # (Eski "piece_count == 0" kontrolü kaldırıldı,
+                # artık her zaman boş hücreye 3 koyulabilir)
+                game.board_state[r_str][c_str] = {
+                    'owner': self.user.username,
+                    'count': 3  # Kuralınıza göre 1 değil 3
+                }
+
+            else:
+                # KURAL 2: Dolu bir hücreye tıklandı.
                 if cell.get('owner') != self.user.username:
                     return game, False, "Bu hücre rakibinize ait."
+
+                # "ondan sonraki hamlelerde sadece zari yukseltebiliyorsun"
+                # Bu, mevcut zarı artırma hamlesidir.
                 cell['count'] += 1
-                cell['owner'] = self.user.username
+                # (Sahibi zaten 'self.user.username' idi, değiştirmeye gerek yok)
+
+            # --- MANTIK DÜZELTMESİ BİTTİ ---
 
             game.save()
             return game, True, ""

@@ -44,8 +44,20 @@ def settings_view(request):
     """Kullanıcının mikrofon/hoparlör seçimi yapacağı ayarlar sayfası."""
     return render(request, 'settings.html', {'title': 'Ayarlar'})
 
+@login_required
+def all_games_lobby(request):
+    """
+    Sistemdeki tüm 'MiniGame' türlerini listeleyen ana oyun merkezi sayfası.
+    Örn: Dice Wars, Satranç, Ludo...
+    """
+    # Veritabanındaki tüm MiniGame nesnelerini al
+    all_minigames = MiniGame.objects.all()
 
-
+    context = {
+        'minigames_list': all_minigames,
+    }
+    # minigames.html adında yeni bir template render et
+    return render(request, 'minigames.html', context)
 
 
 # 2. OYUNA ÖZEL LOBİ (Sorgular değişti)
@@ -82,22 +94,6 @@ def game_specific_lobby(request, game_slug):
 
 
 @login_required
-def all_games_lobby(request):
-    """
-    Sistemdeki tüm 'MiniGame' türlerini listeleyen ana oyun merkezi sayfası.
-    Örn: Dice Wars, Satranç, Ludo...
-    """
-    # Veritabanındaki tüm MiniGame nesnelerini al
-    all_minigames = MiniGame.objects.all()
-
-    context = {
-        'minigames_list': all_minigames,
-    }
-    # minigames.html adında yeni bir template render et
-    return render(request, 'minigames.html', context)
-
-# 3. ODA KURMA (Değişti)
-@login_required
 def create_game(request, game_slug):
     game_type = get_object_or_404(MiniGame, slug=game_slug)
 
@@ -106,18 +102,58 @@ def create_game(request, game_slug):
         messages.warning(request, f"{game_type.name} için zaten bekleyen bir masanız var.")
         return redirect('game_specific_lobby', game_slug=game_slug)
 
-    # Oda kurucuyu 'host' olarak ata
+    # --- YENİ MANTIK: Tahta Boyutunu Ayarla ---
+    # Kural: 2P=5x5, 3P=6x6, 4P=7x7
+    max_p = game_type.max_players
+
+    if max_p <= 2:
+        board_size = 5
+    elif max_p == 3:
+        board_size = 6
+    else:  # 4 veya daha fazlası için
+        board_size = 7
+    # -----------------------------------------
+
+    # Oda kurucuyu 'host' olarak ata ve YENİ board_size'ı kaydet
     game = GameSession.objects.create(
         game_type=game_type,
-        host=request.user,  # 'player1' yerine 'host'
+        host=request.user,
         current_turn=None,
-        board_state={}  # veya default_board()
+        board_state={},
+        board_size=board_size  # --- YENİ ALAN ---
     )
     # Oda kurucuyu 'players' M2M listesine ekle
     game.players.add(request.user)
 
     return redirect('game_room', game_id=game.game_id)
 
+
+# 5. OYUN ODASI (DEĞİŞTİ)
+@login_required
+def game_room(request, game_id):
+    game = get_object_or_404(GameSession.objects.select_related('game_type', 'host', 'current_turn', 'winner'),
+                             game_id=game_id)
+
+    # Oyuncu mu? (M2M listesinde var mı?)
+    is_player = game.players.filter(id=request.user.id).exists()
+    is_spectator = not is_player
+
+    # Eğer izleyiciyse, ama oda bekliyorsa ve dolu değilse,
+    # otomatik olarak 'join' (katıl) view'ine yönlendir.
+    if is_spectator and game.status == 'waiting' and not game.is_full:
+        return redirect('join_game', game_id=game.game_id)
+
+    return render(request, 'game_room.html', {
+        'game': game,
+        'is_spectator': is_spectator,
+        'game_id_json': str(game_id),
+        'username_json': request.user.username,
+        'initial_board_state_json': json.dumps(game.board_state or {}),
+
+        # --- YENİ EKLENDİ ---
+        # Tahta boyutunu template'e JSON olarak gönder
+        'board_size_json': game.board_size
+    })
 
 # 4. ODAYA KATILMA (Tamamen Değişti)
 @login_required
@@ -178,28 +214,7 @@ def join_game(request, game_id):
     return redirect('game_room', game_id=game.game_id)
 
 
-# 5. OYUN ODASI (İzleyici mantığı değişti)
-@login_required
-def game_room(request, game_id):
-    game = get_object_or_404(GameSession.objects.select_related('game_type', 'host', 'current_turn', 'winner'),
-                             game_id=game_id)
 
-    # Oyuncu mu? (M2M listesinde var mı?)
-    is_player = game.players.filter(id=request.user.id).exists()
-    is_spectator = not is_player
-
-    # Eğer izleyiciyse, ama oda bekliyorsa ve dolu değilse,
-    # otomatik olarak 'join' (katıl) view'ine yönlendir.
-    if is_spectator and game.status == 'waiting' and not game.is_full:
-        return redirect('join_game', game_id=game.game_id)
-
-    return render(request, 'game_room.html', {
-        'game': game,
-        'is_spectator': is_spectator,
-        'game_id_json': str(game_id),
-        'username_json': request.user.username,
-        'initial_board_state_json': json.dumps(game.board_state or {})
-    })
 
 
 # 6. ODA SİLME (Kontroller değişti)
