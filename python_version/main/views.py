@@ -12,16 +12,38 @@ from django.utils.translation import gettext_lazy as _
 from django.http import JsonResponse
 from django.urls import reverse
 
-from .models import CustomUser, VoiceChannel, GameSession, MiniGame
+from .models import CustomUser, VoiceChannel, GameSession, MiniGame, ChatMessage, ChannelMember
+from django.contrib.auth import authenticate, login
+from django.contrib.auth.forms import AuthenticationForm
 
 
-@login_required
 def index(request):
-    channels = VoiceChannel.objects.all().order_by('name')
-
+    """Landing page - shows login form or redirects to channels if logged in"""
+    if request.user.is_authenticated:
+        channels = VoiceChannel.objects.all().order_by('name')
+        context = {
+            'channels': channels,
+            'title': _('Voice Chat Rooms'),
+            'user': request.user,
+        }
+        return render(request, 'index.html', context)
+    
+    # Show login form
+    if request.method == 'POST':
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            username = form.cleaned_data.get('username')
+            password = form.cleaned_data.get('password')
+            user = authenticate(username=username, password=password)
+            if user is not None:
+                login(request, user)
+                return redirect('index')
+    else:
+        form = AuthenticationForm()
+    
     context = {
-        'channels': channels,
-        'title': _('Voice Chat Rooms'),
+        'form': form,
+        'title': _('Welcome Back!'),
     }
     return render(request, 'index.html', context)
 
@@ -31,14 +53,47 @@ def voice_channel_view(request, slug):
     """Tek bir sesli sohbet odası ve chat arayüzü."""
 
     channel = get_object_or_404(VoiceChannel, slug=slug)
+    
+    # Get recent chat messages (last 50)
+    recent_messages = ChatMessage.objects.filter(channel=channel).select_related('user').order_by('-created_at')[:50]
+    recent_messages = list(reversed(recent_messages))  # Reverse to show oldest first
+    
+    # Get online members
+    online_members = ChannelMember.objects.filter(channel=channel, is_online=True).select_related('user')
+    all_members = ChannelMember.objects.filter(channel=channel).select_related('user')
 
     context = {
         'channel': channel,
         'title': _('#{channel_name} Room').format(channel_name=channel.name),
-        # Kullanıcının oda slug'ını JavaScript'e aktarmak için
         'channel_slug': slug,
+        'user': request.user,
+        'recent_messages': recent_messages,
+        'online_members': online_members,
+        'all_members': all_members,
     }
     return render(request, 'oda.html', context)
+
+
+@login_required
+def chat_messages_api(request, slug):
+    """API endpoint to fetch chat messages for a channel"""
+    channel = get_object_or_404(VoiceChannel, slug=slug)
+    limit = int(request.GET.get('limit', 50))
+    
+    messages = ChatMessage.objects.filter(channel=channel).select_related('user').order_by('-created_at')[:limit]
+    
+    messages_data = [
+        {
+            'id': msg.id,
+            'author': msg.user.username,
+            'content': msg.content,
+            'timestamp': msg.created_at.isoformat(),
+            'created_at': msg.created_at.strftime('%I:%M %p'),
+        }
+        for msg in reversed(messages)
+    ]
+    
+    return JsonResponse({'messages': messages_data})
 
 @login_required
 def settings_view(request):

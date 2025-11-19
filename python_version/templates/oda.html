@@ -256,26 +256,14 @@
         <!-- Chat Area (Visible when Voice Stage is Hidden) -->
         <div id="chat-area" class="flex-1 flex flex-col min-h-0">
             <!-- Messages -->
-            <div class="flex-1 overflow-y-auto p-4 space-y-6" id="message-list">
-                <!-- Welcome Message -->
-                <div class="mt-4 mb-8">
-                    <div class="w-16 h-16 rounded-full bg-gray-600 flex items-center justify-center mb-4">
+            <div class="flex-1 overflow-y-auto p-4 space-y-6" id="discord-messages">
+                <!-- Welcome Message (will be removed when messages load) -->
+                <div class="mt-4 mb-8 text-center">
+                    <div class="w-16 h-16 rounded-full bg-gray-600 flex items-center justify-center mb-4 mx-auto">
                         <i class="fas fa-hashtag text-4xl text-white"></i>
                     </div>
-                    <h1 class="text-3xl font-bold text-white">Welcome to #general!</h1>
-                    <p class="text-gray-400 mt-1">This is the start of the #general channel.</p>
-                </div>
-
-                <!-- Mock Message -->
-                <div class="flex group hover:bg-[#32353b] -mx-4 px-4 py-1">
-                    <img src="https://ui-avatars.com/api/?name=Alice&background=random" class="w-10 h-10 rounded-full mr-4 mt-1 cursor-pointer hover:opacity-80 transition-opacity">
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center mb-1">
-                            <span class="font-medium text-white hover:underline cursor-pointer mr-2">Alice</span>
-                            <span class="text-xs text-gray-400">Today at 10:30 AM</span>
-                        </div>
-                        <p class="text-gray-300 leading-relaxed">Has anyone seen the new design? It looks amazing! 🚀</p>
-                    </div>
+                    <h1 class="text-3xl font-bold text-white">Welcome to #{{ channel.name }}!</h1>
+                    <p class="text-gray-400 mt-1">This is the start of the #{{ channel.name }} channel.</p>
                 </div>
             </div>
 
@@ -285,24 +273,145 @@
                     <button class="text-gray-400 hover:text-gray-200 mr-4">
                         <i class="fas fa-plus-circle text-lg"></i>
                     </button>
-                    <input type="text" class="bg-transparent flex-1 outline-none text-gray-200 placeholder-gray-500" placeholder="Message #general">
+                    <input type="text" id="discord-chat-input" class="bg-transparent flex-1 outline-none text-gray-200 placeholder-gray-500" placeholder="Message #{{ channel.name }}" autocomplete="off">
+                    <button onclick="sendChatMessage()" class="text-gray-400 hover:text-gray-200 ml-4">
+                        <i class="fas fa-paper-plane text-lg"></i>
+                    </button>
                     <div class="flex items-center space-x-3 ml-4 text-gray-400">
                         <i class="fas fa-gift hover:text-gray-200 cursor-pointer"></i>
                         <i class="fas fa-sticky-note hover:text-gray-200 cursor-pointer"></i>
                         <i class="fas fa-smile hover:text-yellow-400 cursor-pointer transition-colors"></i>
                     </div>
                 </div>
-                <!-- Typing Indicator -->
-                <div class="h-4 mt-1 text-xs text-gray-400 font-bold animate-pulse">
-                    Bob is typing...
-                </div>
             </div>
         </div>
 
     </main>
 
-    <script src="/static/js/backend_dummy.js"></script>
     <script>
+        const channelSlug = "{{ channel_slug }}";
+        const currentUser = "{{ user.username }}";
+        const currentUserId = {{ user.id }};
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws/voice/?channel_slug=${channelSlug}`;
+        
+        let chatSocket = null;
+        const messageList = document.getElementById('discord-messages');
+        const chatInput = document.getElementById('discord-chat-input');
+
+        // Connect WebSocket
+        function connectWebSocket() {
+            chatSocket = new WebSocket(wsUrl);
+
+            chatSocket.onopen = function(e) {
+                console.log("WebSocket Connected");
+            };
+
+            chatSocket.onmessage = function(e) {
+                const data = JSON.parse(e.data);
+                handleWebSocketMessage(data);
+            };
+
+            chatSocket.onclose = function(e) {
+                console.log("WebSocket Disconnected");
+                // Reconnect after 3 seconds
+                setTimeout(connectWebSocket, 3000);
+            };
+
+            chatSocket.onerror = function(error) {
+                console.error("WebSocket Error:", error);
+            };
+        }
+
+        // Handle WebSocket messages
+        function handleWebSocketMessage(data) {
+            if (data.type === 'chat_message') {
+                addMessageToList(data.username, data.message, data.timestamp);
+            } else if (data.type === 'system_notification') {
+                addSystemMessage(data.message, data.event);
+            }
+        }
+
+        // Add message to chat list
+        function addMessageToList(username, content, timestamp) {
+            const div = document.createElement('div');
+            div.className = 'flex group hover:bg-[#32353b] -mx-4 px-4 py-1 message-group';
+            
+            const date = timestamp ? new Date(timestamp) : new Date();
+            const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+            
+            div.innerHTML = `
+                <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random" class="w-10 h-10 rounded-full mr-4 mt-1 cursor-pointer">
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center mb-1">
+                        <span class="font-medium text-white hover:underline cursor-pointer mr-2">${escapeHtml(username)}</span>
+                        <span class="text-xs text-gray-400">${timeStr}</span>
+                    </div>
+                    <p class="text-gray-300">${escapeHtml(content)}</p>
+                </div>
+            `;
+            messageList.appendChild(div);
+            messageList.scrollTop = messageList.scrollHeight;
+        }
+
+        // Add system message
+        function addSystemMessage(message, eventType) {
+            const div = document.createElement('div');
+            div.className = 'system-message info text-center text-gray-400 py-2 text-sm';
+            div.textContent = message;
+            messageList.appendChild(div);
+            messageList.scrollTop = messageList.scrollHeight;
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Send chat message
+        function sendChatMessage() {
+            const input = document.getElementById('discord-chat-input');
+            const message = input.value.trim();
+            if (!message || !chatSocket || chatSocket.readyState !== WebSocket.OPEN) return;
+
+            chatSocket.send(JSON.stringify({
+                signal_type: 'chat_message',
+                data: message
+            }));
+
+            input.value = '';
+        }
+
+        // Handle Enter key in chat input
+        if (chatInput) {
+            chatInput.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendChatMessage();
+                }
+            });
+        }
+
+        // Load chat history
+        async function loadChatHistory() {
+            try {
+                const response = await fetch(`/api/chat/${channelSlug}/messages/`);
+                const data = await response.json();
+                
+                // Clear welcome message if exists
+                const welcomeMsg = messageList.querySelector('.text-center');
+                if (welcomeMsg) welcomeMsg.remove();
+
+                data.messages.forEach(msg => {
+                    addMessageToList(msg.author, msg.content, msg.timestamp);
+                });
+            } catch (error) {
+                console.error("Error loading chat history:", error);
+            }
+        }
+
         // Toggle Voice/Video Stage
         function toggleVoiceArea() {
             const stage = document.getElementById('voice-stage');
@@ -311,9 +420,6 @@
             if (stage.classList.contains('hidden')) {
                 stage.classList.remove('hidden');
                 chat.classList.add('hidden');
-                
-                // Simulate joining
-                window.mockBackend.joinVoiceChannel('general-voice');
             } else {
                 stage.classList.add('hidden');
                 chat.classList.remove('hidden');
@@ -326,53 +432,34 @@
             const btn = event.currentTarget;
             
             if (container.classList.contains('hidden')) {
-                // Activate
                 try {
-                    const streamId = await window.mockBackend.startScreenShare('1080p');
-                    console.log("Screen Share Started:", streamId);
+                    const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                    console.log("Screen Share Started");
                     container.classList.remove('hidden');
-                    container.classList.add('flex'); // Use flex to center content
+                    container.classList.add('flex');
                     btn.classList.add('text-green-400');
+                    
+                    // Handle stream stop
+                    stream.getVideoTracks()[0].onended = () => {
+                        container.classList.add('hidden');
+                        container.classList.remove('flex');
+                        btn.classList.remove('text-green-400');
+                    };
                 } catch(err) {
-                    console.error(err);
+                    console.error("Screen share error:", err);
+                    alert("Could not start screen share. Please check permissions.");
                 }
             } else {
-                // Deactivate
                 container.classList.add('hidden');
                 container.classList.remove('flex');
                 btn.classList.remove('text-green-400');
             }
         }
 
-        // Settings Navigation (Prevent default if needed, but we have a URL)
-        function openSettings(e) {
-            // Typically opens a modal in SPA, but here we link to settings.html
-            // e.preventDefault();
-            // window.location.href = '/settings/';
-        }
-
-        // Mock Message Loading
-        window.addEventListener('DOMContentLoaded', async () => {
-            const msgs = await window.mockBackend.fetchMessages('general');
-            const list = document.getElementById('message-list');
-            
-            msgs.forEach(msg => {
-                const div = document.createElement('div');
-                div.className = 'flex group hover:bg-[#32353b] -mx-4 px-4 py-1 opacity-0 transform translate-y-2 transition-all duration-300';
-                setTimeout(() => div.classList.remove('opacity-0', 'translate-y-2'), 100);
-                div.innerHTML = `
-                    <img src="https://ui-avatars.com/api/?name=${msg.author}&background=random" class="w-10 h-10 rounded-full mr-4 mt-1 cursor-pointer">
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center mb-1">
-                            <span class="font-medium text-white hover:underline cursor-pointer mr-2">${msg.author}</span>
-                            <span class="text-xs text-gray-400">${msg.timestamp}</span>
-                        </div>
-                        <p class="text-gray-300">${msg.content}</p>
-                    </div>
-                `;
-                list.appendChild(div);
-            });
-            list.scrollTop = list.scrollHeight;
+        // Initialize on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadChatHistory();
+            connectWebSocket();
         });
     </script>
 </body>

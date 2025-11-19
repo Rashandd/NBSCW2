@@ -47,8 +47,17 @@ CREATE DATABASE nbcsw2_db;
 -- Create user (optional, you can use postgres user)
 CREATE USER nbcsw2_user WITH PASSWORD 'your_secure_password';
 
--- Grant privileges
+-- Grant privileges on database
 GRANT ALL PRIVILEGES ON DATABASE nbcsw2_db TO nbcsw2_user;
+
+-- IMPORTANT: PostgreSQL 15+ requires schema permissions
+-- Connect to the specific database first
+\c nbcsw2_db
+
+-- Grant schema privileges (REQUIRED for PostgreSQL 15+)
+GRANT ALL ON SCHEMA public TO nbcsw2_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO nbcsw2_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO nbcsw2_user;
 
 -- Exit psql
 \q
@@ -142,11 +151,31 @@ psql -U postgres
 CREATE DATABASE nbcsw2_db;
 ```
 
-### Permission Denied Error
+### Permission Denied Error (Schema Public)
 
-Grant proper permissions:
+**Error:** `permission denied for schema public` when running migrations
+
+**Fix for PostgreSQL 15+:** PostgreSQL 15+ requires explicit schema permissions. Run these commands:
+
 ```sql
-GRANT ALL PRIVILEGES ON DATABASE nbcsw2_db TO your_user;
+-- Connect as postgres superuser
+sudo -u postgres psql
+
+-- Connect to your database
+\c nbcsw2_db
+
+-- Grant schema privileges (REQUIRED)
+GRANT ALL ON SCHEMA public TO nbcsw2_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO nbcsw2_user;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO nbcsw2_user;
+
+-- If using postgres user directly, use 'postgres' instead of 'nbcsw2_user'
+\q
+```
+
+Or run the fix script:
+```bash
+sudo -u postgres psql -d nbcsw2_db -f python_version/fix_postgres_permissions.sql
 ```
 
 ## Production Considerations

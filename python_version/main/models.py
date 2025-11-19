@@ -73,6 +73,23 @@ class ChannelMember(models.Model):
         return f"{self.user.username} - {self.channel.name}"
 
 
+class ChatMessage(models.Model):
+    """Chat messages stored in database for history"""
+    channel = models.ForeignKey(VoiceChannel, on_delete=models.CASCADE, related_name='messages')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='chat_messages')
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['channel', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} in {self.channel.name}: {self.content[:50]}"
+
+
 
 
 # 5x5'lik boş bir tahta oluşturan varsayılan fonksiyon

@@ -8,12 +8,13 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils.translation import gettext as _
 
-from .models import GameSession
+from .models import GameSession, ChatMessage
 from django.utils import timezone
 
 User = get_user_model()
 
 from channels.generic.websocket import AsyncJsonWebsocketConsumer, AsyncWebsocketConsumer
+from channels.db import database_sync_to_async
 
 
 def update_player_rankings(game, winner):
@@ -230,6 +231,22 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
         except VoiceChannel.DoesNotExist:
             return None
 
+    @database_sync_to_async
+    def save_chat_message(self, content):
+        """Save chat message to database"""
+        if not hasattr(self, 'channel_object') or not self.channel_object:
+            return None
+        try:
+            message = ChatMessage.objects.create(
+                channel=self.channel_object,
+                user=self.scope["user"],
+                content=content
+            )
+            return message
+        except Exception as e:
+            logger.error(f"Error saving chat message: {e}")
+            return None
+
     async def connect(self):
         logger.info(f"Yeni bağlantı denemesi. Kullanıcı Anonim mi? {self.scope['user'].is_anonymous}")
 
@@ -318,6 +335,8 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
 
         # 2. Normal Sohbet Mesajı
         elif signal_type == 'chat_message':
+            # Save message to database
+            message_obj = await self.save_chat_message(data)
             await self.channel_layer.group_send(
                 self.channel_group_name,
                 {
@@ -325,6 +344,8 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
                     "sender_id": self.user_id,
                     "username": self.scope["user"].username,
                     "message": data,
+                    "message_id": message_obj.id if message_obj else None,
+                    "timestamp": message_obj.created_at.isoformat() if message_obj else None,
                 }
             )
 
@@ -349,6 +370,8 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
             "sender_id": event["sender_id"],
             "username": event["username"],
             "message": event["message"],
+            "message_id": event.get("message_id"),
+            "timestamp": event.get("timestamp"),
         })
 
     # Yeni üye katılımını bildir

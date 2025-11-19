@@ -5,7 +5,9 @@ from django.contrib.auth import views as auth_views # auth_views'i import edin
 urlpatterns = [
     path('', views.index, name='index'),
     path('login/', auth_views.LoginView.as_view(template_name='login.html'), name='login'),
+    path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('oda/<slug:slug>/', views.voice_channel_view, name='odasayfasi'),
+    path('api/chat/<slug:slug>/messages/', views.chat_messages_api, name='chat_messages_api'),
     path('settings/', views.settings_view, name='settings'),
 
     path('game-lobby/', views.all_games_lobby, name='all_games_lobby'),
