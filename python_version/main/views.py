@@ -12,40 +12,109 @@ from django.utils.translation import gettext_lazy as _
 from django.http import JsonResponse
 from django.urls import reverse
 
-from .models import CustomUser, VoiceChannel, GameSession, MiniGame, ChatMessage, ChannelMember
+from .models import CustomUser, Server, ServerRole, ServerMember, TextChannel, VoiceChannel, GameSession, MiniGame, ChatMessage
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.forms import AuthenticationForm
 
 
 def index(request):
-    """Landing page - shows login form or redirects to channels if logged in"""
+    """Landing page - shows servers if logged in"""
     if request.user.is_authenticated:
-        channels = VoiceChannel.objects.all().order_by('name')
+        # Get servers user is member of or owns
+        servers = Server.objects.filter(
+            Q(owner=request.user) | 
+            Q(members__user=request.user)
+        ).distinct().prefetch_related('members', 'text_channels', 'voice_channels').order_by('name')
+        
+        # Dummy servers for design showcase if DB is empty
+        if not servers.exists():
+            servers = [
+                type('Server', (), {
+                    'name': 'Gaming Hub',
+                    'slug': 'gaming-hub',
+                    'owner': request.user,
+                    'description': 'A community for gamers',
+                    'members': type('QuerySet', (), {'count': lambda: 25})(),
+                    'text_channels': type('QuerySet', (), {'count': lambda: 5})(),
+                    'voice_channels': type('QuerySet', (), {'count': lambda: 3})(),
+                })(),
+                type('Server', (), {
+                    'name': 'Music Lovers',
+                    'slug': 'music-lovers',
+                    'owner': request.user,
+                    'description': 'Share your favorite tunes',
+                    'members': type('QuerySet', (), {'count': lambda: 42})(),
+                    'text_channels': type('QuerySet', (), {'count': lambda: 3})(),
+                    'voice_channels': type('QuerySet', (), {'count': lambda: 2})(),
+                })(),
+            ]
+            
         context = {
-            'channels': channels,
-            'title': _('Voice Chat Rooms'),
+            'servers': servers,
+            'title': _('Your Servers'),
             'user': request.user,
         }
         return render(request, 'index.html', context)
     
-    # Show login form
-    if request.method == 'POST':
-        form = AuthenticationForm(request, data=request.POST)
-        if form.is_valid():
-            username = form.cleaned_data.get('username')
-            password = form.cleaned_data.get('password')
-            user = authenticate(username=username, password=password)
-            if user is not None:
-                login(request, user)
-                return redirect('index')
-    else:
-        form = AuthenticationForm()
+    # Not logged in state
+    return render(request, 'index.html', {'title': _('Welcome to VoiceHub')})
+
+
+@login_required
+def server_view(request, slug):
+    """View a server with its channels"""
+    server = get_object_or_404(
+        Server.objects.prefetch_related('text_channels', 'voice_channels', 'members__user', 'roles'),
+        slug=slug
+    )
+    
+    # Check if user is member or owner
+    is_member = server.owner == request.user or server.members.filter(user=request.user).exists()
+    
+    if not is_member and server.is_private:
+        messages.error(request, _("You don't have access to this server."))
+        return redirect('index')
+    
+    # Get user's roles in this server
+    member = server.members.filter(user=request.user).first()
+    user_roles = member.roles.all() if member else []
     
     context = {
-        'form': form,
-        'title': _('Welcome Back!'),
+        'server': server,
+        'user': request.user,
+        'is_owner': server.owner == request.user,
+        'is_member': is_member,
+        'user_roles': user_roles,
+        'text_channels': server.text_channels.all(),
+        'voice_channels': server.voice_channels.all(),
+        'members': server.members.select_related('user').all(),
     }
-    return render(request, 'index.html', context)
+    return render(request, 'server_view.html', context)
+
+
+@login_required
+def channel_view(request, server_slug, channel_slug):
+    """View a text channel in a server"""
+    server = get_object_or_404(Server, slug=server_slug)
+    channel = get_object_or_404(TextChannel, server=server, slug=channel_slug)
+    
+    # Check if user is member
+    is_member = server.owner == request.user or server.members.filter(user=request.user).exists()
+    if not is_member and server.is_private:
+        messages.error(request, _("You don't have access to this server."))
+        return redirect('index')
+    
+    # Get recent messages
+    recent_messages = ChatMessage.objects.filter(channel=channel).select_related('user').order_by('-created_at')[:50]
+    recent_messages = list(reversed(recent_messages))
+    
+    context = {
+        'server': server,
+        'channel': channel,
+        'user': request.user,
+        'recent_messages': recent_messages,
+    }
+    return render(request, 'channel_view.html', context)
 
 
 @login_required
@@ -58,9 +127,14 @@ def voice_channel_view(request, slug):
     recent_messages = ChatMessage.objects.filter(channel=channel).select_related('user').order_by('-created_at')[:50]
     recent_messages = list(reversed(recent_messages))  # Reverse to show oldest first
     
-    # Get online members
-    online_members = ChannelMember.objects.filter(channel=channel, is_online=True).select_related('user')
-    all_members = ChannelMember.objects.filter(channel=channel).select_related('user')
+    # Get online and all members (from the server if it exists)
+    if channel.server:
+        online_members = ServerMember.objects.filter(server=channel.server, is_online=True).select_related('user')
+        all_members = ServerMember.objects.filter(server=channel.server).select_related('user')
+    else:
+        # Legacy channels without server - no members to show
+        online_members = []
+        all_members = []
 
     context = {
         'channel': channel,

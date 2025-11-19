@@ -1,173 +1,133 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DiscordClone - Gateway</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{% trans "Voice & Chat Hub" %}{% endblock %}
+{% block extra_css %}
+{{ block.super }}
+<style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
         body {
-            margin: 0;
-            overflow: hidden;
-            background-color: #0f0e17;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Inter', sans-serif !important;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
         }
         
-        /* Space Background & Particles */
-        .space-bg {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            background: radial-gradient(ellipse at bottom, #1b2735 0%, #090a0f 100%);
+        .glass-card {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
         }
-        .star {
-            position: absolute;
-            background: white;
-            border-radius: 50%;
-            animation: float 50s infinite linear;
+        
+        .channel-card {
+            transition: all 0.3s ease;
         }
-        @keyframes float {
-            0% { transform: translateY(0px); opacity: 0; }
-            50% { opacity: 1; }
-            100% { transform: translateY(-100vh); opacity: 0; }
+        
+        .channel-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
+            border-color: #6366f1;
         }
 
-        /* Floating Form Container */
-        .glass-panel {
-            background: rgba(255, 255, 255, 0.05);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #1e293b; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #475569; 
+            border-radius: 3px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #64748b; 
         }
     </style>
-</head>
-<body class="flex items-center justify-center h-screen text-white">
+{% endblock %}
 
-    <!-- Dynamic Space Background -->
-    <div class="space-bg" id="space-bg"></div>
-
-    <!-- Main Container -->
-    <div class="w-full max-w-md p-8 rounded-2xl glass-panel transform transition-all duration-500 hover:scale-[1.02]">
-        
-        <!-- Logo / Header -->
-        <div class="text-center mb-8">
-            <div class="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-600 mb-4 shadow-lg shadow-indigo-500/50">
-                <i class="fab fa-discord text-3xl"></i>
-            </div>
-            <h1 class="text-3xl font-bold tracking-wider mb-2">Welcome Back!</h1>
-            <p class="text-gray-400">We're so excited to see you again!</p>
+{% block content %}
+<div class="mt-0">
+    <!-- Header Section -->
+    <div class="mb-4 flex items-center justify-between">
+        <div>
+            <h1 class="h3 mb-2">{% trans "Your Servers" %}</h1>
+            <p class="text-muted">{% trans "Join a server or create your own community" %}</p>
         </div>
-
-        {% if not user.is_authenticated %}
-        <!-- Login Form -->
-        <form method="post" action="{% url 'index' %}" id="login-form" class="space-y-4">
-            {% csrf_token %}
-            {% if form.errors %}
-            <div class="bg-red-600 bg-opacity-20 border border-red-500 text-red-300 px-4 py-3 rounded text-sm">
-                Invalid username or password. Please try again.
-            </div>
-            {% endif %}
-            <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Username</label>
-                <input type="text" name="username" required class="w-full bg-gray-900 border border-gray-700 rounded p-3 outline-none focus:border-indigo-500 transition-colors text-white" placeholder="username" autocomplete="username">
-            </div>
-            <div>
-                <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Password</label>
-                <input type="password" name="password" required class="w-full bg-gray-900 border border-gray-700 rounded p-3 outline-none focus:border-indigo-500 transition-colors text-white" placeholder="********" autocomplete="current-password">
-                <a href="#" class="text-xs text-indigo-400 hover:text-indigo-300 mt-1 block">Forgot your password?</a>
-            </div>
-            <button type="submit" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-3 rounded transition-all duration-200 transform active:scale-95">
-                Log In
+        <div class="flex gap-2">
+            <button class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-filter me-2"></i>{% trans "Filter" %}
             </button>
-        </form>
-        {% else %}
-        <!-- Logged In - Show Channels -->
-        <div class="space-y-4">
-            <div class="text-center">
-                <p class="text-gray-400 mb-4">Welcome, <strong class="text-white">{{ user.username }}</strong>!</p>
-            </div>
-            {% if channels %}
-            <div class="space-y-2 max-h-96 overflow-y-auto">
-                {% for channel in channels %}
-                <a href="{% url 'odasayfasi' slug=channel.slug %}" class="block bg-gray-900 hover:bg-gray-800 border border-gray-700 rounded-lg p-4 transition-all duration-200 transform hover:scale-[1.02]">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center space-x-3">
-                            <i class="fas fa-hashtag text-gray-400"></i>
-                            <div>
-                                <h3 class="text-white font-semibold">{{ channel.name }}</h3>
-                                <p class="text-gray-400 text-xs">{% if channel.is_private %}Private{% else %}Public{% endif %}</p>
+            <button class="btn btn-primary btn-sm">
+                <i class="fas fa-plus me-2"></i>{% trans "Create Server" %}
+            </button>
+        </div>
+    </div>
+
+    <!-- Server Grid -->
+    {% if user.is_authenticated %}
+        {% if servers %}
+        <div class="row g-4">
+            {% for server in servers %}
+            <div class="col-md-6 col-lg-4">
+                <div class="card bg-secondary border-secondary h-100 hover-shadow">
+                    <div class="card-body d-flex flex-column">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div class="rounded bg-dark p-2 border border-secondary">
+                                <i class="fas fa-server text-primary fs-4"></i>
                             </div>
+                            {% if server.owner == user %}
+                            <span class="badge bg-warning text-dark">
+                                <i class="fas fa-crown me-1"></i>{% trans "Owner" %}
+                            </span>
+                            {% endif %}
                         </div>
-                        <i class="fas fa-chevron-right text-gray-400"></i>
+                        
+                        <h5 class="card-title mb-2">{{ server.name }}</h5>
+                        <p class="card-text text-muted small mb-3 flex-grow-1">{{ server.description|default:"Join this server to start chatting!"|truncatewords:15 }}</p>
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <span class="badge bg-success me-2">
+                                    <i class="fas fa-circle me-1" style="font-size: 0.5rem;"></i>
+                                    {{ server.members.count }} {% trans "members" %}
+                                </span>
+                                <span class="badge bg-info text-dark">
+                                    <i class="fas fa-hashtag me-1"></i>
+                                    {{ server.text_channels.count }} {% trans "text" %}
+                                </span>
+                            </div>
+                            <a href="{% url 'server_view' slug=server.slug %}" class="btn btn-primary btn-sm">
+                                {% trans "Join" %} <i class="fas fa-arrow-right ms-1"></i>
+                            </a>
+                        </div>
                     </div>
-                </a>
-                {% endfor %}
+                </div>
             </div>
-            {% else %}
-            <div class="text-center text-gray-400 py-8">
-                <i class="fas fa-inbox text-4xl mb-4 opacity-50"></i>
-                <p>No channels available yet.</p>
-            </div>
-            {% endif %}
-            <div class="pt-4 border-t border-gray-700">
-                <a href="{% url 'settings' %}" class="block text-center text-indigo-400 hover:text-indigo-300 text-sm">
-                    <i class="fas fa-cog mr-2"></i>Settings
-                </a>
-                <a href="{% url 'logout' %}" class="block text-center text-red-400 hover:text-red-300 text-sm mt-2">
-                    <i class="fas fa-sign-out-alt mr-2"></i>Log Out
-                </a>
+            {% endfor %}
+        </div>
+        {% else %}
+        <!-- Empty State -->
+        <div class="card bg-secondary border-secondary text-center p-5">
+            <div class="card-body">
+                <i class="fas fa-server text-muted mb-3" style="font-size: 3rem;"></i>
+                <h5 class="card-title">{% trans "No Servers Yet" %}</h5>
+                <p class="card-text text-muted">{% trans "Create your first server to get started!" %}</p>
+                <button class="btn btn-primary mt-3">
+                    <i class="fas fa-plus me-2"></i>{% trans "Create Server" %}
+                </button>
             </div>
         </div>
         {% endif %}
-
-    </div>
-
-    <script>
-        // Generate Stars
-        const bg = document.getElementById('space-bg');
-        for(let i=0; i<50; i++) {
-            const star = document.createElement('div');
-            star.className = 'star';
-            const size = Math.random() * 3;
-            star.style.width = `${size}px`;
-            star.style.height = `${size}px`;
-            star.style.left = `${Math.random() * 100}%`;
-            star.style.top = `${Math.random() * 100}%`;
-            star.style.animationDuration = `${Math.random() * 20 + 10}s`;
-            star.style.opacity = Math.random();
-            bg.appendChild(star);
-        }
-
-        function toggleForms() {
-            document.getElementById('login-form').classList.toggle('hidden');
-            document.getElementById('register-form').classList.toggle('hidden');
-        }
-
-        async function handleLogin() {
-            try {
-                const btn = document.querySelector('button:not(.hidden)');
-                const originalText = btn.innerText;
-                btn.innerText = 'Loading...';
-                btn.disabled = true;
-                btn.classList.add('opacity-50', 'cursor-not-allowed');
-
-                // Use our MockBackend
-                const result = await window.mockBackend.login('DemoUser', 'password');
-                
-                if (result.success) {
-                    // Redirect to the Room (oda.html)
-                    // Since we are in Django, normally this would be a URL
-                    // But for this prototype, we'll assume /oda/general/ or similar exists
-                    window.location.href = "/oda/general/"; 
-                }
-            } catch (e) {
-                alert(e.message);
-            }
-        }
-    </script>
-</body>
-</html>
+    {% else %}
+        <!-- Not Logged In -->
+        <div class="card bg-secondary border-secondary text-center p-5">
+            <div class="card-body">
+                <i class="fas fa-lock text-muted mb-3" style="font-size: 3rem;"></i>
+                <h5 class="card-title">{% trans "Authentication Required" %}</h5>
+                <p class="card-text text-muted">{% trans "Please log in to access servers and channels" %}</p>
+                <a href="{% url 'login' %}" class="btn btn-primary mt-3">
+                    <i class="fas fa-sign-in-alt me-2"></i>{% trans "Log In" %}
+                </a>
+            </div>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}
