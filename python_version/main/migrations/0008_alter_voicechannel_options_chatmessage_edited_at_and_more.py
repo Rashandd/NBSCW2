@@ -5,6 +5,17 @@ from django.conf import settings
 from django.db import migrations, models
 
 
+def clear_chatmessages_channel(apps, schema_editor):
+    """Set all ChatMessage channel fields to NULL before changing FK"""
+    ChatMessage = apps.get_model('main', 'ChatMessage')
+    ChatMessage.objects.all().update(channel=None)
+
+
+def reverse_clear_chatmessages(apps, schema_editor):
+    """Reverse migration - nothing to do"""
+    pass
+
+
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -136,10 +147,23 @@ class Migration(migrations.Migration):
                 'unique_together': {('server', 'slug')},
             },
         ),
+        # First make the field nullable to allow NULL values
         migrations.AlterField(
             model_name='chatmessage',
             name='channel',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='messages', to='main.textchannel'),
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='messages', to='main.voicechannel'),
+        ),
+        # Data migration: Set all existing ChatMessage channels to NULL
+        # This is needed because the FK will change from VoiceChannel to TextChannel
+        migrations.RunPython(
+            clear_chatmessages_channel,
+            reverse_clear_chatmessages,
+        ),
+        # Now change the FK to TextChannel (existing messages are NULL, so this is safe)
+        migrations.AlterField(
+            model_name='chatmessage',
+            name='channel',
+            field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.CASCADE, related_name='messages', to='main.textchannel'),
         ),
         migrations.DeleteModel(
             name='ChannelMember',
