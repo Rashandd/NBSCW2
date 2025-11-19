@@ -503,7 +503,7 @@ class GameConsumer_DiceWars(AsyncJsonWebsocketConsumer):
                     move_cell=None,
                     eliminated_players=game.eliminated_players if game.eliminated_players else []
                 )
-                await asyncio.sleep(0.05)  # Very small delay between explosion rounds
+                await asyncio.sleep(0.1)  # Very small delay between explosion rounds
 
             final_game = None
             eliminated_players = []

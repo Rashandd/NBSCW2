@@ -1,174 +1,231 @@
-{% extends 'base.html' %}
-{% load i18n %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Custom Range Slider */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: transparent;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 16px;
+            width: 16px;
+            border-radius: 50%;
+            background: white;
+            cursor: pointer;
+            margin-top: -6px;
+            box-shadow: 0 0 2px rgba(0,0,0,0.5);
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            cursor: pointer;
+            background: #4f545c;
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body class="bg-[#2f3136] text-gray-200 font-sans flex h-screen overflow-hidden">
 
-{% block title %}{{ title }}{% endblock %}
+    <!-- Sidebar -->
+    <div class="w-1/3 max-w-xs bg-[#2f3136] flex flex-col items-end py-14 pl-4 pr-4 overflow-y-auto">
+        <nav class="w-48 space-y-1 text-gray-400 text-sm font-medium">
+            <div class="px-2.5 py-1.5 text-xs font-bold text-gray-500 uppercase mb-2">User Settings</div>
+            
+            <a href="#" onclick="switchTab('account')" class="tab-link active block px-2.5 py-1.5 rounded hover:bg-[#36393f] hover:text-gray-200 bg-[#3f4147] text-white transition-colors" id="link-account">
+                My Account
+            </a>
+            <a href="#" onclick="switchTab('voice')" class="tab-link block px-2.5 py-1.5 rounded hover:bg-[#36393f] hover:text-gray-200 transition-colors" id="link-voice">
+                Voice & Video
+            </a>
+            <a href="#" onclick="switchTab('appearance')" class="tab-link block px-2.5 py-1.5 rounded hover:bg-[#36393f] hover:text-gray-200 transition-colors" id="link-appearance">
+                Appearance
+            </a>
+            
+            <div class="border-t border-gray-700 my-2 mx-2"></div>
+            
+            <a href="/logout/" class="block px-2.5 py-1.5 rounded text-red-400 hover:bg-[#36393f] transition-colors group">
+                Log Out <i class="fas fa-sign-out-alt ml-auto opacity-0 group-hover:opacity-100"></i>
+            </a>
+        </nav>
+    </div>
 
-{% block content %}
-<div class="row justify-content-center">
-    <div class="col-lg-8 col-md-10">
-        <h1 class="mb-4">{{ title }}</h1>
-        <p class="text-muted">{% trans "Configure your preferences for voice communication here." %}</p>
-
-        <div class="card bg-secondary text-light mb-4">
-            <div class="card-header border-bottom border-dark">
-                {% trans "Device Preferences" %}
+    <!-- Content -->
+    <div class="flex-1 bg-[#36393f] py-14 px-10 overflow-y-auto relative">
+        
+        <!-- Close Button -->
+        <div class="fixed top-14 right-14 flex flex-col items-center cursor-pointer hover:opacity-75 transition-opacity z-50" onclick="closeSettings()">
+            <div class="w-9 h-9 rounded-full border-2 border-gray-400 flex items-center justify-center text-gray-400 mb-1">
+                <i class="fas fa-times text-lg"></i>
             </div>
-            <div class="card-body">
+            <span class="text-xs font-bold text-gray-400 uppercase">ESC</span>
+        </div>
 
-                <div class="mb-3">
-                    <label for="audioInputSelect" class="form-label">{% trans "Microphone Selection (Input)" %}</label>
-                    <select id="audioInputSelect" class="form-select bg-dark text-light border-dark"></select>
+        <!-- Tab: My Account -->
+        <div id="tab-account" class="tab-content max-w-2xl animate-fade-in">
+            <h2 class="text-xl font-bold text-white mb-6">My Account</h2>
+            
+            <div class="bg-[#2f3136] rounded-lg p-4 mb-8 flex items-center relative overflow-hidden">
+                <div class="h-24 w-full absolute top-0 left-0 bg-indigo-500 opacity-20"></div>
+                <div class="relative flex items-center w-full z-10 pt-4">
+                    <div class="relative mr-4">
+                        <img src="https://ui-avatars.com/api/?name=Me" class="w-20 h-20 rounded-full border-4 border-[#2f3136]">
+                        <div class="absolute bottom-0 right-0 w-5 h-5 bg-green-500 rounded-full border-4 border-[#2f3136]"></div>
+                    </div>
+                    <div class="flex-1">
+                        <div class="text-xl font-bold text-white">Username</div>
+                        <div class="text-gray-400 text-sm">#1234</div>
+                    </div>
+                    <button class="bg-[#5865F2] hover:bg-indigo-600 text-white px-4 py-2 rounded text-sm font-medium transition-colors">
+                        Edit Profile
+                    </button>
                 </div>
+            </div>
 
-                <div class="mb-3">
-                    <label for="audioOutputSelect" class="form-label">{% trans "Speaker Selection (Output)" %}</label>
-                    <select id="audioOutputSelect" class="form-select bg-dark text-light border-dark"></select>
+            <div class="bg-[#2f3136] rounded-lg p-4 space-y-4">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <div class="text-xs font-bold text-gray-400 uppercase mb-1">Username</div>
+                        <div class="text-white">Username <span class="text-gray-500">#1234</span></div>
+                    </div>
+                    <button class="bg-[#4f545c] hover:bg-[#686d73] text-white px-3 py-1.5 rounded text-sm transition-colors">Edit</button>
                 </div>
-
-                <hr class="border-secondary">
-                <div class="mb-3">
-                    <label for="masterVolumeSelect" class="form-label">{% trans "Master Volume Level" %}</label>
-                    <input type="range" class="form-range" id="masterVolumeSelect" min="0" max="1" step="0.01" value="1">
+                <div class="flex justify-between items-center">
+                    <div>
+                        <div class="text-xs font-bold text-gray-400 uppercase mb-1">Email</div>
+                        <div class="text-white">********@gmail.com</div>
+                    </div>
+                    <button class="bg-[#4f545c] hover:bg-[#686d73] text-white px-3 py-1.5 rounded text-sm transition-colors">Edit</button>
                 </div>
-
-                <div class="mb-3">
-                    <label class="form-label">{% trans "Microphone Test (Input Level)" %}</label>
-                    <progress id="micTestMeter" class="w-100" max="100" value="0"></progress>
-                </div>
-
-                <button id="save-settings-btn" class="btn btn-success mt-3">{% trans "Save Preferences" %}</button>
-                <div id="save-status" class="mt-2 text-success" style="display: none;">{% trans "Your settings have been saved!" %}</div>
             </div>
         </div>
+
+        <!-- Tab: Voice & Video -->
+        <div id="tab-voice" class="tab-content max-w-2xl hidden animate-fade-in">
+            <h2 class="text-xl font-bold text-white mb-6">Voice & Video</h2>
+
+            <div class="grid grid-cols-2 gap-6 mb-8">
+                <!-- Input Device -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Input Device</label>
+                    <select class="w-full bg-[#202225] text-white p-2.5 rounded border border-transparent focus:border-black outline-none">
+                        <option>Default - Microphone (Realtek Audio)</option>
+                        <option>Headset Microphone (Logitech)</option>
+                    </select>
+                </div>
+                <!-- Output Device -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Output Device</label>
+                    <select class="w-full bg-[#202225] text-white p-2.5 rounded border border-transparent focus:border-black outline-none">
+                        <option>Default - Speakers (Realtek Audio)</option>
+                        <option>Headphones (Logitech)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="border-b border-gray-600 mb-8"></div>
+
+            <div class="mb-8">
+                <label class="block text-xs font-bold text-gray-400 uppercase mb-4">Input Sensitivity</label>
+                <div class="flex items-center space-x-4">
+                    <i class="fas fa-microphone text-gray-400"></i>
+                    <div class="flex-1 relative">
+                        <!-- Progress Bar Background -->
+                        <div class="h-2 bg-[#202225] rounded-full overflow-hidden">
+                            <div class="h-full bg-green-500 w-3/4" style="width: 65%;"></div>
+                        </div>
+                        <!-- Slider (Invisible Overlay) -->
+                        <input type="range" class="absolute top-0 w-full h-full opacity-0 cursor-pointer">
+                    </div>
+                    <i class="fas fa-microphone-alt text-white"></i>
+                </div>
+                <p class="text-xs text-gray-500 mt-2">Automatically determine input sensitivity</p>
+            </div>
+
+            <div class="mb-8">
+                <h3 class="text-sm font-bold text-white mb-4 uppercase">Video Settings</h3>
+                <div class="bg-[#202225] p-4 rounded-lg flex flex-col items-center justify-center h-48 border-2 border-dashed border-gray-600 text-gray-500 mb-4">
+                    <i class="fas fa-video-slash text-3xl mb-2"></i>
+                    <span>No Camera Preview</span>
+                </div>
+                <select class="w-full bg-[#202225] text-white p-2.5 rounded border border-transparent focus:border-black outline-none">
+                    <option>Integrated Webcam</option>
+                    <option>OBS Virtual Camera</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Tab: Appearance -->
+        <div id="tab-appearance" class="tab-content max-w-2xl hidden animate-fade-in">
+            <h2 class="text-xl font-bold text-white mb-6">Appearance</h2>
+            
+            <div class="mb-8">
+                <h3 class="text-xs font-bold text-gray-400 uppercase mb-3">Theme</h3>
+                <div class="flex space-x-4">
+                    <label class="cursor-pointer">
+                        <div class="w-24 h-16 bg-[#36393f] rounded border-2 border-[#5865F2] flex items-center justify-center mb-2 relative">
+                            <div class="w-4 h-4 rounded-full bg-white absolute top-1 right-1 flex items-center justify-center">
+                                <div class="w-2.5 h-2.5 rounded-full bg-[#5865F2]"></div>
+                            </div>
+                            <span class="text-gray-300 text-sm">Dark</span>
+                        </div>
+                        <div class="text-center text-sm font-medium text-white">Dark</div>
+                    </label>
+                    <label class="cursor-pointer opacity-50 hover:opacity-100 transition-opacity">
+                        <div class="w-24 h-16 bg-white rounded border-2 border-gray-300 flex items-center justify-center mb-2">
+                            <span class="text-gray-800 text-sm">Light</span>
+                        </div>
+                        <div class="text-center text-sm font-medium text-gray-400">Light</div>
+                    </label>
+                </div>
+            </div>
+        </div>
+
     </div>
-</div>
-{% endblock %}
 
-{% block extra_js %}
-<script>
-    const audioInputSelect = document.getElementById('audioInputSelect');
-    const audioOutputSelect = document.getElementById('audioOutputSelect');
-    const masterVolumeSelect = document.getElementById('masterVolumeSelect');
-    const micTestMeter = document.getElementById('micTestMeter');
-    const saveButton = document.getElementById('save-settings-btn');
-    const saveStatus = document.getElementById('save-status');
-
-    let localTestStream = null;
-    let audioContext = null;
-    let analyserNode = null;
-    let volumeMeterLoop = null;
-
-    function loadSavedSettings() {
-        const savedInput = localStorage.getItem('preferredAudioInput');
-        const savedOutput = localStorage.getItem('preferredAudioOutput');
-        const savedMasterVolume = localStorage.getItem('masterVolume');
-
-        if (savedInput) audioInputSelect.value = savedInput;
-        if (savedOutput) audioOutputSelect.value = savedOutput;
-        if (savedMasterVolume) masterVolumeSelect.value = savedMasterVolume;
-    }
-
-    async function getDevices() {
-        try {
-            if (localTestStream) {
-                localTestStream.getTracks().forEach(track => track.stop());
-            }
-            if (volumeMeterLoop) {
-                cancelAnimationFrame(volumeMeterLoop);
-            }
-
-            const selectedInputId = audioInputSelect.value || localStorage.getItem('preferredAudioInput');
-
-            localTestStream = await navigator.mediaDevices.getUserMedia({
-                audio: {
-                    deviceId: selectedInputId ? { exact: selectedInputId } : undefined
-                },
-                video: false
+    <script>
+        function switchTab(tabId) {
+            // Update Links
+            document.querySelectorAll('.tab-link').forEach(el => {
+                el.classList.remove('bg-[#3f4147]', 'text-white');
+                el.classList.add('text-gray-400');
             });
+            document.getElementById('link-' + tabId).classList.add('bg-[#3f4147]', 'text-white');
+            document.getElementById('link-' + tabId).classList.remove('text-gray-400');
 
-            startMicTest(localTestStream);
-
-        } catch (e) {
-            console.error("Microphone permission denied:", e);
-            alert("{% trans 'Please allow microphone access.' %}");
-            return;
+            // Update Content
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById('tab-' + tabId).classList.remove('hidden');
         }
 
-        const devices = await navigator.mediaDevices.enumerateDevices();
+        function closeSettings() {
+            // Go back in history or to oda page
+            window.history.back();
+            // Or explicity: window.location.href = '/oda/general/';
+        }
 
-        audioInputSelect.innerHTML = '';
-        audioOutputSelect.innerHTML = '';
-
-        devices.forEach(device => {
-            const option = document.createElement('option');
-            option.value = device.deviceId;
-
-            if (device.kind === 'audioinput') {
-                option.text = device.label || `{% trans 'Microphone' %} ${audioInputSelect.length + 1}`;
-                audioInputSelect.appendChild(option);
-            } else if (device.kind === 'audiooutput') {
-                option.text = device.label || `{% trans 'Speaker' %} ${audioOutputSelect.length + 1}`;
-                audioOutputSelect.appendChild(option);
+        // Keyboard Shortcut (ESC)
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeSettings();
             }
         });
+    </script>
 
-        loadSavedSettings();
-    }
-
-    function startMicTest(stream) {
-        if (!audioContext) {
-            audioContext = new AudioContext();
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        analyserNode = audioContext.createAnalyser();
-        const source = audioContext.createMediaStreamSource(stream);
-        source.connect(analyserNode);
-
-        analyserNode.fftSize = 256;
-        const bufferLength = analyserNode.frequencyBinCount;
-        const dataArray = new Uint8Array(bufferLength);
-
-        function draw() {
-            volumeMeterLoop = requestAnimationFrame(draw);
-            analyserNode.getByteFrequencyData(dataArray);
-
-            let sum = 0;
-            for(let i = 0; i < bufferLength; i++) {
-                sum += dataArray[i];
-            }
-            let avg = sum / bufferLength;
-
-            micTestMeter.value = (avg / 1.28);
+        .animate-fade-in {
+            animation: fadeIn 0.3s ease-out forwards;
         }
-        draw();
-    }
-
-    saveButton.addEventListener('click', () => {
-        const selectedInput = audioInputSelect.value;
-        const selectedOutput = audioOutputSelect.value;
-        const selectedMasterVolume = masterVolumeSelect.value;
-
-        if (selectedInput) localStorage.setItem('preferredAudioInput', selectedInput);
-        if (selectedOutput) localStorage.setItem('preferredAudioOutput', selectedOutput);
-        if (selectedMasterVolume) localStorage.setItem('masterVolume', selectedMasterVolume);
-
-        saveStatus.style.display = 'block';
-        setTimeout(() => { saveStatus.style.display = 'none'; }, 3000);
-    });
-
-    audioInputSelect.addEventListener('change', getDevices);
-
-    getDevices();
-
-    window.addEventListener('beforeunload', () => {
-        if (localTestStream) {
-            localTestStream.getTracks().forEach(track => track.stop());
-        }
-        if (volumeMeterLoop) {
-            cancelAnimationFrame(volumeMeterLoop);
-        }
-        if (audioContext) {
-            audioContext.close();
-        }
-    });
-</script>
-{% endblock %}
+    </style>
+</body>
+</html>
