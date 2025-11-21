@@ -232,7 +232,8 @@
 
 
 {% block content %}
-    <h1 class="mb-4">{% trans "Game Room" %}</h1>
+<div class="page-shell">
+    <h1 class="section-title mb-4">{% trans "Game Room" %}</h1>
     <div class="row">
         <div class="col-lg-7 col-md-8 mb-4">
             <div id="game-board-container">
@@ -337,6 +338,7 @@
     {{ game.game_type.min_players|json_script:"min-players" }}
     {{ eliminated_players_json|json_script:"eliminated-players-json" }}
     {% if game.winner %}{{ game.winner.username|json_script:"winner-json" }}{% endif %}
+</div>
 {% endblock %}
 
 {% block extra_js %}

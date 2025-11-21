@@ -1,37 +1,60 @@
 {% extends 'base.html' %}
 {% load i18n %}
 {% load custom_filters %}
-{% block title %}{% trans "Login" %} - VoiceHub{% endblock %}
+{% block title %}{% trans "Login" %} - Rashigo{% endblock %}
 {% block extra_css %}
-    <style>
-        .login-card {
-            max-width: 450px;
-            margin: 2rem auto;
-        }
-        .form-icon {
-            position: absolute;
-            left: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #6c757d;
-        }
-        .input-with-icon {
-            padding-left: 45px;
-        }
-    </style>
+{{ block.super }}
+<style>
+    .auth-wrapper {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 75vh;
+    }
+    .login-card {
+        width: 100%;
+        max-width: 460px;
+        padding: 0;
+    }
+    .login-card .card-body {
+        padding: 2.5rem;
+    }
+    .form-icon {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+    }
+    .input-with-icon {
+        padding-left: 45px;
+    }
+    .login-accent {
+        width: 70px;
+        height: 70px;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4);
+        margin: 0 auto;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-center align-items-center" style="min-height: 70vh;">
-    <div class="login-card card bg-secondary border-secondary w-100">
-        <div class="card-body p-4">
-            <div class="text-center mb-4">
-                <div class="rounded-circle bg-primary d-inline-flex align-items-center justify-content-center mb-3" style="width: 60px; height: 60px;">
-                    <i class="fas fa-server text-white fs-4"></i>
+<div class="page-shell">
+    <div class="auth-wrapper">
+        <div class="login-card glass-card">
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <div class="login-accent mb-3">
+                        <i class="fas fa-server text-white fs-3"></i>
+                    </div>
+                    <h2 class="card-title mb-1">{% trans "Welcome Back" %}</h2>
+                    <p class="text-muted">{% trans "Sign in to access your servers" %}</p>
                 </div>
-                <h2 class="card-title">{% trans "Welcome Back" %}</h2>
-                <p class="text-muted">{% trans "Sign in to access your servers" %}</p>
-            </div>
 
             {% if form.errors %}
             <div class="alert alert-danger" role="alert">
@@ -41,7 +64,7 @@
             </div>
             {% endif %}
 
-            <form method="post">
+            <form method="post" class="glass-form">
                 {% csrf_token %}
                 
                 <div class="mb-3">
@@ -69,7 +92,7 @@
 
                 <input type="hidden" name="next" value="{{ next }}">
 
-                <button type="submit" class="btn btn-primary w-100 mb-3">
+                <button type="submit" class="btn btn-gradient w-100 mb-3">
                     <i class="fas fa-sign-in-alt me-2"></i>{% trans "Sign In" %}
                 </button>
             </form>
@@ -82,5 +105,6 @@
             </div>
         </div>
     </div>
+</div>
 </div>
 {% endblock %}

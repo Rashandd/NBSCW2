@@ -67,7 +67,7 @@ def update_player_rankings(game, winner):
             player.save()
 from urllib.parse import parse_qs
 from channels.db import database_sync_to_async
-from .models import VoiceChannel
+from .models import VoiceChannel, TextChannel
 logger = logging.getLogger('main') # İstediğiniz bir isim verin
 
 
@@ -223,19 +223,31 @@ class DiceWars:
 
 class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
 
-    # DB'den VoiceChannel objesini çeker
+    # DB'den TextChannel veya VoiceChannel objesini çeker
     @database_sync_to_async
     def get_channel_by_slug(self, slug):
         try:
-            return VoiceChannel.objects.get(slug=slug)
-        except VoiceChannel.DoesNotExist:
-            return None
+            # First try TextChannel
+            channel = TextChannel.objects.get(slug=slug)
+            return channel
+        except TextChannel.DoesNotExist:
+            try:
+                # Fallback to VoiceChannel
+                channel = VoiceChannel.objects.get(slug=slug)
+                return channel
+            except VoiceChannel.DoesNotExist:
+                return None
 
     @database_sync_to_async
     def save_chat_message(self, content):
-        """Save chat message to database"""
+        """Save chat message to database (only for TextChannel)"""
         if not hasattr(self, 'channel_object') or not self.channel_object:
             return None
+        
+        # Only save messages for TextChannel, not VoiceChannel
+        if isinstance(self.channel_object, VoiceChannel):
+            return None
+            
         try:
             message = ChatMessage.objects.create(
                 channel=self.channel_object,
@@ -271,7 +283,11 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
             await self.close()
             return
 
-        self.channel_group_name = f'voice_{self.channel_slug}'
+        # Use different group names for TextChannel vs VoiceChannel
+        if isinstance(self.channel_object, TextChannel):
+            self.channel_group_name = f'text_{self.channel_slug}'
+        else:
+            self.channel_group_name = f'voice_{self.channel_slug}'
         self.user_id = str(self.scope["user"].id)
 
         # 4. Gruba (Odaya) katıl
@@ -360,6 +376,30 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
                     "status": data  # {'muted': true, 'deafened': false}
                 }
             )
+        
+        # 4. Microphone state change
+        elif signal_type == 'mic_state_change':
+            await self.channel_layer.group_send(
+                self.channel_group_name,
+                {
+                    "type": "mic.state.change",
+                    "sender_id": self.user_id,
+                    "username": self.scope["user"].username,
+                    "muted": data.get('muted', False)
+                }
+            )
+        
+        # 5. Camera state change
+        elif signal_type == 'camera_state_change':
+            await self.channel_layer.group_send(
+                self.channel_group_name,
+                {
+                    "type": "camera.state.change",
+                    "sender_id": self.user_id,
+                    "username": self.scope["user"].username,
+                    "enabled": data.get('enabled', True)
+                }
+            )
 
     # --- Channel Layer'dan Gelen Olay İşleyicileri ---
 
@@ -404,6 +444,32 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
             "data": event["data"],
         })
 
+    # Microphone state change - broadcast to all users
+    async def mic_state_change(self, event):
+        await self.send_json({
+            "type": "mic_state_change",
+            "sender_id": event["sender_id"],
+            "username": event["username"],
+            "muted": event.get("muted", False),
+            "data": {
+                "username": event["username"],
+                "muted": event.get("muted", False)
+            }
+        })
+    
+    # Camera state change - broadcast to all users
+    async def camera_state_change(self, event):
+        await self.send_json({
+            "type": "camera_state_change",
+            "sender_id": event["sender_id"],
+            "username": event["username"],
+            "enabled": event.get("enabled", True),
+            "data": {
+                "username": event["username"],
+                "enabled": event.get("enabled", True)
+            }
+        })
+    
     # Durum güncellemesini gruba yayınla
     async def member_status_update(self, event):
         await self.send_json({

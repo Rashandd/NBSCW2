@@ -1,231 +1,604 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Settings</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        /* Custom Range Slider */
-        input[type=range] {
-            -webkit-appearance: none;
-            background: transparent;
+{% extends 'base.html' %}
+{% load i18n %}
+{% block title %}{% trans "Settings" %} - Rashigo{% endblock %}
+{% block extra_css %}
+{{ block.super }}
+<style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+    
+    body {
+        font-family: 'Inter', sans-serif !important;
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #1e293b 75%, #0f172a 100%) !important;
+        background-size: 400% 400%;
+        animation: gradientShift 20s ease infinite;
+        min-height: 100vh;
+    }
+    
+    @keyframes gradientShift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+    
+    .settings-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+    }
+    
+    .settings-header {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+    
+    .settings-title {
+        font-size: 2.5rem;
+        font-weight: 900;
+        background: linear-gradient(135deg, #fff 0%, #e2e8f0 50%, #cbd5e1 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 0.5rem;
+    }
+    
+    .settings-subtitle {
+        color: rgba(226, 232, 240, 0.7);
+        font-size: 1.1rem;
+    }
+    
+    .settings-card {
+        background: rgba(30, 41, 59, 0.8);
+        backdrop-filter: blur(20px);
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+    
+    .settings-card h3 {
+        color: #f1f5f9;
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    
+    .settings-card h3 i {
+        color: #667eea;
+    }
+    
+    .setting-item {
+        padding: 1.5rem;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: background 0.2s ease;
+    }
+    
+    .setting-item:last-child {
+        border-bottom: none;
+    }
+    
+    .setting-item:hover {
+        background: rgba(102, 126, 234, 0.05);
+        border-radius: 10px;
+    }
+    
+    .setting-label {
+        flex: 1;
+    }
+    
+    .setting-label h4 {
+        color: #f1f5f9;
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+    }
+    
+    .setting-label p {
+        color: #94a3b8;
+        font-size: 0.9rem;
+        margin: 0;
+    }
+    
+    .setting-control {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .stat-card {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+        border: 1px solid rgba(102, 126, 234, 0.3);
+        border-radius: 15px;
+        padding: 1.5rem;
+        text-align: center;
+        transition: transform 0.3s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .stat-number {
+        font-size: 2.5rem;
+        font-weight: 900;
+        color: #667eea;
+        margin-bottom: 0.5rem;
+    }
+    
+    .stat-label {
+        color: #94a3b8;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .btn-danger-custom {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        border: none;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .btn-danger-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4);
+        color: white;
+    }
+    
+    .btn-primary-custom {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .btn-primary-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        color: white;
+    }
+    
+    .user-info-card {
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+        border: 1px solid rgba(102, 126, 234, 0.3);
+        border-radius: 15px;
+        padding: 2rem;
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    
+    .user-avatar {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3rem;
+        color: white;
+        font-weight: 700;
+        margin: 0 auto 1rem;
+        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+    }
+    
+    .user-name {
+        color: #f1f5f9;
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+    }
+    
+    .user-email {
+        color: #94a3b8;
+        font-size: 1rem;
+    }
+    
+    @media (max-width: 768px) {
+        .settings-title {
+            font-size: 2rem;
         }
-        input[type=range]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            height: 16px;
-            width: 16px;
-            border-radius: 50%;
-            background: white;
-            cursor: pointer;
-            margin-top: -6px;
-            box-shadow: 0 0 2px rgba(0,0,0,0.5);
-        }
-        input[type=range]::-webkit-slider-runnable-track {
-            width: 100%;
-            height: 4px;
-            cursor: pointer;
-            background: #4f545c;
-            border-radius: 2px;
-        }
-    </style>
-</head>
-<body class="bg-[#2f3136] text-gray-200 font-sans flex h-screen overflow-hidden">
-
-    <!-- Sidebar -->
-    <div class="w-1/3 max-w-xs bg-[#2f3136] flex flex-col items-end py-14 pl-4 pr-4 overflow-y-auto">
-        <nav class="w-48 space-y-1 text-gray-400 text-sm font-medium">
-            <div class="px-2.5 py-1.5 text-xs font-bold text-gray-500 uppercase mb-2">User Settings</div>
-            
-            <a href="#" onclick="switchTab('account')" class="tab-link active block px-2.5 py-1.5 rounded hover:bg-[#36393f] hover:text-gray-200 bg-[#3f4147] text-white transition-colors" id="link-account">
-                My Account
-            </a>
-            <a href="#" onclick="switchTab('voice')" class="tab-link block px-2.5 py-1.5 rounded hover:bg-[#36393f] hover:text-gray-200 transition-colors" id="link-voice">
-                Voice & Video
-            </a>
-            <a href="#" onclick="switchTab('appearance')" class="tab-link block px-2.5 py-1.5 rounded hover:bg-[#36393f] hover:text-gray-200 transition-colors" id="link-appearance">
-                Appearance
-            </a>
-            
-            <div class="border-t border-gray-700 my-2 mx-2"></div>
-            
-            <a href="/logout/" class="block px-2.5 py-1.5 rounded text-red-400 hover:bg-[#36393f] transition-colors group">
-                Log Out <i class="fas fa-sign-out-alt ml-auto opacity-0 group-hover:opacity-100"></i>
-            </a>
-        </nav>
-    </div>
-
-    <!-- Content -->
-    <div class="flex-1 bg-[#36393f] py-14 px-10 overflow-y-auto relative">
         
-        <!-- Close Button -->
-        <div class="fixed top-14 right-14 flex flex-col items-center cursor-pointer hover:opacity-75 transition-opacity z-50" onclick="closeSettings()">
-            <div class="w-9 h-9 rounded-full border-2 border-gray-400 flex items-center justify-center text-gray-400 mb-1">
-                <i class="fas fa-times text-lg"></i>
-            </div>
-            <span class="text-xs font-bold text-gray-400 uppercase">ESC</span>
-        </div>
+        .settings-card {
+            padding: 1.5rem;
+        }
+        
+        .setting-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
+        }
+        
+        .setting-control {
+            width: 100%;
+            justify-content: flex-end;
+        }
+    }
+</style>
+{% endblock %}
 
-        <!-- Tab: My Account -->
-        <div id="tab-account" class="tab-content max-w-2xl animate-fade-in">
-            <h2 class="text-xl font-bold text-white mb-6">My Account</h2>
-            
-            <div class="bg-[#2f3136] rounded-lg p-4 mb-8 flex items-center relative overflow-hidden">
-                <div class="h-24 w-full absolute top-0 left-0 bg-indigo-500 opacity-20"></div>
-                <div class="relative flex items-center w-full z-10 pt-4">
-                    <div class="relative mr-4">
-                        <img src="https://ui-avatars.com/api/?name=Me" class="w-20 h-20 rounded-full border-4 border-[#2f3136]">
-                        <div class="absolute bottom-0 right-0 w-5 h-5 bg-green-500 rounded-full border-4 border-[#2f3136]"></div>
-                    </div>
-                    <div class="flex-1">
-                        <div class="text-xl font-bold text-white">Username</div>
-                        <div class="text-gray-400 text-sm">#1234</div>
-                    </div>
-                    <button class="bg-[#5865F2] hover:bg-indigo-600 text-white px-4 py-2 rounded text-sm font-medium transition-colors">
-                        Edit Profile
-                    </button>
-                </div>
-            </div>
-
-            <div class="bg-[#2f3136] rounded-lg p-4 space-y-4">
-                <div class="flex justify-between items-center">
-                    <div>
-                        <div class="text-xs font-bold text-gray-400 uppercase mb-1">Username</div>
-                        <div class="text-white">Username <span class="text-gray-500">#1234</span></div>
-                    </div>
-                    <button class="bg-[#4f545c] hover:bg-[#686d73] text-white px-3 py-1.5 rounded text-sm transition-colors">Edit</button>
-                </div>
-                <div class="flex justify-between items-center">
-                    <div>
-                        <div class="text-xs font-bold text-gray-400 uppercase mb-1">Email</div>
-                        <div class="text-white">********@gmail.com</div>
-                    </div>
-                    <button class="bg-[#4f545c] hover:bg-[#686d73] text-white px-3 py-1.5 rounded text-sm transition-colors">Edit</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Tab: Voice & Video -->
-        <div id="tab-voice" class="tab-content max-w-2xl hidden animate-fade-in">
-            <h2 class="text-xl font-bold text-white mb-6">Voice & Video</h2>
-
-            <div class="grid grid-cols-2 gap-6 mb-8">
-                <!-- Input Device -->
-                <div>
-                    <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Input Device</label>
-                    <select class="w-full bg-[#202225] text-white p-2.5 rounded border border-transparent focus:border-black outline-none">
-                        <option>Default - Microphone (Realtek Audio)</option>
-                        <option>Headset Microphone (Logitech)</option>
-                    </select>
-                </div>
-                <!-- Output Device -->
-                <div>
-                    <label class="block text-xs font-bold text-gray-400 uppercase mb-2">Output Device</label>
-                    <select class="w-full bg-[#202225] text-white p-2.5 rounded border border-transparent focus:border-black outline-none">
-                        <option>Default - Speakers (Realtek Audio)</option>
-                        <option>Headphones (Logitech)</option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="border-b border-gray-600 mb-8"></div>
-
-            <div class="mb-8">
-                <label class="block text-xs font-bold text-gray-400 uppercase mb-4">Input Sensitivity</label>
-                <div class="flex items-center space-x-4">
-                    <i class="fas fa-microphone text-gray-400"></i>
-                    <div class="flex-1 relative">
-                        <!-- Progress Bar Background -->
-                        <div class="h-2 bg-[#202225] rounded-full overflow-hidden">
-                            <div class="h-full bg-green-500 w-3/4" style="width: 65%;"></div>
-                        </div>
-                        <!-- Slider (Invisible Overlay) -->
-                        <input type="range" class="absolute top-0 w-full h-full opacity-0 cursor-pointer">
-                    </div>
-                    <i class="fas fa-microphone-alt text-white"></i>
-                </div>
-                <p class="text-xs text-gray-500 mt-2">Automatically determine input sensitivity</p>
-            </div>
-
-            <div class="mb-8">
-                <h3 class="text-sm font-bold text-white mb-4 uppercase">Video Settings</h3>
-                <div class="bg-[#202225] p-4 rounded-lg flex flex-col items-center justify-center h-48 border-2 border-dashed border-gray-600 text-gray-500 mb-4">
-                    <i class="fas fa-video-slash text-3xl mb-2"></i>
-                    <span>No Camera Preview</span>
-                </div>
-                <select class="w-full bg-[#202225] text-white p-2.5 rounded border border-transparent focus:border-black outline-none">
-                    <option>Integrated Webcam</option>
-                    <option>OBS Virtual Camera</option>
-                </select>
-            </div>
-        </div>
-
-        <!-- Tab: Appearance -->
-        <div id="tab-appearance" class="tab-content max-w-2xl hidden animate-fade-in">
-            <h2 class="text-xl font-bold text-white mb-6">Appearance</h2>
-            
-            <div class="mb-8">
-                <h3 class="text-xs font-bold text-gray-400 uppercase mb-3">Theme</h3>
-                <div class="flex space-x-4">
-                    <label class="cursor-pointer">
-                        <div class="w-24 h-16 bg-[#36393f] rounded border-2 border-[#5865F2] flex items-center justify-center mb-2 relative">
-                            <div class="w-4 h-4 rounded-full bg-white absolute top-1 right-1 flex items-center justify-center">
-                                <div class="w-2.5 h-2.5 rounded-full bg-[#5865F2]"></div>
-                            </div>
-                            <span class="text-gray-300 text-sm">Dark</span>
-                        </div>
-                        <div class="text-center text-sm font-medium text-white">Dark</div>
-                    </label>
-                    <label class="cursor-pointer opacity-50 hover:opacity-100 transition-opacity">
-                        <div class="w-24 h-16 bg-white rounded border-2 border-gray-300 flex items-center justify-center mb-2">
-                            <span class="text-gray-800 text-sm">Light</span>
-                        </div>
-                        <div class="text-center text-sm font-medium text-gray-400">Light</div>
-                    </label>
-                </div>
-            </div>
-        </div>
-
+{% block content %}
+<div class="settings-container">
+    <div class="settings-header">
+        <h1 class="settings-title">⚙️ {% trans "Settings" %}</h1>
+        <p class="settings-subtitle">{% trans "Manage your account and preferences" %}</p>
     </div>
-
+    
+    <!-- User Info Card -->
+    <div class="user-info-card">
+        <div class="user-avatar">
+            {{ user.username|first|upper }}
+        </div>
+        <h2 class="user-name">{{ user.username }}</h2>
+        <p class="user-email">{{ user.email|default:"No email set" }}</p>
+    </div>
+    
+    <!-- Statistics -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-number">{{ owned_servers }}</div>
+                <div class="stat-label">{% trans "Owned Servers" %}</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-number">{{ member_servers }}</div>
+                <div class="stat-label">{% trans "Member Servers" %}</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card">
+                <div class="stat-number">{{ user.rank_point|default:0 }}</div>
+                <div class="stat-label">{% trans "Rank Points" %}</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Account Settings -->
+    <div class="settings-card">
+        <h3><i class="fas fa-user"></i> {% trans "Account Settings" %}</h3>
+        
+        <div class="setting-item">
+            <div class="setting-label">
+                <h4>{% trans "Username" %}</h4>
+                <p>{% trans "Your unique username" %}</p>
+            </div>
+            <div class="setting-control">
+                <span class="text-light">{{ user.username }}</span>
+            </div>
+        </div>
+        
+        <div class="setting-item">
+            <div class="setting-label">
+                <h4>{% trans "Email" %}</h4>
+                <p>{% trans "Your email address" %}</p>
+            </div>
+            <div class="setting-control">
+                <span class="text-light">{{ user.email|default:"Not set" }}</span>
+            </div>
+        </div>
+        
+        <div class="setting-item">
+            <div class="setting-label">
+                <h4>{% trans "Account Created" %}</h4>
+                <p>{% trans "When you joined Rashigo" %}</p>
+            </div>
+            <div class="setting-control">
+                <span class="text-muted">{{ user.date_joined|date:"F d, Y" }}</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Preferences -->
+    <div class="settings-card">
+        <h3><i class="fas fa-sliders-h"></i> {% trans "Preferences" %}</h3>
+        
+        <div class="setting-item">
+            <div class="setting-label">
+                <h4>{% trans "Theme" %}</h4>
+                <p>{% trans "Switch between dark and light theme" %}</p>
+            </div>
+            <div class="setting-control">
+                <a href="#" class="btn btn-secondary" onclick="event.preventDefault(); document.querySelector('[data-theme=\'dark\']')?.click() || document.querySelector('[data-theme=\'light\']')?.click();">
+                    <i class="fas fa-palette"></i> {% trans "Change in Navbar" %}
+                </a>
+            </div>
+        </div>
+        
+        <div class="setting-item">
+            <div class="setting-label">
+                <h4>{% trans "Language" %}</h4>
+                <p>{% trans "Change your preferred language" %}</p>
+            </div>
+            <div class="setting-control">
+                <a href="#" class="btn btn-secondary" onclick="event.preventDefault(); document.querySelector('#languageDropdown')?.click();">
+                    <i class="fas fa-globe"></i> {% trans "Change in Navbar" %}
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Microphone, Camera & Headphone Access Settings -->
+    <div class="settings-card">
+        <h3><i class="fas fa-microphone"></i> {% trans "Microphone, Camera & Headphone Access" %}</h3>
+        <p style="color: #94a3b8; margin-bottom: 1.5rem; font-size: 0.9rem;">
+            <i class="fas fa-info-circle"></i> 
+            {% trans "Manage your device permissions for voice and video calls." %}
+        </p>
+        
+        <div class="setting-item">
+            <div class="setting-label">
+                <h4><i class="fas fa-microphone me-2"></i>{% trans "Microphone Access" %}</h4>
+                <p>{% trans "Allow access to your microphone for voice calls" %}</p>
+            </div>
+            <div class="setting-control">
+                <button type="button" class="btn btn-primary" onclick="requestMicrophonePermission()">
+                    <i class="fas fa-check-circle me-1"></i> {% trans "Request Permission" %}
+                </button>
+                <span id="mic-status" style="margin-left: 1rem; color: #94a3b8; font-size: 0.9rem;">
+                    <i class="fas fa-question-circle"></i> {% trans "Not checked" %}
+                </span>
+            </div>
+        </div>
+        
+        <div class="setting-item">
+            <div class="setting-label">
+                <h4><i class="fas fa-video me-2"></i>{% trans "Camera Access" %}</h4>
+                <p>{% trans "Allow access to your camera for video calls" %}</p>
+            </div>
+            <div class="setting-control">
+                <button type="button" class="btn btn-primary" onclick="requestCameraPermission()">
+                    <i class="fas fa-check-circle me-1"></i> {% trans "Request Permission" %}
+                </button>
+                <span id="camera-status" style="margin-left: 1rem; color: #94a3b8; font-size: 0.9rem;">
+                    <i class="fas fa-question-circle"></i> {% trans "Not checked" %}
+                </span>
+            </div>
+        </div>
+        
+        <div class="setting-item">
+            <div class="setting-label">
+                <h4><i class="fas fa-headphones me-2"></i>{% trans "Headphone/Audio Output" %}</h4>
+                <p>{% trans "Select your preferred audio output device" %}</p>
+            </div>
+            <div class="setting-control">
+                <select id="audioOutputDevice" class="form-control" style="width: 300px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(148, 163, 184, 0.3); color: #f1f5f9; padding: 0.5rem; border-radius: 8px;">
+                    <option value="">{% trans "Default Device" %}</option>
+                </select>
+                <button type="button" class="btn btn-sm btn-secondary ms-2" onclick="loadAudioDevices()">
+                    <i class="fas fa-sync-alt"></i> {% trans "Refresh" %}
+                </button>
+            </div>
+        </div>
+        
+        <div class="setting-item">
+            <div class="setting-label">
+                <h4><i class="fas fa-microphone-alt me-2"></i>{% trans "Microphone Input Device" %}</h4>
+                <p>{% trans "Select your preferred microphone input device" %}</p>
+            </div>
+            <div class="setting-control">
+                <select id="audioInputDevice" class="form-control" style="width: 300px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(148, 163, 184, 0.3); color: #f1f5f9; padding: 0.5rem; border-radius: 8px;">
+                    <option value="">{% trans "Default Device" %}</option>
+                </select>
+                <button type="button" class="btn btn-sm btn-secondary ms-2" onclick="loadAudioDevices()">
+                    <i class="fas fa-sync-alt"></i> {% trans "Refresh" %}
+                </button>
+            </div>
+        </div>
+        
+        <div class="setting-item">
+            <div class="setting-label">
+                <h4><i class="fas fa-video me-2"></i>{% trans "Camera Input Device" %}</h4>
+                <p>{% trans "Select your preferred camera input device" %}</p>
+            </div>
+            <div class="setting-control">
+                <select id="videoInputDevice" class="form-control" style="width: 300px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(148, 163, 184, 0.3); color: #f1f5f9; padding: 0.5rem; border-radius: 8px;">
+                    <option value="">{% trans "Default Device" %}</option>
+                </select>
+                <button type="button" class="btn btn-sm btn-secondary ms-2" onclick="loadVideoDevices()">
+                    <i class="fas fa-sync-alt"></i> {% trans "Refresh" %}
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    {% block extra_js %}
     <script>
-        function switchTab(tabId) {
-            // Update Links
-            document.querySelectorAll('.tab-link').forEach(el => {
-                el.classList.remove('bg-[#3f4147]', 'text-white');
-                el.classList.add('text-gray-400');
-            });
-            document.getElementById('link-' + tabId).classList.add('bg-[#3f4147]', 'text-white');
-            document.getElementById('link-' + tabId).classList.remove('text-gray-400');
-
-            // Update Content
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.getElementById('tab-' + tabId).classList.remove('hidden');
-        }
-
-        function closeSettings() {
-            // Go back in history or to oda page
-            window.history.back();
-            // Or explicity: window.location.href = '/oda/general/';
-        }
-
-        // Keyboard Shortcut (ESC)
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                closeSettings();
+        // Check device permissions on page load
+        async function checkPermissions() {
+            try {
+                const micPermission = await navigator.permissions.query({ name: 'microphone' });
+                updatePermissionStatus('mic-status', micPermission.state);
+                micPermission.onchange = () => updatePermissionStatus('mic-status', micPermission.state);
+            } catch (e) {
+                console.log('Microphone permission check not supported');
             }
+            
+            try {
+                const cameraPermission = await navigator.permissions.query({ name: 'camera' });
+                updatePermissionStatus('camera-status', cameraPermission.state);
+                cameraPermission.onchange = () => updatePermissionStatus('camera-status', cameraPermission.state);
+            } catch (e) {
+                console.log('Camera permission check not supported');
+            }
+        }
+        
+        function updatePermissionStatus(elementId, state) {
+            const statusEl = document.getElementById(elementId);
+            if (state === 'granted') {
+                statusEl.innerHTML = '<i class="fas fa-check-circle text-success"></i> {% trans "Granted" %}';
+                statusEl.style.color = '#10b981';
+            } else if (state === 'denied') {
+                statusEl.innerHTML = '<i class="fas fa-times-circle text-danger"></i> {% trans "Denied" %}';
+                statusEl.style.color = '#ef4444';
+            } else {
+                statusEl.innerHTML = '<i class="fas fa-question-circle"></i> {% trans "Not set" %}';
+                statusEl.style.color = '#94a3b8';
+            }
+        }
+        
+        async function requestMicrophonePermission() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                stream.getTracks().forEach(track => track.stop());
+                updatePermissionStatus('mic-status', 'granted');
+                loadAudioDevices();
+            } catch (error) {
+                updatePermissionStatus('mic-status', 'denied');
+                alert('{% trans "Microphone access denied. Please allow microphone access in your browser settings." %}');
+            }
+        }
+        
+        async function requestCameraPermission() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                stream.getTracks().forEach(track => track.stop());
+                updatePermissionStatus('camera-status', 'granted');
+                loadVideoDevices();
+            } catch (error) {
+                updatePermissionStatus('camera-status', 'denied');
+                alert('{% trans "Camera access denied. Please allow camera access in your browser settings." %}');
+            }
+        }
+        
+        async function loadAudioDevices() {
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const inputSelect = document.getElementById('audioInputDevice');
+                const outputSelect = document.getElementById('audioOutputDevice');
+                
+                // Clear existing options (except default)
+                while (inputSelect.children.length > 1) inputSelect.removeChild(inputSelect.lastChild);
+                while (outputSelect.children.length > 1) outputSelect.removeChild(outputSelect.lastChild);
+                
+                devices.forEach(device => {
+                    if (device.kind === 'audioinput') {
+                        const option = document.createElement('option');
+                        option.value = device.deviceId;
+                        option.textContent = device.label || `{% trans "Microphone" %} ${inputSelect.children.length}`;
+                        inputSelect.appendChild(option);
+                    } else if (device.kind === 'audiooutput') {
+                        const option = document.createElement('option');
+                        option.value = device.deviceId;
+                        option.textContent = device.label || `{% trans "Speaker" %} ${outputSelect.children.length}`;
+                        outputSelect.appendChild(option);
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading audio devices:', error);
+            }
+        }
+        
+        async function loadVideoDevices() {
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const videoSelect = document.getElementById('videoInputDevice');
+                
+                // Clear existing options (except default)
+                while (videoSelect.children.length > 1) videoSelect.removeChild(videoSelect.lastChild);
+                
+                devices.forEach(device => {
+                    if (device.kind === 'videoinput') {
+                        const option = document.createElement('option');
+                        option.value = device.deviceId;
+                        option.textContent = device.label || `{% trans "Camera" %} ${videoSelect.children.length}`;
+                        videoSelect.appendChild(option);
+                    }
+                });
+            } catch (error) {
+                console.error('Error loading video devices:', error);
+            }
+        }
+        
+        // Load devices on page load
+        window.addEventListener('DOMContentLoaded', () => {
+            checkPermissions();
+            loadAudioDevices();
+            loadVideoDevices();
         });
     </script>
-
-    <style>
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in {
-            animation: fadeIn 0.3s ease-out forwards;
-        }
-    </style>
-</body>
-</html>
+    {% endblock %}
+    
+    <!-- Privacy & Security -->
+    <div class="settings-card">
+        <h3><i class="fas fa-shield-alt"></i> {% trans "Privacy & Security" %}</h3>
+        
+        <div class="setting-item">
+            <div class="setting-label">
+                <h4>{% trans "Two-Factor Authentication" %}</h4>
+                <p>{% trans "Add an extra layer of security to your account" %}</p>
+            </div>
+            <div class="setting-control">
+                <button class="btn btn-secondary" disabled>
+                    {% trans "Coming Soon" %}
+                </button>
+            </div>
+        </div>
+        
+        <div class="setting-item">
+            <div class="setting-label">
+                <h4>{% trans "Privacy Settings" %}</h4>
+                <p>{% trans "Control who can see your information" %}</p>
+            </div>
+            <div class="setting-control">
+                <button class="btn btn-secondary" disabled>
+                    {% trans "Coming Soon" %}
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Danger Zone -->
+    <div class="settings-card" style="border-color: rgba(239, 68, 68, 0.3);">
+        <h3 style="color: #ef4444;"><i class="fas fa-exclamation-triangle"></i> {% trans "Danger Zone" %}</h3>
+        
+        <div class="setting-item">
+            <div class="setting-label">
+                <h4 style="color: #f1f5f9;">{% trans "Logout" %}</h4>
+                <p>{% trans "Sign out of your account" %}</p>
+            </div>
+            <div class="setting-control">
+                <form method="post" action="{% url 'logout' %}" style="display: inline;">
+                    {% csrf_token %}
+                    <button type="submit" class="btn-danger-custom">
+                        <i class="fas fa-sign-out-alt"></i> {% trans "Logout" %}
+                    </button>
+                </form>
+            </div>
+        </div>
+        
+        <div class="setting-item">
+            <div class="setting-label">
+                <h4 style="color: #f1f5f9;">{% trans "Delete Account" %}</h4>
+                <p>{% trans "Permanently delete your account and all data" %}</p>
+            </div>
+            <div class="setting-control">
+                <button class="btn-danger-custom" disabled>
+                    <i class="fas fa-trash"></i> {% trans "Coming Soon" %}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

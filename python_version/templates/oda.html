@@ -1,3 +1,403 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{{ channel.name }} - {% trans "Voice Room" %}{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    .voice-room-full {
+        width: 100vw;
+        margin-left: calc(50% - 50vw);
+        min-height: calc(100vh - 90px);
+    }
+    .voice-room-full ::-webkit-scrollbar { width: 8px; }
+    .voice-room-full ::-webkit-scrollbar-track { background: #2f3136; }
+    .voice-room-full ::-webkit-scrollbar-thumb { background: #202225; border-radius: 4px; }
+    .voice-room-full ::-webkit-scrollbar-thumb:hover { background: #18191c; }
+    .server-icon {
+        transition: all 0.2s ease-out;
+        border-radius: 50%;
+    }
+    .server-icon:hover, .server-icon.active {
+        border-radius: 35%;
+        background-color: #5865F2;
+    }
+    .server-pill {
+        position: absolute;
+        left: -4px;
+        width: 8px;
+        height: 8px;
+        border-radius: 0 4px 4px 0;
+        background-color: white;
+        transition: all 0.2s;
+        opacity: 0;
+    }
+    .server-icon-wrapper:hover .server-pill { opacity: 1; height: 20px; }
+    .server-icon-wrapper.active .server-pill { opacity: 1; height: 40px; }
+    .voice-avatar { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+    .speaking { box-shadow: 0 0 0 2px #3ba55c; animation: pulse-green 1.5s infinite; }
+    @keyframes pulse-green {
+        0% { box-shadow: 0 0 0 0px rgba(59, 165, 92, 0.7); }
+        100% { box-shadow: 0 0 0 10px rgba(59, 165, 92, 0); }
+    }
+    .full-height-flex { min-height: calc(100vh - 120px); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="voice-room-full">
+    <div class="bg-gray-800 text-gray-100 overflow-hidden h-screen flex font-sans">
+        <nav class="w-18 bg-[#202225] flex flex-col items-center py-4 space-y-2 flex-shrink-0 overflow-y-auto hide-scrollbar">
+            <div class="server-icon-wrapper relative flex items-center justify-center w-full h-12 mb-2 active">
+                <div class="server-pill absolute top-1/2 transform -translate-y-1/2"></div>
+                <div class="server-icon w-12 h-12 bg-[#36393f] flex items-center justify-center text-white cursor-pointer active">
+                    <i class="fab fa-discord text-xl"></i>
+                </div>
+            </div>
+            <div class="h-0.5 w-8 bg-[#36393f] rounded-lg mx-auto"></div>
+            <div class="server-icon-wrapper relative flex items-center justify-center w-full h-12 group">
+                <div class="server-pill absolute top-1/2 transform -translate-y-1/2"></div>
+                <div class="server-icon w-12 h-12 bg-[#36393f] group-hover:bg-[#5865F2] flex items-center justify-center text-white cursor-pointer transition-colors">
+                    <span class="font-bold">GC</span>
+                </div>
+                <div class="absolute left-20 bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
+                    Game Community
+                </div>
+            </div>
+            <div class="server-icon-wrapper relative flex items-center justify-center w-full h-12 group">
+                <div class="server-icon w-12 h-12 bg-[#36393f] group-hover:bg-green-600 flex items-center justify-center text-green-500 group-hover:text-white cursor-pointer transition-colors">
+                    <i class="fas fa-plus"></i>
+                </div>
+            </div>
+        </nav>
+
+        <aside class="w-60 bg-[#2f3136] flex flex-col flex-shrink-0">
+            <div class="h-12 px-4 flex items-center justify-between shadow-sm hover:bg-[#34373c] cursor-pointer transition-colors border-b border-[#202225]">
+                <h2 class="font-bold truncate">{{ channel.server.name|default:"My Game Server" }}</h2>
+                <i class="fas fa-chevron-down text-sm"></i>
+            </div>
+            <div class="flex-1 overflow-y-auto p-2 space-y-4 custom-scrollbar">
+                <div>
+                    <div class="flex items-center justify-between px-2 text-gray-400 hover:text-gray-300 cursor-pointer mb-1 group">
+                        <span class="text-xs font-bold uppercase tracking-wide flex items-center">
+                            <i class="fas fa-chevron-down text-[10px] mr-1"></i> {% trans "Text Channels" %}
+                        </span>
+                        <i class="fas fa-plus text-xs opacity-0 group-hover:opacity-100"></i>
+                    </div>
+                    <div class="space-y-0.5">
+                        <div class="flex items-center px-2 py-1.5 bg-[#393c43] text-white rounded cursor-pointer">
+                            <i class="fas fa-hashtag text-gray-400 mr-1.5"></i> general
+                        </div>
+                        <div class="flex items-center px-2 py-1.5 text-gray-400 hover:bg-[#34373c] hover:text-gray-200 rounded cursor-pointer">
+                            <i class="fas fa-hashtag text-gray-400 mr-1.5"></i> clips
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex items-center justify-between px-2 text-gray-400 hover:text-gray-300 cursor-pointer mb-1 group">
+                        <span class="text-xs font-bold uppercase tracking-wide flex items-center">
+                            <i class="fas fa-chevron-down text-[10px] mr-1"></i> {% trans "Voice Channels" %}
+                        </span>
+                        <i class="fas fa-plus text-xs opacity-0 group-hover:opacity-100"></i>
+                    </div>
+                    <div class="space-y-0.5">
+                        <div class="group px-2 py-1.5 rounded hover:bg-[#34373c] cursor-pointer">
+                            <div class="flex items-center text-gray-400 group-hover:text-gray-200 mb-1">
+                                <i class="fas fa-volume-up mr-1.5"></i> Lounge
+                            </div>
+                            <div class="ml-4 space-y-1">
+                                <div class="flex items-center text-gray-400 text-sm">
+                                    <img src="https://ui-avatars.com/api/?name=User&background=random" class="w-5 h-5 rounded-full mr-2 border border-[#2f3136]">
+                                    <span class="truncate">{% trans "Current User" %}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-[#292b2f] px-2 py-2 flex items-center justify-between">
+                <div class="flex items-center hover:bg-[#34373c] p-1 rounded cursor-pointer">
+                    <div class="relative mr-2">
+                        <img src="https://ui-avatars.com/api/?name={{ user.username|default:'Me' }}" class="w-8 h-8 rounded-full">
+                        <div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-[#292b2f]"></div>
+                    </div>
+                    <div class="text-sm">
+                        <div class="font-bold text-white leading-tight">{{ user.username }}</div>
+                        <div class="text-xs text-gray-400 leading-tight">#1234</div>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button class="w-8 h-8 flex items-center justify-center rounded hover:bg-[#34373c] text-gray-400 hover:text-gray-200">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <button class="w-8 h-8 flex items-center justify-center rounded hover:bg-[#34373c] text-gray-400 hover:text-gray-200">
+                        <i class="fas fa-headphones"></i>
+                    </button>
+                    <a href="{% url 'settings' %}" class="w-8 h-8 flex items-center justify-center rounded hover:bg-[#34373c] text-gray-400 hover:text-gray-200">
+                        <i class="fas fa-cog"></i>
+                    </a>
+                </div>
+            </div>
+        </aside>
+
+        <main class="flex-1 flex flex-col min-w-0 bg-[#36393f] relative">
+            <header class="h-12 px-4 border-b border-[#26272d] flex items-center justify-between flex-shrink-0 shadow-sm z-10">
+                <div class="flex items-center">
+                    <i class="fas fa-hashtag text-gray-400 mr-2 text-xl"></i>
+                    <h3 class="font-bold text-white mr-4">{{ channel.name }}</h3>
+                    <span class="hidden sm:block text-xs text-gray-400 border-l border-gray-600 pl-4">{% trans "This is the start of your legend." %}</span>
+                </div>
+                <div class="flex items-center space-x-4 text-gray-400">
+                    <i class="fas fa-phone cursor-pointer hover:text-gray-200"></i>
+                    <i class="fas fa-video cursor-pointer hover:text-gray-200" onclick="toggleVoiceArea()"></i>
+                    <i class="fas fa-thumbtack cursor-pointer hover:text-gray-200"></i>
+                    <i class="fas fa-user-friends cursor-pointer hover:text-gray-200"></i>
+                    <div class="relative">
+                        <input type="text" placeholder="{% trans 'Search' %}" class="bg-[#202225] text-sm rounded px-2 py-1 transition-all w-36 focus:w-56 outline-none text-white">
+                        <i class="fas fa-search absolute right-2 top-1.5 text-xs"></i>
+                    </div>
+                </div>
+            </header>
+
+            <div id="voice-stage" class="hidden bg-black flex-1 relative p-4 overflow-hidden">
+                <div class="absolute top-4 right-4 z-20 flex gap-2">
+                    <button class="bg-[#2f3136] hover:bg-[#40444b] text-white px-3 py-2 rounded text-sm font-medium shadow transition-colors">
+                        <i class="fas fa-th-large mr-2"></i> Grid
+                    </button>
+                    <button class="bg-[#2f3136] hover:bg-[#40444b] text-white px-3 py-2 rounded text-sm font-medium shadow transition-colors">
+                        <i class="fas fa-compress mr-2"></i> Focus
+                    </button>
+                </div>
+                <div id="video-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 h-full w-full">
+                    <div class="bg-[#2f3136] rounded-lg relative flex flex-col items-center justify-center group border-2 border-transparent hover:border-gray-600">
+                        <img src="https://ui-avatars.com/api/?name=Alice&background=random" class="w-24 h-24 rounded-full mb-4 voice-avatar speaking">
+                        <div class="absolute bottom-3 left-3 bg-black bg-opacity-60 px-2 py-1 rounded text-sm font-bold flex items-center">
+                            <i class="fas fa-microphone text-green-400 mr-2 text-xs"></i> Alice
+                        </div>
+                    </div>
+                    <div class="bg-[#2f3136] rounded-lg relative flex flex-col items-center justify-center group">
+                        <img src="https://ui-avatars.com/api/?name=Bob&background=random" class="w-24 h-24 rounded-full mb-4 voice-avatar">
+                        <div class="absolute bottom-3 left-3 bg-black bg-opacity-60 px-2 py-1 rounded text-sm font-bold">
+                            Bob
+                        </div>
+                    </div>
+                    <div id="screen-share-container" class="hidden col-span-2 row-span-2 bg-[#000] rounded-lg relative border-2 border-indigo-500 overflow-hidden">
+                        <div class="absolute inset-0 flex items-center justify-center bg-gray-900 text-gray-500">
+                            <div class="text-center">
+                                <i class="fas fa-desktop text-6xl mb-4 text-indigo-500 animate-pulse"></i>
+                                <h3 class="text-xl font-bold text-white">{% trans "Screen Sharing Active" %}</h3>
+                                <p class="text-sm">{% trans "Live Stream - 1080p 60fps" %}</p>
+                            </div>
+                        </div>
+                        <div class="absolute bottom-4 right-4">
+                            <img src="https://ui-avatars.com/api/?name={{ user.username|default:'Me' }}" class="w-16 h-16 rounded border-2 border-indigo-500 shadow-lg">
+                        </div>
+                    </div>
+                </div>
+                <div class="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-[#2f3136] rounded-full px-6 py-3 flex items-center gap-4 shadow-xl z-30">
+                    <button class="w-10 h-10 rounded-full bg-gray-600 hover:bg-gray-500 flex items-center justify-center transition-colors">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <button class="w-10 h-10 rounded-full bg-gray-600 hover:bg-gray-500 flex items-center justify-center transition-colors">
+                        <i class="fas fa-video"></i>
+                    </button>
+                    <button onclick="toggleScreenShare(event)" class="w-10 h-10 rounded-full bg-gray-600 hover:bg-indigo-500 flex items-center justify-center transition-colors text-gray-200">
+                        <i class="fas fa-desktop"></i>
+                    </button>
+                    <button onclick="toggleVoiceArea()" class="w-10 h-10 rounded-full bg-red-500 hover:bg-red-600 flex items-center justify-center transition-colors text-white">
+                        <i class="fas fa-phone-slash"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div id="chat-area" class="flex-1 flex flex-col min-h-0">
+                <div class="flex-1 overflow-y-auto p-4 space-y-6" id="discord-messages">
+                    <div class="mt-4 mb-8 text-center">
+                        <div class="w-16 h-16 rounded-full bg-gray-600 flex items-center justify-center mb-4 mx-auto">
+                            <i class="fas fa-hashtag text-4xl text-white"></i>
+                        </div>
+                        <h1 class="text-3xl font-bold text-white">{% trans "Welcome to" %} #{{ channel.name }}!</h1>
+                        <p class="text-gray-400 mt-1">{% trans "This is the start of the channel." %}</p>
+                    </div>
+                </div>
+                <div class="p-4 pt-0">
+                    <div class="bg-[#40444b] rounded-lg px-4 py-2.5 flex items-center">
+                        <button class="text-gray-400 hover:text-gray-200 mr-4">
+                            <i class="fas fa-plus-circle text-lg"></i>
+                        </button>
+                        <input type="text" id="discord-chat-input" class="bg-transparent flex-1 outline-none text-gray-200 placeholder-gray-500" placeholder="{% trans 'Message' %} #{{ channel.name }}" autocomplete="off">
+                        <button onclick="sendChatMessage()" class="text-gray-400 hover:text-gray-200 ml-4">
+                            <i class="fas fa-paper-plane text-lg"></i>
+                        </button>
+                        <div class="flex items-center space-x-3 ml-4 text-gray-400">
+                            <i class="fas fa-gift hover:text-gray-200 cursor-pointer"></i>
+                            <i class="fas fa-sticky-note hover:text-gray-200 cursor-pointer"></i>
+                            <i class="fas fa-smile hover:text-yellow-400 cursor-pointer transition-colors"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    const channelSlug = "{{ channel_slug }}";
+    const currentUser = "{{ user.username }}";
+    const currentUserId = {{ user.id }};
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsUrl = `${wsProtocol}//${window.location.host}/ws/voice/?channel_slug=${channelSlug}`;
+    
+    let chatSocket = null;
+    const messageList = document.getElementById('discord-messages');
+    const chatInput = document.getElementById('discord-chat-input');
+
+    function connectWebSocket() {
+        chatSocket = new WebSocket(wsUrl);
+        chatSocket.onopen = function() {
+            console.log("WebSocket Connected");
+        };
+        chatSocket.onmessage = function(e) {
+            const data = JSON.parse(e.data);
+            handleWebSocketMessage(data);
+        };
+        chatSocket.onclose = function() {
+            console.log("WebSocket Disconnected");
+            setTimeout(connectWebSocket, 3000);
+        };
+        chatSocket.onerror = function(error) {
+            console.error("WebSocket Error:", error);
+        };
+    }
+
+    function handleWebSocketMessage(data) {
+        if (data.type === 'chat_message') {
+            addMessageToList(data.username, data.message, data.timestamp);
+        } else if (data.type === 'system_notification') {
+            addSystemMessage(data.message, data.event);
+        }
+    }
+
+    function addMessageToList(username, content, timestamp) {
+        const div = document.createElement('div');
+        div.className = 'flex group hover:bg-[#32353b] -mx-4 px-4 py-1 message-group';
+        
+        const date = timestamp ? new Date(timestamp) : new Date();
+        const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+        
+        div.innerHTML = `
+            <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random" class="w-10 h-10 rounded-full mr-4 mt-1 cursor-pointer">
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center mb-1">
+                    <span class="font-medium text-white hover:underline cursor-pointer mr-2">${escapeHtml(username)}</span>
+                    <span class="text-xs text-gray-400">${timeStr}</span>
+                </div>
+                <p class="text-gray-300">${escapeHtml(content)}</p>
+            </div>
+        `;
+        messageList.appendChild(div);
+        messageList.scrollTop = messageList.scrollHeight;
+    }
+
+    function addSystemMessage(message) {
+        const div = document.createElement('div');
+        div.className = 'system-message info text-center text-gray-400 py-2 text-sm';
+        div.textContent = message;
+        messageList.appendChild(div);
+        messageList.scrollTop = messageList.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function sendChatMessage() {
+        const input = document.getElementById('discord-chat-input');
+        const message = input.value.trim();
+        if (!message || !chatSocket || chatSocket.readyState !== WebSocket.OPEN) return;
+
+        chatSocket.send(JSON.stringify({
+            signal_type: 'chat_message',
+            data: message
+        }));
+
+        input.value = '';
+    }
+
+    if (chatInput) {
+        chatInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendChatMessage();
+            }
+        });
+    }
+
+    async function loadChatHistory() {
+        try {
+            const response = await fetch(`/api/chat/${channelSlug}/messages/`);
+            const data = await response.json();
+            const welcomeMsg = messageList.querySelector('.text-center');
+            if (welcomeMsg) welcomeMsg.remove();
+            data.messages.forEach(msg => {
+                addMessageToList(msg.author, msg.content, msg.timestamp);
+            });
+        } catch (error) {
+            console.error("Error loading chat history:", error);
+        }
+    }
+
+    function toggleVoiceArea() {
+        const stage = document.getElementById('voice-stage');
+        const chat = document.getElementById('chat-area');
+        if (stage.classList.contains('hidden')) {
+            stage.classList.remove('hidden');
+            chat.classList.add('hidden');
+        } else {
+            stage.classList.add('hidden');
+            chat.classList.remove('hidden');
+        }
+    }
+
+    async function toggleScreenShare(event) {
+        const container = document.getElementById('screen-share-container');
+        const btn = event.currentTarget;
+        
+        if (container.classList.contains('hidden')) {
+            try {
+                const stream = await navigator.mediaDevices.getDisplayMedia({ video: true });
+                container.classList.remove('hidden');
+                container.classList.add('flex');
+                btn.classList.add('text-green-400');
+                
+                stream.getVideoTracks()[0].onended = () => {
+                    container.classList.add('hidden');
+                    container.classList.remove('flex');
+                    btn.classList.remove('text-green-400');
+                };
+            } catch(err) {
+                console.error("Screen share error:", err);
+                alert("{% trans 'Could not start screen share. Please check permissions.' %}");
+            }
+        } else {
+            container.classList.add('hidden');
+            container.classList.remove('flex');
+            btn.classList.remove('text-green-400');
+        }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+        loadChatHistory();
+        connectWebSocket();
+    });
+</script>
+{% endblock %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,7 +406,7 @@
     <title>DiscordClone - Room</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
+<style>
         /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #2f3136; }
@@ -22,7 +422,7 @@
             background-color: #5865F2;
         }
         .server-pill {
-            position: absolute;
+        position: absolute;
             left: -4px;
             width: 8px;
             height: 8px;
@@ -51,8 +451,8 @@
         @keyframes pulse-green {
             0% { box-shadow: 0 0 0 0px rgba(59, 165, 92, 0.7); }
             100% { box-shadow: 0 0 0 10px rgba(59, 165, 92, 0); }
-        }
-    </style>
+    }
+</style>
 </head>
 <body class="bg-gray-800 text-gray-100 overflow-hidden h-screen flex font-sans">
 
@@ -63,7 +463,7 @@
             <div class="server-pill absolute top-1/2 transform -translate-y-1/2"></div>
             <div class="server-icon w-12 h-12 bg-[#36393f] flex items-center justify-center text-white cursor-pointer active">
                 <i class="fab fa-discord text-xl"></i>
-            </div>
+    </div>
         </div>
         
         <div class="h-0.5 w-8 bg-[#36393f] rounded-lg mx-auto"></div>
@@ -77,15 +477,15 @@
             <!-- Tooltip -->
             <div class="absolute left-20 bg-black text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
                 Game Community
-            </div>
-        </div>
+    </div>
+</div>
 
         <!-- Add Server -->
         <div class="server-icon-wrapper relative flex items-center justify-center w-full h-12 group">
             <div class="server-icon w-12 h-12 bg-[#36393f] group-hover:bg-green-600 flex items-center justify-center text-green-500 group-hover:text-white cursor-pointer transition-colors">
                 <i class="fas fa-plus"></i>
             </div>
-        </div>
+    </div>
     </nav>
 
     <!-- 2. Channel Sidebar -->
@@ -94,13 +494,13 @@
         <div class="h-12 px-4 flex items-center justify-between shadow-sm hover:bg-[#34373c] cursor-pointer transition-colors border-b border-[#202225]">
             <h2 class="font-bold truncate">My Game Server</h2>
             <i class="fas fa-chevron-down text-sm"></i>
-        </div>
+</div>
 
         <!-- Channel List -->
         <div class="flex-1 overflow-y-auto p-2 space-y-4 custom-scrollbar">
-            
+
             <!-- Text Channels Category -->
-            <div>
+        <div>
                 <div class="flex items-center justify-between px-2 text-gray-400 hover:text-gray-300 cursor-pointer mb-1 group">
                     <span class="text-xs font-bold uppercase tracking-wide flex items-center">
                         <i class="fas fa-chevron-down text-[10px] mr-1"></i> Text Channels
@@ -114,8 +514,8 @@
                     <div class="flex items-center px-2 py-1.5 text-gray-400 hover:bg-[#34373c] hover:text-gray-200 rounded cursor-pointer">
                         <i class="fas fa-hashtag text-gray-400 mr-1.5"></i> clips
                     </div>
-                </div>
-            </div>
+        </div>
+    </div>
 
             <!-- Voice Channels Category -->
             <div>
@@ -264,8 +664,8 @@
                     </div>
                     <h1 class="text-3xl font-bold text-white">Welcome to #{{ channel.name }}!</h1>
                     <p class="text-gray-400 mt-1">This is the start of the #{{ channel.name }} channel.</p>
-                </div>
-            </div>
+    </div>
+</div>
 
             <!-- Input Area -->
             <div class="p-4 pt-0">
@@ -288,8 +688,8 @@
 
     </main>
 
-    <script>
-        const channelSlug = "{{ channel_slug }}";
+<script>
+    const channelSlug = "{{ channel_slug }}";
         const currentUser = "{{ user.username }}";
         const currentUserId = {{ user.id }};
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
@@ -420,7 +820,7 @@
             if (stage.classList.contains('hidden')) {
                 stage.classList.remove('hidden');
                 chat.classList.add('hidden');
-            } else {
+        } else {
                 stage.classList.add('hidden');
                 chat.classList.remove('hidden');
             }
@@ -461,6 +861,6 @@
             loadChatHistory();
             connectWebSocket();
         });
-    </script>
+</script>
 </body>
 </html>

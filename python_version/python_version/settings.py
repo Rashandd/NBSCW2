@@ -174,3 +174,12 @@ CHANNEL_LAYERS = {
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# COTURN/WebRTC Configuration (Backend settings - one server handles all voice channels)
+COTURN_CONFIG = {
+    'stun_url': os.getenv('COTURN_STUN_URL', 'stun:31.58.244.167:3478'),
+    'turn_url': os.getenv('COTURN_TURN_URL', 'turn:31.58.244.167:3478'),
+    'turn_username': os.getenv('COTURN_USERNAME', 'adem'),
+    'turn_credential': os.getenv('COTURN_CREDENTIAL', 'fb1907'),
+    'stun_url_2': os.getenv('COTURN_STUN_URL_2', 'stun:stun.l.google.com:19302'),
+}

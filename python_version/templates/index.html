@@ -1,133 +1,453 @@
 {% extends 'base.html' %}
 {% load i18n %}
-{% block title %}{% trans "Voice & Chat Hub" %}{% endblock %}
+{% block title %}{% trans "Rashigo - Connect, Chat & Collaborate" %}{% endblock %}
 {% block extra_css %}
 {{ block.super }}
 <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        
-        body {
-            font-family: 'Inter', sans-serif !important;
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%) !important;
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+    
+    body {
+        font-family: 'Inter', sans-serif !important;
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #1e293b 75%, #0f172a 100%) !important;
+        background-size: 400% 400%;
+        animation: gradientShift 20s ease infinite;
+        min-height: 100vh;
+    }
+    
+    @keyframes gradientShift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+    
+    .main-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+    }
+    
+    .hero-section {
+        text-align: center;
+        padding: 3rem 0;
+        margin-bottom: 3rem;
+    }
+    
+    .hero-title {
+        font-size: 3.5rem;
+        font-weight: 900;
+        background: linear-gradient(135deg, #fff 0%, #e2e8f0 50%, #cbd5e1 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        margin-bottom: 1rem;
+        letter-spacing: -0.02em;
+    }
+    
+    .hero-subtitle {
+        font-size: 1.25rem;
+        color: rgba(226, 232, 240, 0.8);
+        font-weight: 400;
+        margin-bottom: 2rem;
+    }
+    
+    .server-card {
+        background: rgba(30, 41, 59, 0.8);
+        backdrop-filter: blur(20px);
+        border-radius: 20px;
+        padding: 2rem;
+        height: 100%;
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .server-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 4px;
+        background: linear-gradient(90deg, #667eea, #764ba2, #f093fb, #4facfe);
+        background-size: 200% 100%;
+        animation: shimmer 3s ease infinite;
+    }
+    
+    @keyframes shimmer {
+        0% { background-position: -200% 0; }
+        100% { background-position: 200% 0; }
+    }
+    
+    .server-card:hover {
+        transform: translateY(-10px) scale(1.02);
+        box-shadow: 0 20px 60px rgba(102, 126, 234, 0.4);
+        border-color: rgba(102, 126, 234, 0.5);
+        background: rgba(30, 41, 59, 0.95);
+    }
+    
+    .server-icon {
+        width: 70px;
+        height: 70px;
+        border-radius: 18px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        transition: transform 0.3s ease;
+    }
+    
+    .server-card:hover .server-icon {
+        transform: rotate(5deg) scale(1.1);
+    }
+    
+    .server-name {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #f1f5f9;
+        margin-bottom: 0.75rem;
+    }
+    
+    .server-description {
+        color: #94a3b8;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        margin-bottom: 1.5rem;
+        min-height: 3em;
+    }
+    
+    .server-stats {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+    }
+    
+    .stat-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 25px;
+        font-size: 0.875rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        color: white;
+    }
+    
+    .stat-badge.members {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+    
+    .stat-badge.channels {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+    
+    .stat-badge.voice {
+        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+    
+    .stat-badge:hover {
+        transform: scale(1.05);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    
+    .server-actions {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: auto;
+    }
+    
+    .btn-primary-custom {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        flex: 1;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+    }
+    
+    .btn-primary-custom:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.5);
+        color: white;
+    }
+    
+    .btn-secondary-custom {
+        background: rgba(102, 126, 234, 0.2);
+        border: 2px solid #667eea;
+        color: #cbd5e1;
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+    }
+    
+    .btn-secondary-custom:hover {
+        background: #667eea;
+        color: white;
+        transform: translateY(-2px);
+    }
+    
+    .empty-state {
+        background: rgba(30, 41, 59, 0.8);
+        backdrop-filter: blur(20px);
+        border-radius: 20px;
+        padding: 4rem 2rem;
+        text-align: center;
+        border: 2px dashed rgba(102, 126, 234, 0.3);
+    }
+    
+    .empty-state-icon {
+        font-size: 5rem;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 1.5rem;
+    }
+    
+    .empty-state-title {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #f1f5f9;
+        margin-bottom: 1rem;
+    }
+    
+    .empty-state-text {
+        color: #94a3b8;
+        font-size: 1.1rem;
+        margin-bottom: 2rem;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        margin-top: 2rem;
+        flex-wrap: wrap;
+    }
+    
+    .header-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: flex-end;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+    }
+    
+    .owner-badge {
+        background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        color: #1e293b;
+        padding: 0.35rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .modal-content {
+        background-color: var(--bg-secondary);
+        border-color: var(--border-color);
+        color: var(--text-primary);
+    }
+    
+    .modal-header {
+        border-color: var(--border-color);
+    }
+    
+    .modal-footer {
+        border-color: var(--border-color);
+    }
+    
+    @media (max-width: 768px) {
+        .hero-title {
+            font-size: 2.5rem;
         }
         
-        .glass-card {
-            background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.05);
+        .hero-subtitle {
+            font-size: 1rem;
         }
         
-        .channel-card {
-            transition: all 0.3s ease;
+        .server-card {
+            padding: 1.5rem;
         }
         
-        .channel-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
-            border-color: #6366f1;
+        .main-container {
+            padding: 1rem;
         }
-
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: #1e293b; 
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #475569; 
-            border-radius: 3px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #64748b; 
-        }
-    </style>
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="mt-0">
-    <!-- Header Section -->
-    <div class="mb-4 flex items-center justify-between">
-        <div>
-            <h1 class="h3 mb-2">{% trans "Your Servers" %}</h1>
-            <p class="text-muted">{% trans "Join a server or create your own community" %}</p>
-        </div>
-        <div class="flex gap-2">
-            <button class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-filter me-2"></i>{% trans "Filter" %}
-            </button>
-            <button class="btn btn-primary btn-sm">
-                <i class="fas fa-plus me-2"></i>{% trans "Create Server" %}
-            </button>
-        </div>
-    </div>
-
-    <!-- Server Grid -->
+<div class="main-container">
     {% if user.is_authenticated %}
+        <!-- Hero Section -->
+        <div class="hero-section">
+            <h1 class="hero-title">🎮 Rashigo</h1>
+            <p class="hero-subtitle">{% trans "Your servers, your community, your way" %}</p>
+            
+            <div class="header-actions">
+                <button class="btn btn-secondary-custom" data-bs-toggle="modal" data-bs-target="#joinServerModal">
+                    <i class="fas fa-key"></i> {% trans "Join Private Server" %}
+                </button>
+                <button class="btn btn-secondary-custom" onclick="alert('Filter coming soon!')">
+                    <i class="fas fa-filter"></i> {% trans "Filter" %}
+                </button>
+                <button class="btn btn-primary-custom" onclick="alert('Create server coming soon!')">
+                    <i class="fas fa-plus"></i> {% trans "Create Server" %}
+                </button>
+            </div>
+        </div>
+        
         {% if servers %}
-        <div class="row g-4">
-            {% for server in servers %}
-            <div class="col-md-6 col-lg-4">
-                <div class="card bg-secondary border-secondary h-100 hover-shadow">
-                    <div class="card-body d-flex flex-column">
-                        <div class="d-flex justify-content-between align-items-start mb-3">
-                            <div class="rounded bg-dark p-2 border border-secondary">
-                                <i class="fas fa-server text-primary fs-4"></i>
-                            </div>
+            <!-- Servers Grid -->
+            <div class="row g-4">
+                {% for server in servers %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="server-card">
+                        <div class="server-icon">
+                            {{ server.icon|default:"🎮" }}
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h3 class="server-name">{{ server.name }}</h3>
                             {% if server.owner == user %}
-                            <span class="badge bg-warning text-dark">
-                                <i class="fas fa-crown me-1"></i>{% trans "Owner" %}
+                            <span class="owner-badge">
+                                <i class="fas fa-crown"></i> {% trans "Owner" %}
                             </span>
                             {% endif %}
                         </div>
                         
-                        <h5 class="card-title mb-2">{{ server.name }}</h5>
-                        <p class="card-text text-muted small mb-3 flex-grow-1">{{ server.description|default:"Join this server to start chatting!"|truncatewords:15 }}</p>
+                        <p class="server-description">
+                            {{ server.description|default:"Join this amazing server and connect with friends!"|truncatewords:20 }}
+                        </p>
                         
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div class="d-flex align-items-center">
-                                <span class="badge bg-success me-2">
-                                    <i class="fas fa-circle me-1" style="font-size: 0.5rem;"></i>
-                                    {{ server.members.count }} {% trans "members" %}
-                                </span>
-                                <span class="badge bg-info text-dark">
-                                    <i class="fas fa-hashtag me-1"></i>
-                                    {{ server.text_channels.count }} {% trans "text" %}
-                                </span>
-                            </div>
-                            <a href="{% url 'server_view' slug=server.slug %}" class="btn btn-primary btn-sm">
-                                {% trans "Join" %} <i class="fas fa-arrow-right ms-1"></i>
+                        <div class="server-stats">
+                            <span class="stat-badge members">
+                                <i class="fas fa-users"></i>
+                                {{ server.members.count }} {% trans "members" %}
+                            </span>
+                            <span class="stat-badge channels">
+                                <i class="fas fa-hashtag"></i>
+                                {{ server.text_channels.count }} {% trans "text" %}
+                            </span>
+                            <span class="stat-badge voice">
+                                <i class="fas fa-volume-up"></i>
+                                {{ server.voice_channels.count }} {% trans "voice" %}
+                            </span>
+                        </div>
+                        
+                        <div class="server-actions">
+                            <a href="{% url 'server_view' slug=server.slug %}" class="btn btn-primary-custom">
+                                {% trans "Open" %} <i class="fas fa-arrow-right"></i>
                             </a>
                         </div>
                     </div>
                 </div>
+                {% endfor %}
             </div>
-            {% endfor %}
-        </div>
         {% else %}
-        <!-- Empty State -->
-        <div class="card bg-secondary border-secondary text-center p-5">
-            <div class="card-body">
-                <i class="fas fa-server text-muted mb-3" style="font-size: 3rem;"></i>
-                <h5 class="card-title">{% trans "No Servers Yet" %}</h5>
-                <p class="card-text text-muted">{% trans "Create your first server to get started!" %}</p>
-                <button class="btn btn-primary mt-3">
-                    <i class="fas fa-plus me-2"></i>{% trans "Create Server" %}
-                </button>
+            <!-- Empty State -->
+            <div class="empty-state">
+                <div class="empty-state-icon">
+                    <i class="fas fa-server"></i>
+                </div>
+                <h2 class="empty-state-title">{% trans "No Servers Yet" %}</h2>
+                <p class="empty-state-text">
+                    {% trans "Create your first server to start building your community!" %}
+                </p>
+                <div class="action-buttons">
+                    <button class="btn btn-secondary-custom" data-bs-toggle="modal" data-bs-target="#joinServerModal">
+                        <i class="fas fa-key"></i> {% trans "Join Private Server" %}
+                    </button>
+                    <button class="btn btn-primary-custom" onclick="alert('Create server coming soon!')">
+                        <i class="fas fa-plus"></i> {% trans "Create Your First Server" %}
+                    </button>
+                </div>
             </div>
-        </div>
         {% endif %}
     {% else %}
         <!-- Not Logged In -->
-        <div class="card bg-secondary border-secondary text-center p-5">
-            <div class="card-body">
-                <i class="fas fa-lock text-muted mb-3" style="font-size: 3rem;"></i>
-                <h5 class="card-title">{% trans "Authentication Required" %}</h5>
-                <p class="card-text text-muted">{% trans "Please log in to access servers and channels" %}</p>
-                <a href="{% url 'login' %}" class="btn btn-primary mt-3">
-                    <i class="fas fa-sign-in-alt me-2"></i>{% trans "Log In" %}
+        <div class="hero-section">
+            <h1 class="hero-title">🎮 Rashigo</h1>
+            <p class="hero-subtitle">{% trans "Connect, chat, and collaborate with your community" %}</p>
+        </div>
+        
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <i class="fas fa-lock"></i>
+            </div>
+            <h2 class="empty-state-title">{% trans "Welcome to Rashigo" %}</h2>
+            <p class="empty-state-text">
+                {% trans "Please log in to access servers and start connecting with others!" %}
+            </p>
+            <div class="action-buttons">
+                <a href="{% url 'login' %}" class="btn btn-primary-custom">
+                    <i class="fas fa-sign-in-alt"></i> {% trans "Log In" %}
                 </a>
             </div>
         </div>
     {% endif %}
 </div>
+
+<!-- Join Private Server Modal -->
+{% if user.is_authenticated %}
+<div class="modal fade" id="joinServerModal" tabindex="-1" aria-labelledby="joinServerModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="joinServerModalLabel">
+                    <i class="fas fa-key me-2"></i>{% trans "Join Private Server" %}
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="{% url 'join_server' %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <p class="text-muted mb-3">
+                        {% trans "Enter the server invite code to join a private server." %}
+                    </p>
+                    <div class="mb-3">
+                        <label for="inviteCode" class="form-label">{% trans "Invite Code" %}</label>
+                        <input type="text" class="form-control" id="inviteCode" name="invite_code" 
+                               placeholder="{% trans 'Enter server invite code...' %}" required>
+                        <small class="form-text text-muted">
+                            {% trans "The invite code is usually the server's slug name." %}
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-sign-in-alt me-2"></i>{% trans "Join Server" %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
 {% endblock %}

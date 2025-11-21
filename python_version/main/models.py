@@ -22,6 +22,7 @@ class CustomUser(AbstractUser):
     #   "another-game": {...}
     # }
     per_game_stats = JSONField(default=dict, verbose_name="Oyun Bazlı İstatistikler")
+    user_settings = JSONField(default=dict, verbose_name="Kullanıcı Ayarları")
     
     @property
     def win_rate(self):

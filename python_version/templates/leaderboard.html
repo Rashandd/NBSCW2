@@ -6,11 +6,23 @@
 {% endblock %}
 
 {% block extra_css %}
+{{ block.super }}
 <style>
+    .leaderboard-hero {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    .leaderboard-hero .emoji {
+        font-size: 3rem;
+        display: inline-flex;
+        margin-bottom: 0.75rem;
+    }
     .leaderboard-table {
-        background: #1a1a1a;
-        border-radius: 10px;
+        border-radius: 18px;
         overflow: hidden;
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        box-shadow: 0 20px 45px rgba(15, 23, 42, 0.5);
     }
     .rank-badge {
         width: 40px;
@@ -47,17 +59,17 @@
 {% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="text-center mb-5">
-        <h1 class="display-4">
-            🏆
+<div class="page-shell">
+    <div class="leaderboard-hero">
+        <div class="emoji">🏆</div>
+        <h1 class="section-title">
             {% if game_type %}
                 {{ game_type.name }} {% trans "Leaderboard" %}
             {% else %}
                 {% trans "General Leaderboard" %}
             {% endif %}
         </h1>
-        <p class="lead text-muted">
+        <p class="section-subtitle">
             {% if game_type %}
                 {% trans "Discover the best players for this game." %}
             {% else %}
@@ -67,26 +79,27 @@
     </div>
 
     <!-- Sorting Filters -->
-    <div class="card text-bg-dark mb-4 border-secondary">
-        <div class="card-body">
+    <div class="glass-card mb-4">
+        <div class="card-body p-0">
+            <div class="row g-3 align-items-center">
             <div class="row align-items-center">
                 <div class="col-md-6">
-                    <label class="form-label">{% trans "Sort by:" %}</label>
-                    <div class="btn-group" role="group">
+                    <p class="text-muted mb-2">{% trans "Sort by:" %}</p>
+                    <div class="btn-group flex-wrap" role="group">
                         <a href="?sort=rank_point&order=desc" 
-                           class="btn btn-outline-primary {% if sort_by == 'rank_point' and order == 'desc' %}active{% endif %}">
+                           class="btn btn-outline-primary btn-sm {% if sort_by == 'rank_point' and order == 'desc' %}active{% endif %}">
                             {% trans "Rank Points" %}
                         </a>
                         <a href="?sort=total_wins&order=desc" 
-                           class="btn btn-outline-primary {% if sort_by == 'total_wins' and order == 'desc' %}active{% endif %}">
+                           class="btn btn-outline-primary btn-sm {% if sort_by == 'total_wins' and order == 'desc' %}active{% endif %}">
                             {% trans "Wins" %}
                         </a>
                         <a href="?sort=win_rate&order=desc" 
-                           class="btn btn-outline-primary {% if sort_by == 'win_rate' and order == 'desc' %}active{% endif %}">
+                           class="btn btn-outline-primary btn-sm {% if sort_by == 'win_rate' and order == 'desc' %}active{% endif %}">
                             {% trans "Win Rate" %}
                         </a>
                         <a href="?sort=total_games&order=desc" 
-                           class="btn btn-outline-primary {% if sort_by == 'total_games' and order == 'desc' %}active{% endif %}">
+                           class="btn btn-outline-primary btn-sm {% if sort_by == 'total_games' and order == 'desc' %}active{% endif %}">
                             {% trans "Total Games" %}
                         </a>
                     </div>
@@ -103,9 +116,9 @@
     </div>
 
     <!-- Leaderboard Table -->
-    <div class="card text-bg-dark border-secondary leaderboard-table">
+    <div class="leaderboard-table mb-4">
         <div class="card-body p-0">
-            <table class="table table-dark table-hover mb-0">
+            <table class="table table-dark table-hover mb-0 align-middle">
                 <thead>
                     <tr>
                         <th style="width: 80px;">{% trans "Rank" %}</th>
@@ -200,14 +213,11 @@
 
     <!-- User Statistics (If not in list) -->
     {% if current_user and user_rank and user_rank > 100 and not game_type %}
-    <div class="card text-bg-dark mt-4 border-primary">
-        <div class="card-header bg-primary">
-            <h5 class="mb-0">{% trans "Your Statistics" %}</h5>
-        </div>
-        <div class="card-body">
-            <div class="row text-center">
+    <div class="glass-card mt-4">
+        <div class="card-body p-0">
+            <div class="row g-3 text-center">
                 <div class="col-md-3">
-                    <h4>{{ current_user.rank_point }}</h4>
+                    <h4 class="text-white">{{ current_user.rank_point }}</h4>
                     <p class="text-muted mb-0">{% trans "Rank Points" %}</p>
                 </div>
                 <div class="col-md-3">
@@ -215,11 +225,11 @@
                     <p class="text-muted mb-0">{% trans "Wins" %}</p>
                 </div>
                 <div class="col-md-3">
-                    <h4>{{ current_user.total_losses }}</h4>
+                    <h4 class="text-white">{{ current_user.total_losses }}</h4>
                     <p class="text-muted mb-0">{% trans "Losses" %}</p>
                 </div>
                 <div class="col-md-3">
-                    <h4>{{ current_user.win_rate }}%</h4>
+                    <h4 class="text-white">{{ current_user.win_rate }}%</h4>
                     <p class="text-muted mb-0">{% trans "Win Rate" %}</p>
                 </div>
             </div>

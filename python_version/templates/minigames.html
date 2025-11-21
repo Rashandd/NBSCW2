@@ -5,37 +5,42 @@
 {% block title %}{% trans "Game Center" %}{% endblock %}
 
 {% block extra_css %}
+{{ block.super }}
 <style>
     .game-card {
-        transition: all 0.2s ease-in-out;
-        border: 1px solid #444;
+        transition: all 0.3s ease;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        background: rgba(15, 23, 42, 0.7);
+        border-radius: 18px;
+        padding: 1.5rem;
+        height: 100%;
     }
     .game-card:hover {
-        transform: translateY(-5px);
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-        border-color: #888;
+        transform: translateY(-6px);
+        border-color: rgba(102, 126, 234, 0.6);
+        box-shadow: 0 20px 50px rgba(15, 23, 42, 0.6);
     }
     .game-card-body {
-        min-height: 150px;
+        min-height: 180px;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
     }
     .player-count-badge {
-        font-size: 0.9rem;
+        font-size: 0.85rem;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="text-center mb-5">
-        <h1 class="display-4">{% trans "Game Center" %}</h1>
-        <p class="lead text-muted">{% trans "Select the game you want to play." %}</p>
+<div class="page-shell">
+    <div class="page-hero">
+        <h1 class="section-title">{% trans "Game Center" %}</h1>
+        <p class="section-subtitle">{% trans "Select the game you want to play." %}</p>
     </div>
 
     <!-- Filtering and Search Section -->
-    <div class="card text-bg-dark mb-4 border-secondary">
+    <div class="glass-card mb-4">
         <div class="card-body">
             <form method="get" action="{% url 'all_games_lobby' %}" class="row g-3">
                 <!-- Search -->
@@ -146,8 +151,8 @@
 
         {% for game in minigames_list %}
         <div class="col-lg-4 col-md-6">
-            <div class="card h-100 text-bg-dark game-card">
-                <div class="card-body game-card-body">
+            <div class="game-card h-100">
+                <div class="game-card-body">
                     <div>
                         <h3 class="card-title">{{ game.name }}</h3>
                         <p class="card-text text-muted">
@@ -156,12 +161,12 @@
                     </div>
 
                     <div>
-                        <span class="badge bg-secondary player-count-badge mb-3">
+                        <span class="badge-soft primary player-count-badge mb-3 d-inline-flex align-items-center gap-1">
                             <i class="fas fa-users"></i>
                             {{ game.min_players }} - {{ game.max_players }} {% trans "Players" %}
                         </span>
 
-                        <a href="{% url 'game_specific_lobby' game.slug %}" class="btn btn-primary w-100">
+                        <a href="{% url 'game_specific_lobby' game.slug %}" class="btn btn-gradient w-100">
                             {% trans "Go to" %} {{ game.name }} {% trans "Lobby" %}
                             <i class="fas fa-arrow-right ms-1"></i>
                         </a>

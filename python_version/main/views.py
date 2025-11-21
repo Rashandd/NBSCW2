@@ -3,6 +3,7 @@ import json
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from django.contrib import messages
+from django.core.serializers.json import DjangoJSONEncoder
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
 from django.db.models import Count, Q, Case, When, FloatField, F
@@ -15,6 +16,7 @@ from django.urls import reverse
 from .models import CustomUser, Server, ServerRole, ServerMember, TextChannel, VoiceChannel, GameSession, MiniGame, ChatMessage
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.forms import AuthenticationForm
+from django.conf import settings as django_settings
 
 
 def index(request):
@@ -57,7 +59,49 @@ def index(request):
         return render(request, 'index.html', context)
     
     # Not logged in state
-    return render(request, 'index.html', {'title': _('Welcome to VoiceHub')})
+    return render(request, 'index.html', {'title': _('Welcome to Rashigo')})
+
+
+@login_required
+def join_server(request):
+    """Join a server using invite code (slug)"""
+    if request.method == 'POST':
+        invite_code = request.POST.get('invite_code', '').strip()
+        
+        if not invite_code:
+            messages.error(request, _("Please enter an invite code."))
+            return redirect('index')
+        
+        try:
+            server = Server.objects.get(slug=invite_code)
+            
+            # Check if already a member
+            is_member = server.owner == request.user or server.members.filter(user=request.user).exists()
+            if is_member:
+                messages.info(request, _("You are already a member of this server."))
+                return redirect('server_view', slug=server.slug)
+            
+            # Check if private and user is not owner
+            if server.is_private and server.owner != request.user:
+                # For now, allow joining private servers with the code
+                # In production, you might want an actual invite system
+                pass
+            
+            # Create ServerMember
+            ServerMember.objects.get_or_create(
+                server=server,
+                user=request.user,
+                defaults={'is_online': True}
+            )
+            
+            messages.success(request, _("Successfully joined {server_name}!").format(server_name=server.name))
+            return redirect('server_view', slug=server.slug)
+            
+        except Server.DoesNotExist:
+            messages.error(request, _("Invalid invite code. Please check and try again."))
+            return redirect('index')
+    
+    return redirect('index')
 
 
 @login_required
@@ -79,6 +123,18 @@ def server_view(request, slug):
     member = server.members.filter(user=request.user).first()
     user_roles = member.roles.all() if member else []
     
+    # Get COTURN settings from backend (one server handles all voice channels)
+    coturn_config = getattr(django_settings, 'COTURN_CONFIG', {
+        'stun_url': 'stun:31.58.244.167:3478',
+        'turn_url': 'turn:31.58.244.167:3478',
+        'turn_username': 'adem',
+        'turn_credential': 'fb1907',
+        'stun_url_2': 'stun:stun.l.google.com:19302',
+    })
+    
+    # Serialize COTURN config as JSON for JavaScript
+    coturn_config_json = json.dumps(coturn_config, cls=DjangoJSONEncoder)
+    
     context = {
         'server': server,
         'user': request.user,
@@ -88,6 +144,8 @@ def server_view(request, slug):
         'text_channels': server.text_channels.all(),
         'voice_channels': server.voice_channels.all(),
         'members': server.members.select_related('user').all(),
+        'coturn_config': coturn_config,  # For template display
+        'coturn_config_json': coturn_config_json,  # For JavaScript
     }
     return render(request, 'server_view.html', context)
 
@@ -150,8 +208,17 @@ def voice_channel_view(request, slug):
 
 @login_required
 def chat_messages_api(request, slug):
-    """API endpoint to fetch chat messages for a channel"""
-    channel = get_object_or_404(VoiceChannel, slug=slug)
+    """API endpoint to fetch chat messages for a channel (TextChannel or VoiceChannel)"""
+    # Try TextChannel first, then VoiceChannel
+    channel = None
+    try:
+        channel = TextChannel.objects.get(slug=slug)
+    except TextChannel.DoesNotExist:
+        try:
+            channel = VoiceChannel.objects.get(slug=slug)
+        except VoiceChannel.DoesNotExist:
+            return JsonResponse({'error': 'Channel not found'}, status=404)
+    
     limit = int(request.GET.get('limit', 50))
     
     messages = ChatMessage.objects.filter(channel=channel).select_related('user').order_by('-created_at')[:limit]
@@ -171,8 +238,112 @@ def chat_messages_api(request, slug):
 
 @login_required
 def settings_view(request):
-    """Kullanıcının mikrofon/hoparlör seçimi yapacağı ayarlar sayfası."""
-    return render(request, 'settings.html', {'title': _('Settings')})
+    """User settings page with account management and preferences."""
+    user = request.user
+    owned_servers = Server.objects.filter(owner=user).count()
+    member_servers = Server.objects.filter(members__user=user).exclude(owner=user).distinct().count()
+    
+    # Get COTURN settings from backend (read-only, configured by admin)
+    coturn_config = getattr(django_settings, 'COTURN_CONFIG', {
+        'stun_url': 'stun:31.58.244.167:3478',
+        'turn_url': 'turn:31.58.244.167:3478',
+        'turn_username': 'adem',
+        'turn_credential': 'fb1907',
+        'stun_url_2': 'stun:stun.l.google.com:19302',
+    })
+    
+    context = {
+        'title': _('Settings'),
+        'user': user,
+        'owned_servers': owned_servers,
+        'member_servers': member_servers,
+        'coturn_config': coturn_config,  # Backend COTURN settings (read-only)
+    }
+    return render(request, 'settings.html', context)
+
+
+@login_required
+def create_text_channel(request, server_slug):
+    """Create a text channel in a server (owner only, max 100)"""
+    server = get_object_or_404(Server, slug=server_slug)
+    
+    # Check if user is owner
+    if server.owner != request.user:
+        messages.error(request, _("Only the server owner can create channels."))
+        return redirect('server_view', slug=server_slug)
+    
+    # Check channel limit (100 total: text + voice)
+    total_channels = server.text_channels.count() + server.voice_channels.count()
+    if total_channels >= 100:
+        messages.error(request, _("Maximum channel limit reached (100 channels)."))
+        return redirect('server_view', slug=server_slug)
+    
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        description = request.POST.get('description', '').strip()
+        position = int(request.POST.get('position', 0))
+        is_private = request.POST.get('is_private') == 'on'
+        
+        if not name:
+            messages.error(request, _("Channel name is required."))
+            return redirect('server_view', slug=server_slug)
+        
+        try:
+            TextChannel.objects.create(
+                server=server,
+                name=name,
+                description=description,
+                position=position,
+                is_private=is_private
+            )
+            messages.success(request, _("Text channel '{name}' created successfully!").format(name=name))
+        except Exception as e:
+            messages.error(request, _("Error creating channel: {error}").format(error=str(e)))
+    
+    return redirect('server_view', slug=server_slug)
+
+
+@login_required
+def create_voice_channel(request, server_slug):
+    """Create a voice channel in a server (owner only, max 100)"""
+    server = get_object_or_404(Server, slug=server_slug)
+    
+    # Check if user is owner
+    if server.owner != request.user:
+        messages.error(request, _("Only the server owner can create channels."))
+        return redirect('server_view', slug=server_slug)
+    
+    # Check channel limit (100 total: text + voice)
+    total_channels = server.text_channels.count() + server.voice_channels.count()
+    if total_channels >= 100:
+        messages.error(request, _("Maximum channel limit reached (100 channels)."))
+        return redirect('server_view', slug=server_slug)
+    
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        description = request.POST.get('description', '').strip()
+        position = int(request.POST.get('position', 0))
+        user_limit = int(request.POST.get('user_limit', 0))
+        is_private = request.POST.get('is_private') == 'on'
+        
+        if not name:
+            messages.error(request, _("Channel name is required."))
+            return redirect('server_view', slug=server_slug)
+        
+        try:
+            VoiceChannel.objects.create(
+                server=server,
+                name=name,
+                description=description,
+                position=position,
+                user_limit=user_limit,
+                is_private=is_private
+            )
+            messages.success(request, _("Voice channel '{name}' created successfully!").format(name=name))
+        except Exception as e:
+            messages.error(request, _("Error creating channel: {error}").format(error=str(e)))
+    
+    return redirect('server_view', slug=server_slug)
 
 @login_required
 def all_games_lobby(request):
