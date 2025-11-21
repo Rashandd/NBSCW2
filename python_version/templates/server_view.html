@@ -1111,6 +1111,8 @@
             // Notify that connection is ready
             if (currentChannelType === 'voice') {
                 console.log("Ready for voice communication");
+                // After connection, if we have local stream, we're ready to receive offers
+                // The member_joined events will trigger peer connection creation
             }
         };
         
@@ -1200,11 +1202,22 @@
             }
             
             // Handle WebRTC signaling for peer-to-peer connections
-            // Only process if the signal is for us (based on recipient_id)
+            // Process signals that are for us (recipient_id matches) or from other users (not from ourselves)
             if (data.type === 'webrtc_signal') {
-                const currentUserId = '{{ user.id }}';
-                // Check if this signal is for us
-                if (data.recipient_id === currentUserId || data.sender_id !== currentUserId) {
+                const currentUserId = String('{{ user.id }}');
+                const recipientId = String(data.recipient_id || '');
+                const senderId = String(data.sender_id || '');
+                
+                console.log('WebRTC signal received:', {
+                    type: data.signal_type,
+                    from: senderId,
+                    to: recipientId,
+                    currentUser: currentUserId
+                });
+                
+                // Process if: signal is for us OR signal is from someone else (not from ourselves)
+                if (recipientId === currentUserId || (senderId !== currentUserId && senderId !== '')) {
+                    console.log('Processing WebRTC signal:', data.signal_type);
                     if (data.signal_type === 'offer') {
                         handleWebRTCOffer(data);
                     } else if (data.signal_type === 'answer') {
@@ -1212,6 +1225,8 @@
                     } else if (data.signal_type === 'ice_candidate') {
                         handleWebRTCIceCandidate(data);
                     }
+                } else {
+                    console.log('Ignoring WebRTC signal (not for us)');
                 }
             } else if (data.type === 'chat_message') {
                 // Can receive chat messages in voice channels too
@@ -1278,25 +1293,39 @@
                 
                 if (videoElement) {
                     videoElement.srcObject = remoteStream;
+                    videoElement.muted = false; // Unmute remote audio
+                    // Ensure video plays
+                    videoElement.play().catch(err => {
+                        console.error('Error playing remote video:', err);
+                    });
+                    console.log(`Connected remote stream from ${username} to video element`);
+                } else {
+                    console.warn(`No video element found for ${username}`);
                 }
+            } else {
+                console.warn(`No participant div found for ${username}`);
             }
         };
         
         // Handle ICE candidates
         pc.onicecandidate = (event) => {
             if (event.candidate) {
-                console.log(`Sending ICE candidate to ${username}`);
+                console.log(`Sending ICE candidate to ${username} (ID: ${senderId})`);
                 if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
                     chatSocket.send(JSON.stringify({
                         signal_type: 'ice_candidate',
-                        recipient_id: senderId,
+                        recipient_id: String(senderId),
                         data: {
                             candidate: event.candidate.candidate,
                             sdpMLineIndex: event.candidate.sdpMLineIndex,
                             sdpMid: event.candidate.sdpMid
                         }
                     }));
+                } else {
+                    console.warn('WebSocket not open, cannot send ICE candidate');
                 }
+            } else {
+                console.log(`ICE gathering complete for ${username}`);
             }
         };
         
@@ -1320,12 +1349,15 @@
             if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
                 chatSocket.send(JSON.stringify({
                     signal_type: 'offer',
-                    recipient_id: senderId,
+                    recipient_id: String(senderId),
                     data: {
                         sdp: offer.sdp,
                         type: offer.type
                     }
                 }));
+                console.log(`Offer sent to ${username} (ID: ${senderId})`);
+            } else {
+                console.error('WebSocket not open, cannot send offer');
             }
         } catch (error) {
             console.error(`Error creating offer for ${username}:`, error);
@@ -1335,14 +1367,23 @@
     // Handle WebRTC offer
     async function handleWebRTCOffer(data) {
         const username = data.username || 'unknown';
-        const senderId = data.sender_id;
+        const senderId = String(data.sender_id || '');
         const offer = data.data;
         
         console.log(`Received offer from ${username} (ID: ${senderId})`);
+        console.log('Offer data:', offer);
+        
+        // Ensure participant exists in grid
+        let participantDiv = document.getElementById(`participant-${username}`);
+        if (!participantDiv) {
+            console.log(`Creating participant div for ${username} (from offer)`);
+            participantDiv = addParticipantToGrid(username, null, false);
+        }
         
         // Create or get peer connection
         let pc = peerConnections[username];
         if (!pc) {
+            console.log(`Creating new peer connection for ${username} (from offer)`);
             // Create new peer connection
             if (!localStream) {
                 console.warn('Cannot handle offer: no local stream');
@@ -1378,23 +1419,38 @@
                     }
                     if (videoElement) {
                         videoElement.srcObject = remoteStream;
+                        videoElement.muted = false; // Unmute remote audio
+                        // Ensure video plays
+                        videoElement.play().catch(err => {
+                            console.error('Error playing remote video:', err);
+                        });
+                        console.log(`Connected remote stream from ${username} to video element`);
+                    } else {
+                        console.warn(`No video element found for ${username}`);
                     }
+                } else {
+                    console.warn(`No participant div found for ${username}`);
                 }
             };
             
             pc.onicecandidate = (event) => {
                 if (event.candidate) {
+                    console.log(`Sending ICE candidate to ${username} (ID: ${senderId})`);
                     if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
                         chatSocket.send(JSON.stringify({
                             signal_type: 'ice_candidate',
-                            recipient_id: senderId,
+                            recipient_id: String(senderId),
                             data: {
                                 candidate: event.candidate.candidate,
                                 sdpMLineIndex: event.candidate.sdpMLineIndex,
                                 sdpMid: event.candidate.sdpMid
                             }
                         }));
+                    } else {
+                        console.warn('WebSocket not open, cannot send ICE candidate');
                     }
+                } else {
+                    console.log(`ICE gathering complete for ${username}`);
                 }
             };
             
@@ -1403,9 +1459,17 @@
         
         // Set remote description and create answer
         try {
-            await pc.setRemoteDescription(new RTCSessionDescription(offer));
+            console.log(`Setting remote description (offer) for ${username}...`);
+            await pc.setRemoteDescription(new RTCSessionDescription({
+                type: offer.type,
+                sdp: offer.sdp
+            }));
+            console.log(`Remote description set, creating answer...`);
+            
             const answer = await pc.createAnswer();
+            console.log(`Answer created, setting local description...`);
             await pc.setLocalDescription(answer);
+            console.log(`Local description set`);
             
             console.log(`Created answer for ${username}, sending...`);
             
@@ -1418,9 +1482,13 @@
                         type: answer.type
                     }
                 }));
+                console.log(`Answer sent to ${username} (ID: ${senderId})`);
+            } else {
+                console.error('WebSocket not open, cannot send answer');
             }
         } catch (error) {
             console.error(`Error handling offer from ${username}:`, error);
+            console.error('Error details:', error.message, error.stack);
         }
     }
     
@@ -1430,6 +1498,7 @@
         const answer = data.data;
         
         console.log(`Received answer from ${username}`);
+        console.log('Answer data:', answer);
         
         const pc = peerConnections[username];
         if (!pc) {
@@ -1438,10 +1507,15 @@
         }
         
         try {
-            await pc.setRemoteDescription(new RTCSessionDescription(answer));
-            console.log(`Set remote description (answer) for ${username}`);
+            console.log(`Setting remote description (answer) for ${username}...`);
+            await pc.setRemoteDescription(new RTCSessionDescription({
+                type: answer.type,
+                sdp: answer.sdp
+            }));
+            console.log(`Remote description (answer) set successfully for ${username}`);
         } catch (error) {
             console.error(`Error handling answer from ${username}:`, error);
+            console.error('Error details:', error.message, error.stack);
         }
     }
     
@@ -1454,15 +1528,20 @@
         
         const pc = peerConnections[username];
         if (!pc) {
-            console.warn(`No peer connection found for ${username}`);
+            console.warn(`No peer connection found for ${username}, cannot add ICE candidate`);
             return;
         }
         
         try {
-            await pc.addIceCandidate(new RTCIceCandidate(candidate));
+            await pc.addIceCandidate(new RTCIceCandidate({
+                candidate: candidate.candidate,
+                sdpMLineIndex: candidate.sdpMLineIndex,
+                sdpMid: candidate.sdpMid
+            }));
             console.log(`Added ICE candidate from ${username}`);
         } catch (error) {
             console.error(`Error adding ICE candidate from ${username}:`, error);
+            console.error('Error details:', error.message);
         }
     }
     
