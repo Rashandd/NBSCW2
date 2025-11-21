@@ -1329,6 +1329,9 @@
     // Store user_id mapping (username -> user_id from server)
     const userIdMap = {};
     
+    // Queue for ICE candidates that arrive before peer connections are created
+    const iceCandidateQueue = {};
+    
     // Create a peer connection for a user
     async function createPeerConnection(username, senderId) {
         // Don't create connection if it already exists
@@ -1488,6 +1491,29 @@
         
         // Store peer connection
         peerConnections[username] = pc;
+        
+        // Process any queued ICE candidates now that peer connection exists
+        if (iceCandidateQueue[username] && iceCandidateQueue[username].length > 0) {
+            console.log(`Processing ${iceCandidateQueue[username].length} queued ICE candidates for ${username}`);
+            const queue = iceCandidateQueue[username];
+            iceCandidateQueue[username] = []; // Clear queue
+            
+            // Wait a bit for local description to be set
+            setTimeout(async () => {
+                for (const queuedCandidate of queue) {
+                    try {
+                        await pc.addIceCandidate(new RTCIceCandidate({
+                            candidate: queuedCandidate.candidate,
+                            sdpMLineIndex: queuedCandidate.sdpMLineIndex,
+                            sdpMid: queuedCandidate.sdpMid
+                        }));
+                        console.log(`Added queued ICE candidate from ${username}`);
+                    } catch (error) {
+                        console.warn(`Error adding queued ICE candidate from ${username}:`, error.message);
+                    }
+                }
+            }, 200);
+        }
         
         // If we're the one initiating (new user joined after us), create and send offer
         // This creates a mesh topology - everyone connects to everyone
@@ -1731,6 +1757,29 @@
             await pc.setLocalDescription(answer);
             console.log(`Local description set`);
             
+            // Process any queued ICE candidates now that peer connection and answer are set
+            if (iceCandidateQueue[username] && iceCandidateQueue[username].length > 0) {
+                console.log(`Processing ${iceCandidateQueue[username].length} queued ICE candidates for ${username} (after answer)`);
+                const queue = iceCandidateQueue[username];
+                iceCandidateQueue[username] = []; // Clear queue
+                
+                // Wait a bit for local description to be fully set
+                setTimeout(async () => {
+                    for (const queuedCandidate of queue) {
+                        try {
+                            await pc.addIceCandidate(new RTCIceCandidate({
+                                candidate: queuedCandidate.candidate,
+                                sdpMLineIndex: queuedCandidate.sdpMLineIndex,
+                                sdpMid: queuedCandidate.sdpMid
+                            }));
+                            console.log(`Added queued ICE candidate from ${username} (after answer)`);
+                        } catch (error) {
+                            console.warn(`Error adding queued ICE candidate from ${username}:`, error.message);
+                        }
+                    }
+                }, 200);
+            }
+            
             console.log(`Created answer for ${username}, sending...`);
             
             if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
@@ -1788,10 +1837,36 @@
         
         const pc = peerConnections[username];
         if (!pc) {
-            console.warn(`No peer connection found for ${username}, cannot add ICE candidate`);
+            // Queue the candidate if peer connection doesn't exist yet
+            if (!iceCandidateQueue[username]) {
+                iceCandidateQueue[username] = [];
+            }
+            iceCandidateQueue[username].push(candidate);
+            console.log(`Queued ICE candidate for ${username} (peer connection not ready yet, queue size: ${iceCandidateQueue[username].length})`);
             return;
         }
         
+        // Process any queued candidates first
+        if (iceCandidateQueue[username] && iceCandidateQueue[username].length > 0) {
+            console.log(`Processing ${iceCandidateQueue[username].length} queued ICE candidates for ${username}`);
+            const queue = iceCandidateQueue[username];
+            iceCandidateQueue[username] = []; // Clear queue
+            
+            for (const queuedCandidate of queue) {
+                try {
+                    await pc.addIceCandidate(new RTCIceCandidate({
+                        candidate: queuedCandidate.candidate,
+                        sdpMLineIndex: queuedCandidate.sdpMLineIndex,
+                        sdpMid: queuedCandidate.sdpMid
+                    }));
+                    console.log(`Added queued ICE candidate from ${username}`);
+                } catch (error) {
+                    console.warn(`Error adding queued ICE candidate from ${username}:`, error.message);
+                }
+            }
+        }
+        
+        // Process current candidate
         try {
             await pc.addIceCandidate(new RTCIceCandidate({
                 candidate: candidate.candidate,
