@@ -113,6 +113,15 @@ def server_view(request, slug):
     # Check if user is member or owner
     is_member = server.owner == request.user or server.members.filter(user=request.user).exists()
     
+    # If user is owner but not a ServerMember, automatically create membership
+    if server.owner == request.user and not server.members.filter(user=request.user).exists():
+        ServerMember.objects.get_or_create(
+            server=server,
+            user=request.user,
+            defaults={'is_online': True}
+        )
+        is_member = True
+    
     if not is_member and server.is_private:
         messages.error(request, _("You don't have access to this server."))
         return redirect('index')

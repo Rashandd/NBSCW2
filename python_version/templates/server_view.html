@@ -609,18 +609,35 @@
                 </div>
             </div>
             
+            <!-- Pinned Participant View (Large) -->
+            <div id="pinned-view" class="hidden" style="display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #000; z-index: 15; border: 3px solid #667eea; border-radius: 15px;">
+                <div style="position: relative; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+                    <video id="pinned-video" autoplay playsInline style="width: 100%; height: 100%; object-fit: contain;"></video>
+                    <div style="position: absolute; top: 1rem; right: 1rem; display: flex; gap: 0.5rem;">
+                        <button onclick="unpinParticipant()" class="btn" style="background: rgba(30, 41, 59, 0.9); border: none; color: #f1f5f9; padding: 0.5rem 1rem; border-radius: 8px;">
+                            <i class="fas fa-times"></i> {% trans "Unpin" %}
+                        </button>
+                    </div>
+                    <div style="position: absolute; bottom: 1rem; left: 1rem; background: rgba(0, 0, 0, 0.7); padding: 0.75rem 1.25rem; border-radius: 10px; color: #f1f5f9; font-weight: 600;" id="pinned-username">
+                        <!-- Pinned user name -->
+                    </div>
+                </div>
+            </div>
+            
             <!-- Video Grid -->
-            <div id="video-grid" style="flex: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; padding: 1.5rem; overflow-y: auto;">
+            <div id="video-grid" style="flex: 1; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; padding: 1.5rem; overflow-y: auto; position: relative;">
                 <!-- Participants will be added here -->
             </div>
             
-            <!-- Screen Share Container -->
-            <div id="screen-share-container" class="hidden" style="display: none; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: #000; z-index: 10; border: 2px solid #667eea;">
-                <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0, 0, 0, 0.9);">
-                    <div style="text-align: center; color: #667eea;">
-                        <i class="fas fa-desktop" style="font-size: 4rem; margin-bottom: 1rem; animation: pulse 2s infinite;"></i>
-                        <h3 style="color: #f1f5f9; font-weight: 700;">{% trans "Screen Sharing Active" %}</h3>
-                        <p style="color: #94a3b8;">{% trans "Live Stream - 1080p 60fps" %}</p>
+            <!-- Screen Share Container (Separate overlay, doesn't block camera) -->
+            <div id="screen-share-container" class="hidden" style="display: none; position: absolute; top: 2rem; right: 2rem; width: 400px; height: 300px; background: #000; z-index: 12; border: 2px solid #667eea; border-radius: 15px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);">
+                <div style="position: relative; width: 100%; height: 100%;">
+                    <video id="screen-share-video" autoplay playsInline style="width: 100%; height: 100%; object-fit: contain; border-radius: 15px;"></video>
+                    <button onclick="toggleScreenShare()" style="position: absolute; top: 0.5rem; right: 0.5rem; background: rgba(239, 68, 68, 0.9); border: none; color: white; padding: 0.5rem; border-radius: 50%; width: 32px; height: 32px; cursor: pointer;">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    <div style="position: absolute; bottom: 0.5rem; left: 0.5rem; background: rgba(0, 0, 0, 0.7); padding: 0.5rem 0.75rem; border-radius: 8px; color: #f1f5f9; font-size: 0.85rem; font-weight: 600;">
+                        <i class="fas fa-desktop"></i> {% trans "Screen Share" %}
                     </div>
                 </div>
             </div>
@@ -803,6 +820,9 @@
     let peerConnections = {};
     let isMuted = false;
     let isVideoEnabled = true;
+    let audioAnalyzers = {}; // Store audio analyzers for voice activity detection
+    let pinnedParticipant = null; // Currently pinned participant
+    let screenShareStream = null; // Screen share stream (separate from camera)
     
     const messageList = document.getElementById('discord-messages');
     const chatInput = document.getElementById('discord-chat-input');
@@ -894,6 +914,23 @@
             pc.close();
         });
         peerConnections = {};
+        
+        // Stop all audio analyzers
+        Object.values(audioAnalyzers).forEach(analyzer => {
+            if (analyzer.stop) analyzer.stop();
+        });
+        audioAnalyzers = {};
+        
+        // Unpin if pinned
+        if (pinnedParticipant) {
+            unpinParticipant();
+        }
+        
+        // Stop screen share
+        if (screenShareStream) {
+            screenShareStream.getTracks().forEach(track => track.stop());
+            screenShareStream = null;
+        }
         
         // Close WebSocket if open
         if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
@@ -1049,25 +1086,43 @@
                 // Add local user to video grid with video element if camera is on
                 addParticipantToGrid('{{ user.username }}', localStream, true);
                 
-                // If video is enabled, show it
+                // If video is enabled, show it (full cover)
                 if (isVideoEnabled && localStream.getVideoTracks().length > 0) {
                     const participantDiv = document.getElementById('participant-{{ user.username }}');
                     if (participantDiv) {
+                        const videoContainer = participantDiv.querySelector('.participant-video-container');
                         const avatar = participantDiv.querySelector('.participant-avatar');
-                        if (avatar) {
-                            // Replace avatar with video element
-                            const videoElement = document.createElement('video');
+                        
+                        if (videoContainer) {
+                            if (avatar) avatar.style.display = 'none';
+                            
+                            let videoElement = participantDiv.querySelector('video');
+                            if (!videoElement) {
+                                videoElement = document.createElement('video');
+                                videoElement.id = 'video-{{ user.username }}';
+                                videoElement.className = 'participant-video';
+                                videoElement.autoplay = true;
+                                videoElement.playsInline = true;
+                                videoElement.muted = true; // Mute own video
+                                videoElement.style.cssText = 'width: 100%; height: 100%; min-height: 200px; object-fit: cover; border-radius: 15px; position: absolute; inset: 0; z-index: 1;';
+                                videoContainer.appendChild(videoElement);
+                            }
+                            
                             videoElement.srcObject = localStream;
-                            videoElement.autoplay = true;
-                            videoElement.muted = true; // Mute own video
-                            videoElement.style.cssText = 'width: 100%; height: 100%; max-width: 300px; max-height: 300px; object-fit: cover; border-radius: 15px; margin-bottom: 1rem;';
-                            avatar.replaceWith(videoElement);
+                            videoElement.play().catch(err => {
+                                console.warn('Error playing local video:', err);
+                            });
                         }
                     }
                 }
                 
+                // Setup VAD for local user
+                if (localStream && localStream.getAudioTracks().length > 0) {
+                    setupVoiceActivityDetection('{{ user.username }}', localStream);
+                }
+                
                 console.log('Voice channel fully initialized');
-            }, 300);
+            }, 500);
             
         } catch (error) {
             console.error("Error accessing media devices:", error);
@@ -1166,23 +1221,46 @@
                     }
                     
                     // Create WebRTC peer connection for the new user (only if we have local stream)
+                    // This ensures mesh topology - everyone connects to everyone
                     if (localStream) {
-                        createPeerConnection(data.username, data.sender_id);
+                        // Wait a bit to ensure WebSocket is ready
+                        setTimeout(() => {
+                            createPeerConnection(data.username, data.sender_id);
+                        }, 200);
                     } else {
                         console.log('Waiting for local stream before creating peer connection');
                     }
+                } else {
+                    // When we join, we need to create connections with existing users
+                    // This will be handled when existing users send us offers
+                    console.log('I joined the channel, waiting for offers from existing users');
                 }
             }
             
             // Handle member left event (only for voice channels)
             if (data.type === 'system_notification' && data.event === 'member_left') {
                 console.log('Member left voice channel:', data.username);
+                
+                // Stop voice activity detection
+                if (audioAnalyzers[data.username]) {
+                    if (audioAnalyzers[data.username].stop) {
+                        audioAnalyzers[data.username].stop();
+                    }
+                    delete audioAnalyzers[data.username];
+                }
+                
+                // Unpin if this was the pinned participant
+                if (pinnedParticipant === data.username) {
+                    unpinParticipant();
+                }
+                
                 // Close peer connection
                 if (peerConnections[data.username]) {
                     peerConnections[data.username].close();
                     delete peerConnections[data.username];
                     console.log(`Closed peer connection with ${data.username}`);
                 }
+                
                 // Remove the member from the grid
                 const participantDiv = document.getElementById(`participant-${data.username}`);
                 if (participantDiv) {
@@ -1273,38 +1351,70 @@
         // Handle remote stream
         pc.ontrack = (event) => {
             console.log(`Received remote ${event.track.kind} track from ${username}`);
-            const remoteStream = event.streams[0];
+            const remoteStream = event.streams[0] || new MediaStream([event.track]);
             
-            // Update participant's video/audio element
-            const participantDiv = document.getElementById(`participant-${username}`);
-            if (participantDiv) {
+            // Use setTimeout to ensure DOM is stable
+            setTimeout(() => {
+                const participantDiv = document.getElementById(`participant-${username}`);
+                if (!participantDiv) {
+                    console.warn(`No participant div found for ${username}, creating one...`);
+                    addParticipantToGrid(username, null, false);
+                    return;
+                }
+                
                 // Check if video element exists, if not create one
+                const videoContainer = participantDiv.querySelector('.participant-video-container');
+                if (!videoContainer) return;
+                
                 let videoElement = participantDiv.querySelector('video');
                 if (!videoElement) {
                     const avatar = participantDiv.querySelector('.participant-avatar');
-                    if (avatar) {
-                        videoElement = document.createElement('video');
-                        videoElement.autoplay = true;
-                        videoElement.playsInline = true;
-                        videoElement.style.cssText = 'width: 100%; height: 100%; max-width: 300px; max-height: 300px; object-fit: cover; border-radius: 15px; margin-bottom: 1rem;';
-                        avatar.replaceWith(videoElement);
-                    }
+                    // Hide avatar when video appears
+                    if (avatar) avatar.style.display = 'none';
+                    
+                    videoElement = document.createElement('video');
+                    videoElement.id = `video-${username}`;
+                    videoElement.className = 'participant-video';
+                    videoElement.autoplay = true;
+                    videoElement.playsInline = true;
+                    videoElement.muted = false;
+                    // Full cover video
+                    videoElement.style.cssText = 'width: 100%; height: 100%; min-height: 200px; object-fit: cover; border-radius: 15px; position: absolute; inset: 0; z-index: 1;';
+                    videoContainer.appendChild(videoElement);
+                    
+                    // Initialize voice activity detection for this video
+                    setupVoiceActivityDetection(username, remoteStream);
                 }
                 
-                if (videoElement) {
-                    videoElement.srcObject = remoteStream;
-                    videoElement.muted = false; // Unmute remote audio
-                    // Ensure video plays
-                    videoElement.play().catch(err => {
-                        console.error('Error playing remote video:', err);
+                if (videoElement && document.body.contains(videoElement)) {
+                    // Update or set stream - don't replace if already exists
+                    if (videoElement.srcObject) {
+                        const existingStream = videoElement.srcObject;
+                        remoteStream.getTracks().forEach(track => {
+                            const existingTrack = existingStream.getTracks().find(t => t.kind === track.kind && t.id !== track.id);
+                            if (existingTrack) {
+                                existingTrack.replaceWith(track);
+                            } else if (!existingStream.getTracks().some(t => t.id === track.id)) {
+                                existingStream.addTrack(track);
+                            }
+                        });
+                    } else {
+                        videoElement.srcObject = remoteStream;
+                    }
+                    
+                    // Ensure video plays - check if element still exists
+                    requestAnimationFrame(() => {
+                        if (videoElement && document.body.contains(videoElement)) {
+                            videoElement.play().catch(err => {
+                                if (err.name !== 'AbortError' && err.name !== 'NotAllowedError') {
+                                    console.warn('Video play error (non-critical):', err.name);
+                                }
+                            });
+                        }
                     });
-                    console.log(`Connected remote stream from ${username} to video element`);
-                } else {
-                    console.warn(`No video element found for ${username}`);
+                    console.log(`Connected remote stream from ${username}`);
                 }
-            } else {
-                console.warn(`No participant div found for ${username}`);
-            }
+            }, 100);
         };
         
         // Handle ICE candidates
@@ -1341,10 +1451,19 @@
         peerConnections[username] = pc;
         
         // If we're the one initiating (new user joined after us), create and send offer
+        // This creates a mesh topology - everyone connects to everyone
         try {
-            const offer = await pc.createOffer();
+            const offerOptions = {
+                offerToReceiveAudio: true,
+                offerToReceiveVideo: true
+            };
+            
+            const offer = await pc.createOffer(offerOptions);
             await pc.setLocalDescription(offer);
             console.log(`Created offer for ${username}, sending...`);
+            
+            // Wait a bit to ensure local description is set
+            await new Promise(resolve => setTimeout(resolve, 100));
             
             if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
                 chatSocket.send(JSON.stringify({
@@ -1357,7 +1476,27 @@
                 }));
                 console.log(`Offer sent to ${username} (ID: ${senderId})`);
             } else {
-                console.error('WebSocket not open, cannot send offer');
+                console.warn('WebSocket not open, will retry offer...');
+                // Retry after delay
+                setTimeout(async () => {
+                    if (chatSocket && chatSocket.readyState === WebSocket.OPEN && peerConnections[username]) {
+                        try {
+                            const retryOffer = await peerConnections[username].createOffer(offerOptions);
+                            await peerConnections[username].setLocalDescription(retryOffer);
+                            chatSocket.send(JSON.stringify({
+                                signal_type: 'offer',
+                                recipient_id: String(senderId),
+                                data: {
+                                    sdp: retryOffer.sdp,
+                                    type: retryOffer.type
+                                }
+                            }));
+                            console.log(`Offer sent to ${username} (retry successful)`);
+                        } catch (retryError) {
+                            console.error('Error retrying offer:', retryError);
+                        }
+                    }
+                }, 500);
             }
         } catch (error) {
             console.error(`Error creating offer for ${username}:`, error);
@@ -1403,34 +1542,65 @@
             // Set up event handlers
             pc.ontrack = (event) => {
                 console.log(`Received remote track from ${username}`);
-                const remoteStream = event.streams[0];
-                const participantDiv = document.getElementById(`participant-${username}`);
-                if (participantDiv) {
+                const remoteStream = event.streams[0] || new MediaStream([event.track]);
+                
+                setTimeout(() => {
+                    const participantDiv = document.getElementById(`participant-${username}`);
+                    if (!participantDiv) {
+                        console.warn(`No participant div found for ${username}, creating one...`);
+                        addParticipantToGrid(username, null, false);
+                        return;
+                    }
+                    
+                    const videoContainer = participantDiv.querySelector('.participant-video-container');
+                    if (!videoContainer) return;
+                    
                     let videoElement = participantDiv.querySelector('video');
                     if (!videoElement) {
                         const avatar = participantDiv.querySelector('.participant-avatar');
-                        if (avatar) {
-                            videoElement = document.createElement('video');
-                            videoElement.autoplay = true;
-                            videoElement.playsInline = true;
-                            videoElement.style.cssText = 'width: 100%; height: 100%; max-width: 300px; max-height: 300px; object-fit: cover; border-radius: 15px; margin-bottom: 1rem;';
-                            avatar.replaceWith(videoElement);
-                        }
+                        if (avatar) avatar.style.display = 'none';
+                        
+                        videoElement = document.createElement('video');
+                        videoElement.id = `video-${username}`;
+                        videoElement.className = 'participant-video';
+                        videoElement.autoplay = true;
+                        videoElement.playsInline = true;
+                        videoElement.muted = false;
+                        videoElement.style.cssText = 'width: 100%; height: 100%; min-height: 200px; object-fit: cover; border-radius: 15px; position: absolute; inset: 0; z-index: 1;';
+                        videoContainer.appendChild(videoElement);
+                        
+                        // Initialize voice activity detection
+                        setupVoiceActivityDetection(username, remoteStream);
                     }
-                    if (videoElement) {
-                        videoElement.srcObject = remoteStream;
-                        videoElement.muted = false; // Unmute remote audio
-                        // Ensure video plays
-                        videoElement.play().catch(err => {
-                            console.error('Error playing remote video:', err);
+                    
+                    if (videoElement && document.body.contains(videoElement)) {
+                        if (videoElement.srcObject) {
+                            const existingStream = videoElement.srcObject;
+                            remoteStream.getTracks().forEach(track => {
+                                const existingTrack = existingStream.getTracks().find(t => t.kind === track.kind);
+                                if (existingTrack) {
+                                    existingTrack.replaceWith(track);
+                                } else {
+                                    existingStream.addTrack(track);
+                                }
+                            });
+                        } else {
+                            videoElement.srcObject = remoteStream;
+                            setupVoiceActivityDetection(username, remoteStream);
+                        }
+                        
+                        requestAnimationFrame(() => {
+                            if (videoElement && document.body.contains(videoElement)) {
+                                videoElement.play().catch(err => {
+                                    if (err.name !== 'AbortError' && err.name !== 'NotAllowedError') {
+                                        console.error('Error playing remote video:', err);
+                                    }
+                                });
+                            }
                         });
                         console.log(`Connected remote stream from ${username} to video element`);
-                    } else {
-                        console.warn(`No video element found for ${username}`);
                     }
-                } else {
-                    console.warn(`No participant div found for ${username}`);
-                }
+                }, 100);
             };
             
             pc.onicecandidate = (event) => {
@@ -1563,20 +1733,57 @@
         participantDiv.dataset.username = username;
         participantDiv.dataset.micMuted = 'false';
         participantDiv.dataset.videoEnabled = 'true';
-        participantDiv.style.cssText = 'background: rgba(30, 41, 59, 0.8); border-radius: 15px; padding: 1.5rem; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; border: 2px solid transparent;';
+        participantDiv.dataset.speaking = 'false';
+        participantDiv.style.cssText = 'background: rgba(30, 41, 59, 0.8); border-radius: 15px; padding: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; position: relative; border: 2px solid transparent; overflow: hidden; transition: all 0.3s ease; min-height: 200px;';
+        
+        // Video container that covers full area
+        const videoContainer = document.createElement('div');
+        videoContainer.className = 'participant-video-container';
+        videoContainer.style.cssText = 'width: 100%; height: 100%; position: relative; display: flex; align-items: center; justify-content: center; min-height: 200px;';
+        
+        // Speaking indicator (blue glow overlay)
+        const speakingIndicator = document.createElement('div');
+        speakingIndicator.className = 'speaking-indicator';
+        speakingIndicator.style.cssText = 'position: absolute; inset: 0; border: 3px solid transparent; border-radius: 15px; pointer-events: none; opacity: 0; transition: opacity 0.2s ease, box-shadow 0.2s ease; z-index: 5;';
+        speakingIndicator.dataset.speaking = 'false';
         
         const avatar = document.createElement('div');
         avatar.className = 'participant-avatar';
-        avatar.style.cssText = 'width: 100px; height: 100px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; font-size: 2.5rem; color: white; font-weight: 700; margin-bottom: 1rem;';
+        avatar.style.cssText = 'width: 80px; height: 80px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; font-size: 2rem; color: white; font-weight: 700; position: absolute; z-index: 3;';
         avatar.textContent = username.charAt(0).toUpperCase();
+        
+        // Controls overlay
+        const controlsOverlay = document.createElement('div');
+        controlsOverlay.className = 'participant-controls';
+        controlsOverlay.style.cssText = 'position: absolute; top: 0.5rem; right: 0.5rem; display: flex; gap: 0.5rem; opacity: 0; transition: opacity 0.2s ease; z-index: 10;';
+        
+        // Pin button
+        const pinBtn = document.createElement('button');
+        pinBtn.className = 'pin-btn';
+        pinBtn.innerHTML = '<i class="fas fa-thumbtack"></i>';
+        pinBtn.title = '{% trans "Pin" %}';
+        pinBtn.style.cssText = 'background: rgba(30, 41, 59, 0.9); border: none; color: #f1f5f9; padding: 0.5rem; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.85rem;';
+        pinBtn.onclick = () => pinParticipant(username);
+        controlsOverlay.appendChild(pinBtn);
+        
+        // Show controls on hover
+        participantDiv.addEventListener('mouseenter', () => {
+            controlsOverlay.style.opacity = '1';
+        });
+        participantDiv.addEventListener('mouseleave', () => {
+            controlsOverlay.style.opacity = '0';
+        });
         
         const nameLabel = document.createElement('div');
         nameLabel.className = 'participant-name-label';
-        nameLabel.style.cssText = 'position: absolute; bottom: 1rem; left: 1rem; background: rgba(0, 0, 0, 0.6); padding: 0.5rem 1rem; border-radius: 8px; color: #f1f5f9; font-weight: 600; display: flex; align-items: center; gap: 0.5rem;';
+        nameLabel.style.cssText = 'position: absolute; bottom: 0.75rem; left: 0.75rem; background: rgba(0, 0, 0, 0.7); padding: 0.5rem 0.75rem; border-radius: 8px; color: #f1f5f9; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem; z-index: 5;';
         nameLabel.innerHTML = `<i class="fas fa-microphone participant-mic-icon" style="color: #3ba55c;"></i> ${escapeHtml(username)}`;
         
-        participantDiv.appendChild(avatar);
-        participantDiv.appendChild(nameLabel);
+        videoContainer.appendChild(avatar);
+        videoContainer.appendChild(speakingIndicator);
+        videoContainer.appendChild(controlsOverlay);
+        videoContainer.appendChild(nameLabel);
+        participantDiv.appendChild(videoContainer);
         videoGrid.appendChild(participantDiv);
         
         return participantDiv;
@@ -1615,56 +1822,281 @@
         
         participantDiv.dataset.videoEnabled = isEnabled.toString();
         const avatar = participantDiv.querySelector('.participant-avatar');
+        const videoElement = participantDiv.querySelector('video');
         
-        if (avatar) {
-            if (isEnabled) {
-                avatar.style.border = '2px solid transparent';
-            } else {
-                avatar.style.border = '2px solid #ef4444';
-                // Add camera-off overlay
-                let overlay = participantDiv.querySelector('.camera-off-overlay');
-                if (!overlay) {
-                    overlay = document.createElement('div');
-                    overlay.className = 'camera-off-overlay';
-                    overlay.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0, 0, 0, 0.7); padding: 0.5rem 1rem; border-radius: 8px; color: #ef4444; font-weight: 600;';
-                    overlay.innerHTML = '<i class="fas fa-video-slash"></i> Camera Off';
-                    participantDiv.appendChild(overlay);
-                }
-                overlay.style.display = 'block';
-            }
-        }
-        
-        // Remove overlay if camera is enabled
         if (isEnabled) {
+            // Show video, hide avatar
+            if (avatar) avatar.style.display = 'none';
+            if (videoElement) {
+                videoElement.style.display = 'block';
+            }
+            // Remove camera-off overlay
             const overlay = participantDiv.querySelector('.camera-off-overlay');
             if (overlay) {
                 overlay.style.display = 'none';
             }
+        } else {
+            // Hide video, show avatar
+            if (videoElement) {
+                videoElement.style.display = 'none';
+            }
+            if (avatar) {
+                avatar.style.display = 'flex';
+                avatar.style.border = '2px solid #ef4444';
+            }
+            // Add camera-off overlay
+            const videoContainer = participantDiv.querySelector('.participant-video-container');
+            if (videoContainer) {
+                let overlay = participantDiv.querySelector('.camera-off-overlay');
+                if (!overlay) {
+                    overlay = document.createElement('div');
+                    overlay.className = 'camera-off-overlay';
+                    overlay.style.cssText = 'position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0, 0, 0, 0.8); padding: 0.75rem 1.25rem; border-radius: 10px; color: #ef4444; font-weight: 600; z-index: 6; display: flex; align-items: center; gap: 0.5rem;';
+                    overlay.innerHTML = '<i class="fas fa-video-slash"></i> <span>{% trans "Camera Off" %}</span>';
+                    videoContainer.appendChild(overlay);
+                }
+                overlay.style.display = 'flex';
+            }
         }
+    }
+    
+    // Voice Activity Detection (VAD) - detects when user is speaking
+    function setupVoiceActivityDetection(username, stream) {
+        // Don't set up multiple analyzers for same user
+        if (audioAnalyzers[username]) {
+            return;
+        }
+        
+        // Only set up VAD if stream has audio tracks
+        if (!stream || !stream.getAudioTracks || stream.getAudioTracks().length === 0) {
+            console.log(`No audio tracks for ${username}, skipping VAD`);
+            return;
+        }
+        
+        try {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const analyser = audioContext.createAnalyser();
+            analyser.fftSize = 256;
+            analyser.smoothingTimeConstant = 0.8;
+            
+            const microphone = audioContext.createMediaStreamSource(stream);
+            microphone.connect(analyser);
+            
+            const bufferLength = analyser.frequencyBinCount;
+            const dataArray = new Uint8Array(bufferLength);
+            
+            // Threshold for voice detection (adjust as needed)
+            const SPEAKING_THRESHOLD = 25;
+            let isSpeaking = false;
+            
+            function detectVoice() {
+                // Check if user still exists
+                const participantDiv = document.getElementById(`participant-${username}`);
+                if (!participantDiv || (!peerConnections[username] && username !== '{{ user.username }}')) {
+                    // Cleanup if user left
+                    if (audioAnalyzers[username]) {
+                        if (audioContext.state !== 'closed') {
+                            audioContext.close();
+                        }
+                        delete audioAnalyzers[username];
+                    }
+                    return;
+                }
+                
+                analyser.getByteFrequencyData(dataArray);
+                
+                // Calculate average volume (focus on speech frequencies: 300-3400 Hz)
+                let sum = 0;
+                let count = 0;
+                for (let i = 0; i < bufferLength; i++) {
+                    // Focus on mid-range frequencies (where speech is)
+                    if (i > bufferLength * 0.1 && i < bufferLength * 0.7) {
+                        sum += dataArray[i];
+                        count++;
+                    }
+                }
+                const average = count > 0 ? sum / count : 0;
+                
+                const wasSpeaking = isSpeaking;
+                isSpeaking = average > SPEAKING_THRESHOLD;
+                
+                // Update visual indicator only when state changes
+                if (isSpeaking !== wasSpeaking) {
+                    updateSpeakingIndicator(username, isSpeaking);
+                }
+                
+                // Continue monitoring
+                requestAnimationFrame(detectVoice);
+            }
+            
+            audioAnalyzers[username] = {
+                audioContext: audioContext,
+                analyser: analyser,
+                stop: () => {
+                    if (audioContext.state !== 'closed') {
+                        audioContext.close();
+                    }
+                    delete audioAnalyzers[username];
+                }
+            };
+            
+            detectVoice();
+            console.log(`Voice activity detection started for ${username}`);
+        } catch (error) {
+            console.error(`Error setting up VAD for ${username}:`, error);
+        }
+    }
+    
+    // Update speaking indicator (blue glow)
+    function updateSpeakingIndicator(username, isSpeaking) {
+        const participantDiv = document.getElementById(`participant-${username}`);
+        if (!participantDiv) return;
+        
+        participantDiv.dataset.speaking = isSpeaking.toString();
+        const indicator = participantDiv.querySelector('.speaking-indicator');
+        
+        if (indicator) {
+            if (isSpeaking) {
+                indicator.style.opacity = '1';
+                indicator.style.borderColor = '#3b82f6';
+                indicator.style.boxShadow = '0 0 20px rgba(59, 130, 246, 0.6), inset 0 0 20px rgba(59, 130, 246, 0.2)';
+                participantDiv.style.borderColor = '#3b82f6';
+                participantDiv.style.boxShadow = '0 0 25px rgba(59, 130, 246, 0.5)';
+            } else {
+                indicator.style.opacity = '0';
+                indicator.style.borderColor = 'transparent';
+                indicator.style.boxShadow = 'none';
+                participantDiv.style.borderColor = 'transparent';
+                participantDiv.style.boxShadow = 'none';
+            }
+        }
+    }
+    
+    // Pin participant (show in large view)
+    function pinParticipant(username) {
+        const participantDiv = document.getElementById(`participant-${username}`);
+        if (!participantDiv) return;
+        
+        const videoElement = participantDiv.querySelector('video');
+        if (!videoElement || !videoElement.srcObject) {
+            alert('{% trans "Cannot pin: user is not sharing video" %}');
+            return;
+        }
+        
+        pinnedParticipant = username;
+        const pinnedView = document.getElementById('pinned-view');
+        const pinnedVideo = document.getElementById('pinned-video');
+        const pinnedUsername = document.getElementById('pinned-username');
+        
+        if (pinnedView && pinnedVideo) {
+            // Show pinned view
+            pinnedView.classList.remove('hidden');
+            pinnedView.style.display = 'block';
+            
+            // Set video stream
+            pinnedVideo.srcObject = videoElement.srcObject;
+            pinnedVideo.play().catch(err => {
+                console.error('Error playing pinned video:', err);
+            });
+            
+            // Set username
+            if (pinnedUsername) {
+                pinnedUsername.textContent = username;
+            }
+            
+            // Update pin button
+            const pinBtn = participantDiv.querySelector('.pin-btn');
+            if (pinBtn) {
+                pinBtn.style.background = '#3b82f6';
+                pinBtn.innerHTML = '<i class="fas fa-thumbtack"></i>';
+            }
+            
+            console.log(`Pinned ${username}`);
+        }
+    }
+    
+    // Unpin participant
+    function unpinParticipant() {
+        if (!pinnedParticipant) return;
+        
+        const participantDiv = document.getElementById(`participant-${pinnedParticipant}`);
+        if (participantDiv) {
+            const pinBtn = participantDiv.querySelector('.pin-btn');
+            if (pinBtn) {
+                pinBtn.style.background = 'rgba(30, 41, 59, 0.9)';
+            }
+        }
+        
+        const pinnedView = document.getElementById('pinned-view');
+        const pinnedVideo = document.getElementById('pinned-video');
+        
+        if (pinnedView) {
+            pinnedView.classList.add('hidden');
+            pinnedView.style.display = 'none';
+        }
+        
+        if (pinnedVideo && pinnedVideo.srcObject) {
+            pinnedVideo.srcObject = null;
+        }
+        
+        pinnedParticipant = null;
+        console.log('Unpinned participant');
     }
     
     function toggleScreenShare() {
         const container = document.getElementById('screen-share-container');
+        const videoElement = document.getElementById('screen-share-video');
         const btn = document.getElementById('screen-share-btn');
         
         if (container.classList.contains('hidden')) {
-            navigator.mediaDevices.getDisplayMedia({ video: true })
+            navigator.mediaDevices.getDisplayMedia({ 
+                video: { 
+                    cursor: 'always',
+                    displaySurface: 'monitor'
+                },
+                audio: false 
+            })
                 .then(stream => {
+                    screenShareStream = stream;
                     container.classList.remove('hidden');
-                    container.style.display = 'flex';
+                    container.style.display = 'block';
                     btn.style.background = '#3ba55c';
                     
+                    if (videoElement) {
+                        videoElement.srcObject = stream;
+                        videoElement.play().catch(err => {
+                            console.error('Error playing screen share:', err);
+                        });
+                    }
+                    
+                    // Stop screen share when track ends
                     stream.getVideoTracks()[0].onended = () => {
                         container.classList.add('hidden');
                         container.style.display = 'none';
                         btn.style.background = 'rgba(100, 116, 139, 0.6)';
+                        if (videoElement && videoElement.srcObject) {
+                            videoElement.srcObject.getTracks().forEach(track => track.stop());
+                            videoElement.srcObject = null;
+                        }
+                        screenShareStream = null;
                     };
                 })
                 .catch(err => {
                     console.error("Screen share error:", err);
-                    alert("{% trans 'Could not start screen share. Please check permissions.' %}");
+                    if (err.name !== 'NotAllowedError') {
+                        alert("{% trans 'Could not start screen share. Please check permissions.' %}");
+                    }
                 });
         } else {
+            // Stop screen share
+            if (screenShareStream) {
+                screenShareStream.getTracks().forEach(track => track.stop());
+                screenShareStream = null;
+            }
+            if (videoElement && videoElement.srcObject) {
+                videoElement.srcObject.getTracks().forEach(track => track.stop());
+                videoElement.srcObject = null;
+            }
             container.classList.add('hidden');
             container.style.display = 'none';
             btn.style.background = 'rgba(100, 116, 139, 0.6)';
