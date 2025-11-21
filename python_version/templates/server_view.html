@@ -916,7 +916,8 @@
         if (!currentChannelSlug || currentChannelType !== 'text') return;
         
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${wsProtocol}//${window.location.host}/ws/voice/?channel_slug=${currentChannelSlug}`;
+        // Add channel_type parameter to disambiguate between TextChannel and VoiceChannel with same slug
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws/voice/?channel_slug=${currentChannelSlug}&channel_type=text`;
         
         if (chatSocket) {
             chatSocket.close();
@@ -930,11 +931,12 @@
         
         chatSocket.onmessage = function(e) {
             const data = JSON.parse(e.data);
+            // Only handle chat messages for text channels
+            // Don't show system_notification for text channels (prevents "joined room" spam)
             if (data.type === 'chat_message') {
                 addMessageToList(data.username, data.message, data.timestamp);
-            } else if (data.type === 'system_notification') {
-                addSystemMessage(data.message);
             }
+            // Ignore system_notification for text channels
         };
         
         chatSocket.onclose = function() {
@@ -1027,77 +1029,145 @@
     // Voice functionality
     async function initializeVoice() {
         try {
+            console.log("Initializing voice channel...");
+            
+            // Request media access first
             localStream = await navigator.mediaDevices.getUserMedia({ 
                 audio: true, 
                 video: isVideoEnabled  // Use the current video state
             });
             
-            // Add local user to video grid with video element if camera is on
-            addParticipantToGrid('{{ user.username }}', localStream, true);
+            console.log("Media stream obtained:", localStream.getTracks().length, "tracks");
             
-            // If video is enabled, show it
-            if (isVideoEnabled && localStream.getVideoTracks().length > 0) {
-                const participantDiv = document.getElementById('participant-{{ user.username }}');
-                if (participantDiv) {
-                    const avatar = participantDiv.querySelector('.participant-avatar');
-                    if (avatar) {
-                        // Replace avatar with video element
-                        const videoElement = document.createElement('video');
-                        videoElement.srcObject = localStream;
-                        videoElement.autoplay = true;
-                        videoElement.muted = true; // Mute own video
-                        videoElement.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 15px;';
-                        avatar.replaceWith(videoElement);
+            // Connect to WebSocket FIRST (before adding user to grid)
+            // This ensures we're in the channel group when we appear
+            connectVoiceWebSocket();
+            
+            // Add local user to video grid after connecting
+            // Wait a bit for WebSocket to connect
+            setTimeout(() => {
+                // Add local user to video grid with video element if camera is on
+                addParticipantToGrid('{{ user.username }}', localStream, true);
+                
+                // If video is enabled, show it
+                if (isVideoEnabled && localStream.getVideoTracks().length > 0) {
+                    const participantDiv = document.getElementById('participant-{{ user.username }}');
+                    if (participantDiv) {
+                        const avatar = participantDiv.querySelector('.participant-avatar');
+                        if (avatar) {
+                            // Replace avatar with video element
+                            const videoElement = document.createElement('video');
+                            videoElement.srcObject = localStream;
+                            videoElement.autoplay = true;
+                            videoElement.muted = true; // Mute own video
+                            videoElement.style.cssText = 'width: 100%; height: 100%; max-width: 300px; max-height: 300px; object-fit: cover; border-radius: 15px; margin-bottom: 1rem;';
+                            avatar.replaceWith(videoElement);
+                        }
                     }
                 }
-            }
+                
+                console.log('Voice channel fully initialized');
+            }, 300);
             
-            // Connect to WebSocket for signaling
-            connectVoiceWebSocket();
         } catch (error) {
             console.error("Error accessing media devices:", error);
             alert("{% trans 'Could not access microphone/camera. Please check permissions.' %}");
+            // Still try to connect WebSocket even if media fails
+            connectVoiceWebSocket();
         }
     }
     
     function connectVoiceWebSocket() {
-        if (!currentChannelSlug || currentChannelType !== 'voice') return;
+        if (!currentChannelSlug || currentChannelType !== 'voice') {
+            console.warn("Cannot connect: missing channel slug or not voice channel");
+            return;
+        }
         
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${wsProtocol}//${window.location.host}/ws/voice/?channel_slug=${currentChannelSlug}`;
+        // Add channel_type parameter to disambiguate between TextChannel and VoiceChannel with same slug
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws/voice/?channel_slug=${currentChannelSlug}&channel_type=voice`;
         
-        // Reuse chat socket if available, or create new one
-        if (!chatSocket || chatSocket.readyState === WebSocket.CLOSED) {
-            chatSocket = new WebSocket(wsUrl);
+        console.log("Connecting to voice WebSocket:", wsUrl);
+        
+        // Close existing socket if open (to create fresh connection for voice)
+        if (chatSocket) {
+            chatSocket.onerror = null;
+            chatSocket.onclose = null;
+            chatSocket.close();
+            chatSocket = null;
         }
+        
+        // Create new WebSocket connection for voice channel
+        try {
+            chatSocket = new WebSocket(wsUrl);
+        } catch (error) {
+            console.error("Failed to create WebSocket:", error);
+            alert("Failed to connect to voice channel. Please refresh and try again.");
+            return;
+        }
+        
+        chatSocket.onopen = function() {
+            console.log("Voice WebSocket Connected successfully");
+            // Notify that connection is ready
+            if (currentChannelType === 'voice') {
+                console.log("Ready for voice communication");
+            }
+        };
+        
+        chatSocket.onerror = function(error) {
+            console.error("Voice WebSocket Error:", error);
+            // Try to reconnect after a delay
+            if (currentChannelType === 'voice') {
+                setTimeout(() => {
+                    if (currentChannelType === 'voice' && (!chatSocket || chatSocket.readyState === WebSocket.CLOSED)) {
+                        console.log("Attempting to reconnect voice WebSocket...");
+                        connectVoiceWebSocket();
+                    }
+                }, 3000);
+            }
+        };
+        
+        chatSocket.onclose = function(event) {
+            console.log("Voice WebSocket Closed", event.code, event.reason);
+            // Try to reconnect if we're still in a voice channel
+            if (currentChannelType === 'voice' && currentChannelSlug) {
+                console.log("Attempting to reconnect voice WebSocket in 2 seconds...");
+                setTimeout(() => {
+                    if (currentChannelType === 'voice' && currentChannelSlug) {
+                        connectVoiceWebSocket();
+                    }
+                }, 2000);
+            }
+        };
         
         chatSocket.onmessage = function(e) {
             const data = JSON.parse(e.data);
             
-            // Handle member joined event
+            // Handle member joined event (only for voice channels)
             if (data.type === 'system_notification' && data.event === 'member_joined') {
-                console.log('Member joined:', data.username);
-                // Add the new member to the grid if not already present
+                console.log('Member joined voice channel:', data.username);
+                // Add the new member to the grid if not already present and not self
                 if (data.username !== '{{ user.username }}') {
-                    addParticipantToGrid(data.username, null, false);
-                }
-                // Show notification in chat if available
-                if (data.message) {
-                    console.log(data.message);
+                    // Check if participant already exists
+                    let participantDiv = document.getElementById(`participant-${data.username}`);
+                    if (!participantDiv) {
+                        // Add new participant with placeholder avatar
+                        participantDiv = addParticipantToGrid(data.username, null, false);
+                        console.log(`Added ${data.username} to voice grid`);
+                    } else {
+                        console.log(`${data.username} already in grid`);
+                    }
                 }
             }
             
-            // Handle member left event
+            // Handle member left event (only for voice channels)
             if (data.type === 'system_notification' && data.event === 'member_left') {
-                console.log('Member left:', data.username);
+                console.log('Member left voice channel:', data.username);
                 // Remove the member from the grid
                 const participantDiv = document.getElementById(`participant-${data.username}`);
                 if (participantDiv) {
                     participantDiv.remove();
-                }
-                // Show notification in chat if available
-                if (data.message) {
-                    console.log(data.message);
+                    console.log(`Removed ${data.username} from voice grid`);
                 }
             }
             
@@ -1124,6 +1194,9 @@
             } else if (data.type === 'chat_message') {
                 // Can receive chat messages in voice channels too
                 console.log('Chat message in voice channel:', data);
+            } else {
+                // Log any other message types for debugging
+                console.log('Received voice channel message:', data);
             }
         };
     }

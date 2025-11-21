@@ -225,18 +225,48 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
 
     # DB'den TextChannel veya VoiceChannel objesini çeker
     @database_sync_to_async
-    def get_channel_by_slug(self, slug):
-        try:
-            # First try TextChannel
-            channel = TextChannel.objects.get(slug=slug)
-            return channel
-        except TextChannel.DoesNotExist:
+    def get_channel_by_slug(self, slug, channel_type=None):
+        """
+        Get channel by slug, checking both TextChannel and VoiceChannel.
+        If channel_type is provided ('text' or 'voice'), only check that type to avoid slug collision bugs.
+        """
+        # If channel_type is specified, only check that type
+        if channel_type == 'text':
             try:
-                # Fallback to VoiceChannel
+                channel = TextChannel.objects.get(slug=slug)
+                logger.debug(f"Found TextChannel: {channel.name} with slug: {slug}")
+                return channel
+            except TextChannel.DoesNotExist:
+                logger.warning(f"TextChannel with slug '{slug}' not found")
+                return None
+        
+        elif channel_type == 'voice':
+            try:
                 channel = VoiceChannel.objects.get(slug=slug)
+                logger.debug(f"Found VoiceChannel: {channel.name} with slug: {slug}")
                 return channel
             except VoiceChannel.DoesNotExist:
+                logger.warning(f"VoiceChannel with slug '{slug}' not found")
                 return None
+        
+        # If channel_type not specified, try TextChannel first, then VoiceChannel (backward compatibility)
+        # WARNING: This can cause bugs if both have the same slug!
+        else:
+            logger.warning(f"No channel_type specified for slug '{slug}'. Auto-detecting (may cause conflicts).")
+            try:
+                # First try TextChannel
+                channel = TextChannel.objects.get(slug=slug)
+                logger.debug(f"Found TextChannel: {channel.name} with slug: {slug}")
+                return channel
+            except TextChannel.DoesNotExist:
+                try:
+                    # Fallback to VoiceChannel
+                    channel = VoiceChannel.objects.get(slug=slug)
+                    logger.debug(f"Found VoiceChannel: {channel.name} with slug: {slug}")
+                    return channel
+                except VoiceChannel.DoesNotExist:
+                    logger.warning(f"No channel found with slug: {slug}")
+                    return None
 
     @database_sync_to_async
     def save_chat_message(self, content):
@@ -260,53 +290,66 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
             return None
 
     async def connect(self):
-        logger.info(f"Yeni bağlantı denemesi. Kullanıcı Anonim mi? {self.scope['user'].is_anonymous}")
+        username = self.scope["user"].username if not self.scope["user"].is_anonymous else "Anonymous"
+        logger.info(f"New connection attempt from user: {username}, Anonymous: {self.scope['user'].is_anonymous}")
 
         if self.scope["user"].is_anonymous:
-            logger.warning("Kimlik doğrulanmamış kullanıcı reddedildi.")
+            logger.warning("Unauthenticated user rejected.")
             await self.close()
             return
 
-        # 2. Oda adını/slug'ını al
+        # 2. Get channel slug and type from query string
         query_params = parse_qs(self.scope['query_string'].decode('utf-8'))
         channel_slug = query_params.get('channel_slug', [None])[0]
+        channel_type = query_params.get('channel_type', [''])[0]  # 'text' or 'voice'
 
         self.channel_slug = channel_slug
 
         if not self.channel_slug:
+            logger.warning(f"No channel_slug provided. Rejecting connection.")
             await self.close()
             return
 
-        # 3. Oda Var mı Kontrolü
-        self.channel_object = await self.get_channel_by_slug(self.channel_slug)
+        logger.info(f"Looking up channel with slug: {self.channel_slug}, type: {channel_type or 'auto-detect'}")
+
+        # 3. Check if channel exists (use channel_type if provided to avoid slug collision bugs)
+        self.channel_object = await self.get_channel_by_slug(self.channel_slug, channel_type)
         if not self.channel_object:
+            logger.warning(f"Channel with slug '{self.channel_slug}' and type '{channel_type}' not found. Rejecting connection.")
             await self.close()
             return
 
         # Use different group names for TextChannel vs VoiceChannel
+        channel_type = "TextChannel" if isinstance(self.channel_object, TextChannel) else "VoiceChannel"
+        logger.info(f"Channel found: {channel_type} - {self.channel_object.name} (slug: {self.channel_slug})")
+        
         if isinstance(self.channel_object, TextChannel):
             self.channel_group_name = f'text_{self.channel_slug}'
         else:
             self.channel_group_name = f'voice_{self.channel_slug}'
         self.user_id = str(self.scope["user"].id)
 
-        # 4. Gruba (Odaya) katıl
+        # 4. Join the group (channel)
         await self.channel_layer.group_add(
             self.channel_group_name,
             self.channel_name
         )
 
+        logger.info(f"User {username} joined {channel_type} group: {self.channel_group_name}")
         await self.accept()
 
-        # 5. Odaya katıldığını tüm gruba bildir
-        await self.channel_layer.group_send(
-            self.channel_group_name,
-            {
-                "type": "member.joined",
-                "sender_id": self.user_id,
-                "username": self.scope["user"].username,
-            }
-        )
+        # 5. Notify group that user joined (only for voice channels)
+        # Don't send "joined room" message for text channels
+        if isinstance(self.channel_object, VoiceChannel):
+            logger.info(f"Notifying voice channel group that {username} joined")
+            await self.channel_layer.group_send(
+                self.channel_group_name,
+                {
+                    "type": "member.joined",
+                    "sender_id": self.user_id,
+                    "username": self.scope["user"].username,
+                }
+            )
 
     async def disconnect(self, close_code):
         if hasattr(self, 'channel_group_name') and self.channel_group_name and not self.scope["user"].is_anonymous:
@@ -315,15 +358,17 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
                 self.channel_group_name,
                 self.channel_name
             )
-            # 2. Ayrıldığını gruba bildir
-            await self.channel_layer.group_send(
-                self.channel_group_name,
-                {
-                    "type": "member.left",
-                    "sender_id": self.user_id,
-                    "username": self.scope["user"].username,
-                }
-            )
+            # 2. Ayrıldığını gruba bildir (sadece voice channel için)
+            # Text channel için "left room" mesajı gönderme
+            if hasattr(self, 'channel_object') and isinstance(self.channel_object, VoiceChannel):
+                await self.channel_layer.group_send(
+                    self.channel_group_name,
+                    {
+                        "type": "member.left",
+                        "sender_id": self.user_id,
+                        "username": self.scope["user"].username,
+                    }
+                )
 
         await super().disconnect(close_code)
 

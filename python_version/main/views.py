@@ -63,6 +63,18 @@ def join_server(request):
             
             # Check if already a member
             is_member = server.owner == request.user or server.members.filter(user=request.user).exists()
+            
+            # If user is owner but not a ServerMember, create the membership
+            if server.owner == request.user and not server.members.filter(user=request.user).exists():
+                ServerMember.objects.get_or_create(
+                    server=server,
+                    user=request.user,
+                    defaults={'is_online': True}
+                )
+                messages.success(request, _("Successfully joined {server_name}!").format(server_name=server.name))
+                return redirect('server_view', slug=server.slug)
+            
+            # If already a member (but not owner), just redirect
             if is_member:
                 messages.info(request, _("You are already a member of this server."))
                 return redirect('server_view', slug=server.slug)
