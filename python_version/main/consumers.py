@@ -388,6 +388,7 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
                 {
                     "type": "webrtc.signal",
                     "sender_id": self.user_id,
+                    "username": self.scope["user"].username,  # Add username
                     "recipient_id": recipient_id,  # Kimin alması gerektiğini belirt
                     "signal_type": signal_type,
                     "data": data,
@@ -486,6 +487,7 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
             "sender_id": event["sender_id"],
             "recipient_id": event.get("recipient_id"),
             "signal_type": event["signal_type"],
+            "username": event.get("username", ""),  # Add username for easier identification
             "data": event["data"],
         })
 
