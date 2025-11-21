@@ -322,10 +322,13 @@
             </div>
         </div>
         
-        {% if servers %}
-            <!-- Servers Grid -->
-            <div class="row g-4">
-                {% for server in servers %}
+        <!-- My Servers Section -->
+        {% if my_servers %}
+            <h2 style="color: #f1f5f9; font-size: 1.75rem; font-weight: 700; margin-bottom: 1.5rem;">
+                <i class="fas fa-home me-2"></i>{% trans "My Servers" %}
+            </h2>
+            <div class="row g-4 mb-5">
+                {% for server in my_servers %}
                 <div class="col-md-6 col-lg-4">
                     <div class="server-card">
                         <div class="server-icon">
@@ -369,7 +372,63 @@
                 </div>
                 {% endfor %}
             </div>
-        {% else %}
+        {% endif %}
+        
+        <!-- Public Servers Section -->
+        {% if public_servers %}
+            <h2 style="color: #f1f5f9; font-size: 1.75rem; font-weight: 700; margin-bottom: 1.5rem;">
+                <i class="fas fa-globe me-2"></i>{% trans "Discover Public Servers" %}
+            </h2>
+            <div class="row g-4">
+                {% for server in public_servers %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="server-card">
+                        <div class="server-icon">
+                            {{ server.icon|default:"🌐" }}
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <h3 class="server-name">{{ server.name }}</h3>
+                            <span class="badge bg-success">
+                                <i class="fas fa-globe"></i> {% trans "Public" %}
+                            </span>
+                        </div>
+                        
+                        <p class="server-description">
+                            {{ server.description|default:"Join this amazing server and connect with friends!"|truncatewords:20 }}
+                        </p>
+                        
+                        <div class="server-stats">
+                            <span class="stat-badge members">
+                                <i class="fas fa-users"></i>
+                                {{ server.members.count }} {% trans "members" %}
+                            </span>
+                            <span class="stat-badge channels">
+                                <i class="fas fa-hashtag"></i>
+                                {{ server.text_channels.count }} {% trans "text" %}
+                            </span>
+                            <span class="stat-badge voice">
+                                <i class="fas fa-volume-up"></i>
+                                {{ server.voice_channels.count }} {% trans "voice" %}
+                            </span>
+                        </div>
+                        
+                        <div class="server-actions">
+                            <form method="post" action="{% url 'join_server' %}" style="width: 100%;">
+                                {% csrf_token %}
+                                <input type="hidden" name="invite_code" value="{{ server.slug }}">
+                                <button type="submit" class="btn btn-primary-custom" style="width: 100%;">
+                                    <i class="fas fa-sign-in-alt"></i> {% trans "Join Server" %}
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+        
+        {% if not my_servers and not public_servers %}
             <!-- Empty State -->
             <div class="empty-state">
                 <div class="empty-state-icon">

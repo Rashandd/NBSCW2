@@ -1,103 +1,325 @@
 {% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Game Lobby" %}{% endblock %}
 
 {% block extra_css %}
 {{ block.super }}
 <style>
-    .lobby-list .list-group-item {
-        background: transparent;
-        border: 1px solid rgba(148, 163, 184, 0.2);
-        border-radius: 12px;
-        margin-bottom: 1rem;
-        padding: 1rem 1.25rem;
-        backdrop-filter: blur(8px);
+    body {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #1e293b 75%, #0f172a 100%);
+        background-size: 400% 400%;
+        animation: gradientShift 20s ease infinite;
     }
-    .lobby-list .list-group-item:hover {
-        border-color: rgba(102, 126, 234, 0.6);
+    
+    @keyframes gradientShift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+    
+    .lobby-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem 1rem;
+    }
+    
+    .lobby-header {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+    
+    .lobby-title {
+        font-size: 2.5rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #fff 0%, #e2e8f0 50%, #cbd5e1 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 0.5rem;
+    }
+    
+    .lobby-subtitle {
+        color: rgba(226, 232, 240, 0.7);
+        font-size: 1.1rem;
+    }
+    
+    .section-card {
+        background: rgba(30, 41, 59, 0.8);
+        backdrop-filter: blur(20px);
+        border-radius: 20px;
+        padding: 2rem;
+        height: 100%;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+    
+    .section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1rem;
+        border-bottom: 2px solid rgba(102, 126, 234, 0.3);
+    }
+    
+    .section-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #f1f5f9;
+        margin: 0;
+    }
+    
+    .game-item {
+        background: rgba(51, 65, 85, 0.6);
+        border-radius: 15px;
+        padding: 1.25rem;
+        margin-bottom: 1rem;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        transition: all 0.3s ease;
+    }
+    
+    .game-item:hover {
+        transform: translateY(-3px);
+        border-color: rgba(102, 126, 234, 0.5);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+    }
+    
+    .game-info {
+        flex: 1;
+    }
+    
+    .game-title {
+        font-size: 1.1rem;
+        font-weight: 600;
+        color: #f1f5f9;
+        margin-bottom: 0.5rem;
+    }
+    
+    .game-meta {
+        display: flex;
+        gap: 1rem;
+        flex-wrap: wrap;
+        margin-top: 0.75rem;
+    }
+    
+    .game-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.35rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+    }
+    
+    .game-actions {
+        display: flex;
+        gap: 0.75rem;
+        margin-top: 1rem;
+    }
+    
+    .btn-game {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        padding: 0.65rem 1.25rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .btn-game:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
+        color: white;
+    }
+    
+    .btn-game-danger {
+        background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    }
+    
+    .btn-game-danger:hover {
+        box-shadow: 0 6px 16px rgba(239, 68, 68, 0.5);
+    }
+    
+    .btn-create {
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        border: none;
+        color: white;
+        padding: 0.65rem 1.25rem;
+        border-radius: 10px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .btn-create:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(16, 185, 129, 0.5);
+        color: white;
+    }
+    
+    .empty-state {
+        text-align: center;
+        padding: 3rem 1rem;
+        color: #94a3b8;
+    }
+    
+    .empty-icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+    
+    @media (max-width: 768px) {
+        .lobby-title {
+            font-size: 2rem;
+        }
+        
+        .game-actions {
+            flex-direction: column;
+        }
+        
+        .btn-game, .btn-create {
+            width: 100%;
+            justify-content: center;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="page-shell">
+<div class="lobby-container">
+    <div class="lobby-header">
+        <h1 class="lobby-title">
+            <i class="fas fa-gamepad me-2"></i>{% trans "Game Lobby" %}
+        </h1>
+        <p class="lobby-subtitle">{% trans "Create or join game tables" %}</p>
+    </div>
+    
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+    
     <div class="row g-4">
-
+        <!-- My Active Tables -->
         <div class="col-lg-6">
-            <div class="glass-card h-100">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h2 class="section-title" style="font-size:1.2rem;">Aktif Masalarım</h2>
-                    <a href="{% url 'create_game' %}" class="btn btn-gradient btn-sm">
-                        <i class="fas fa-plus"></i> Yeni Masa Kur
+            <div class="section-card">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-chess-board me-2"></i>{% trans "My Active Tables" %}
+                    </h2>
+                    <a href="{% url 'create_game' %}" class="btn-create">
+                        <i class="fas fa-plus"></i> {% trans "Create Table" %}
                     </a>
                 </div>
-                {% if messages %}
-                    {% for message in messages %}
-                        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-                    {% endfor %}
-                {% endif %}
-
+                
                 {% if my_games %}
-                    <div class="list-group lobby-list">
-                        {% for game in my_games %}
-                            <div class="list-group-item d-flex justify-content-between align-items-center flex-column flex-sm-row gap-3">
-                                <div>
-                                    <strong>
-                                        {% if game.status == 'waiting' %}
-                                            (P2 Bekleniyor)
-                                        {% else %}
-                                            vs {{ game.player1.username|default:"?" }} / {{ game.player2.username|default:"?" }}
-                                        {% endif %}
-                                    </strong>
-                                    <br>
-                                    <small class="text-muted">ID: {{ game.game_id|truncatechars:8 }}</small>
+                    {% for game in my_games %}
+                        <div class="game-item">
+                            <div class="game-info">
+                                <div class="game-title">
+                                    {% if game.status == 'waiting' %}
+                                        <i class="fas fa-clock me-2"></i>{% trans "Waiting for Player 2" %}
+                                    {% else %}
+                                        <i class="fas fa-users me-2"></i>{{ game.player1.username }} {% trans "vs" %} {{ game.player2.username }}
+                                    {% endif %}
                                 </div>
-                                <div class="d-flex gap-2">
-                                    <a href="{% url 'game_room' game.game_id %}" class="btn btn-primary btn-sm">
-                                        <i class="fas fa-sign-in-alt"></i> Masaya Git
-                                    </a>
-
-                                    {% if game.player1 == user and not game.player2 and game.status == 'waiting' %}
-                                        <a href="{% url 'delete_game' game.game_id %}" class="btn btn-outline-danger btn-sm">
-                                            <i class="fas fa-trash"></i> Kapat
-                                        </a>
+                                <div class="game-meta">
+                                    <span class="game-badge">
+                                        <i class="fas fa-hashtag"></i> {{ game.game_id|truncatechars:8 }}
+                                    </span>
+                                    {% if game.status == 'waiting' %}
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="fas fa-hourglass-half"></i> {% trans "Waiting" %}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-success">
+                                            <i class="fas fa-play"></i> {% trans "Active" %}
+                                        </span>
                                     {% endif %}
                                 </div>
                             </div>
-                        {% endfor %}
-                    </div>
+                            <div class="game-actions">
+                                <a href="{% url 'game_room' game.game_id %}" class="btn-game">
+                                    <i class="fas fa-sign-in-alt"></i> {% trans "Enter Table" %}
+                                </a>
+                                {% if game.player1 == user and not game.player2 and game.status == 'waiting' %}
+                                    <a href="{% url 'delete_game' game.game_id %}" class="btn-game btn-game-danger">
+                                        <i class="fas fa-trash"></i> {% trans "Close" %}
+                                    </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    {% endfor %}
                 {% else %}
-                    <p class="text-muted">Hiç aktif masanız yok. Hemen bir tane kurun!</p>
+                    <div class="empty-state">
+                        <div class="empty-icon">
+                            <i class="fas fa-inbox"></i>
+                        </div>
+                        <p>{% trans "You have no active tables. Create one to start playing!" %}</p>
+                    </div>
                 {% endif %}
             </div>
         </div>
-
+        
+        <!-- Available Tables to Join -->
         <div class="col-lg-6">
-            <div class="glass-card h-100">
-                <h2 class="section-title" style="font-size:1.2rem;">Katılınabilecek Masalar</h2>
-                <p>Başka oyuncular tarafından kurulan ve P2 bekleyen masalar:</p>
-
+            <div class="section-card">
+                <div class="section-header">
+                    <h2 class="section-title">
+                        <i class="fas fa-door-open me-2"></i>{% trans "Available Tables" %}
+                    </h2>
+                </div>
+                
                 {% if available_games %}
-                    <div class="list-group lobby-list">
-                        {% for game in available_games %}
-                            <div class="list-group-item d-flex justify-content-between align-items-center flex-column flex-sm-row gap-3">
-                                <div>
-                                    <strong>Masa Sahibi: {{ game.player1.username }}</strong>
-                                    <br>
-                                    <small class="text-muted">ID: {{ game.game_id|truncatechars:8 }}</small>
+                    {% for game in available_games %}
+                        <div class="game-item">
+                            <div class="game-info">
+                                <div class="game-title">
+                                    <i class="fas fa-user me-2"></i>{% trans "Host" %}: {{ game.player1.username }}
                                 </div>
-                                <a href="{% url 'join_game' game.game_id %}" class="btn btn-gradient btn-sm">
-                                    <i class="fas fa-play"></i> Masaya Katıl
+                                <div class="game-meta">
+                                    <span class="game-badge">
+                                        <i class="fas fa-hashtag"></i> {{ game.game_id|truncatechars:8 }}
+                                    </span>
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check-circle"></i> {% trans "Open" %}
+                                    </span>
+                                </div>
+                            </div>
+                            <div class="game-actions">
+                                <a href="{% url 'join_game' game.game_id %}" class="btn-game">
+                                    <i class="fas fa-play"></i> {% trans "Join Table" %}
                                 </a>
                             </div>
-                        {% endfor %}
-                    </div>
+                        </div>
+                    {% endfor %}
                 {% else %}
-                    <div class="alert alert-secondary mb-0">
-                        Şu anda P2 bekleyen bir masa bulunmuyor.
+                    <div class="empty-state">
+                        <div class="empty-icon">
+                            <i class="fas fa-search"></i>
+                        </div>
+                        <p>{% trans "No tables are currently waiting for players." %}</p>
                     </div>
                 {% endif %}
             </div>
         </div>
-
     </div>
 </div>
 {% endblock %}

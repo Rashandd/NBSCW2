@@ -23,36 +23,22 @@ def index(request):
     """Landing page - shows servers if logged in"""
     if request.user.is_authenticated:
         # Get servers user is member of or owns
-        servers = Server.objects.filter(
+        my_servers = Server.objects.filter(
             Q(owner=request.user) | 
             Q(members__user=request.user)
         ).distinct().prefetch_related('members', 'text_channels', 'voice_channels').order_by('name')
         
-        # Dummy servers for design showcase if DB is empty
-        if not servers.exists():
-            servers = [
-                type('Server', (), {
-                    'name': 'Gaming Hub',
-                    'slug': 'gaming-hub',
-                    'owner': request.user,
-                    'description': 'A community for gamers',
-                    'members': type('QuerySet', (), {'count': lambda: 25})(),
-                    'text_channels': type('QuerySet', (), {'count': lambda: 5})(),
-                    'voice_channels': type('QuerySet', (), {'count': lambda: 3})(),
-                })(),
-                type('Server', (), {
-                    'name': 'Music Lovers',
-                    'slug': 'music-lovers',
-                    'owner': request.user,
-                    'description': 'Share your favorite tunes',
-                    'members': type('QuerySet', (), {'count': lambda: 42})(),
-                    'text_channels': type('QuerySet', (), {'count': lambda: 3})(),
-                    'voice_channels': type('QuerySet', (), {'count': lambda: 2})(),
-                })(),
-            ]
+        # Get all public servers that user is NOT a member of
+        public_servers = Server.objects.filter(
+            is_private=False
+        ).exclude(
+            Q(owner=request.user) | 
+            Q(members__user=request.user)
+        ).distinct().prefetch_related('members', 'text_channels', 'voice_channels').order_by('-created_at')[:12]
             
         context = {
-            'servers': servers,
+            'my_servers': my_servers,
+            'public_servers': public_servers,
             'title': _('Your Servers'),
             'user': request.user,
         }

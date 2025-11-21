@@ -1029,17 +1029,34 @@
         try {
             localStream = await navigator.mediaDevices.getUserMedia({ 
                 audio: true, 
-                video: false 
+                video: isVideoEnabled  // Use the current video state
             });
             
-            // Add local user to video grid
+            // Add local user to video grid with video element if camera is on
             addParticipantToGrid('{{ user.username }}', localStream, true);
+            
+            // If video is enabled, show it
+            if (isVideoEnabled && localStream.getVideoTracks().length > 0) {
+                const participantDiv = document.getElementById('participant-{{ user.username }}');
+                if (participantDiv) {
+                    const avatar = participantDiv.querySelector('.participant-avatar');
+                    if (avatar) {
+                        // Replace avatar with video element
+                        const videoElement = document.createElement('video');
+                        videoElement.srcObject = localStream;
+                        videoElement.autoplay = true;
+                        videoElement.muted = true; // Mute own video
+                        videoElement.style.cssText = 'width: 100%; height: 100%; object-fit: cover; border-radius: 15px;';
+                        avatar.replaceWith(videoElement);
+                    }
+                }
+            }
             
             // Connect to WebSocket for signaling
             connectVoiceWebSocket();
         } catch (error) {
             console.error("Error accessing media devices:", error);
-            alert("{% trans 'Could not access microphone. Please check permissions.' %}");
+            alert("{% trans 'Could not access microphone/camera. Please check permissions.' %}");
         }
     }
     
@@ -1056,6 +1073,33 @@
         
         chatSocket.onmessage = function(e) {
             const data = JSON.parse(e.data);
+            
+            // Handle member joined event
+            if (data.type === 'system_notification' && data.event === 'member_joined') {
+                console.log('Member joined:', data.username);
+                // Add the new member to the grid if not already present
+                if (data.username !== '{{ user.username }}') {
+                    addParticipantToGrid(data.username, null, false);
+                }
+                // Show notification in chat if available
+                if (data.message) {
+                    console.log(data.message);
+                }
+            }
+            
+            // Handle member left event
+            if (data.type === 'system_notification' && data.event === 'member_left') {
+                console.log('Member left:', data.username);
+                // Remove the member from the grid
+                const participantDiv = document.getElementById(`participant-${data.username}`);
+                if (participantDiv) {
+                    participantDiv.remove();
+                }
+                // Show notification in chat if available
+                if (data.message) {
+                    console.log(data.message);
+                }
+            }
             
             // Handle microphone state changes from other users
             if (data.type === 'mic_state_change' && data.data) {
@@ -1080,9 +1124,6 @@
             } else if (data.type === 'chat_message') {
                 // Can receive chat messages in voice channels too
                 console.log('Chat message in voice channel:', data);
-            } else if (data.type === 'system_notification') {
-                // System notifications
-                console.log('System notification:', data.message);
             }
         };
     }
@@ -1281,6 +1322,20 @@
             }
         }
         
+        // Hide video and show avatar again
+        const participantDiv = document.getElementById('participant-{{ user.username }}');
+        if (participantDiv) {
+            const videoElement = participantDiv.querySelector('video');
+            if (videoElement) {
+                // Replace video with avatar
+                const avatar = document.createElement('div');
+                avatar.className = 'participant-avatar';
+                avatar.style.cssText = 'width: 100px; height: 100px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; font-size: 2.5rem; color: white; font-weight: 700; margin-bottom: 1rem;';
+                avatar.textContent = '{{ user.username }}'.charAt(0).toUpperCase();
+                videoElement.replaceWith(avatar);
+            }
+        }
+        
         // Update local user's participant display
         updateParticipantVideoState('{{ user.username }}', false);
         
@@ -1402,7 +1457,13 @@
                 const videoStream = await navigator.mediaDevices.getUserMedia({ video: true });
                 const videoTrack = videoStream.getVideoTracks()[0];
                 
-                // Replace video track in existing stream
+                // Remove old video tracks
+                localStream.getVideoTracks().forEach(track => {
+                    localStream.removeTrack(track);
+                    track.stop();
+                });
+                
+                // Add new video track to existing stream
                 localStream.addTrack(videoTrack);
                 
                 // Update peer connections with new track
@@ -1410,19 +1471,43 @@
                     const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
                     if (sender) {
                         sender.replaceTrack(videoTrack);
+                    } else {
+                        // If no video sender exists, add one
+                        pc.addTrack(videoTrack, localStream);
                     }
                 });
             }
             
             isVideoEnabled = true;
             
-            // Update UI
+            // Update UI button
             const btn = document.getElementById('video-btn');
             if (btn) {
                 btn.style.background = 'rgba(100, 116, 139, 0.6)';
                 const icon = btn.querySelector('i');
                 if (icon) {
                     icon.className = 'fas fa-video';
+                }
+            }
+            
+            // Show video in participant display
+            const participantDiv = document.getElementById('participant-{{ user.username }}');
+            if (participantDiv && localStream.getVideoTracks().length > 0) {
+                // Find avatar or video element
+                let videoElement = participantDiv.querySelector('video');
+                const avatar = participantDiv.querySelector('.participant-avatar');
+                
+                if (!videoElement && avatar) {
+                    // Create video element to replace avatar
+                    videoElement = document.createElement('video');
+                    videoElement.autoplay = true;
+                    videoElement.muted = true; // Mute own video
+                    videoElement.style.cssText = 'width: 100%; height: 100%; max-width: 300px; max-height: 300px; object-fit: cover; border-radius: 15px; margin-bottom: 1rem;';
+                    avatar.replaceWith(videoElement);
+                }
+                
+                if (videoElement) {
+                    videoElement.srcObject = localStream;
                 }
             }
             
