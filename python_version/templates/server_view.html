@@ -915,6 +915,11 @@
         });
         peerConnections = {};
         
+        // Clear ICE candidate queue
+        Object.keys(iceCandidateQueue).forEach(username => {
+            delete iceCandidateQueue[username];
+        });
+        
         // Stop all audio analyzers
         Object.values(audioAnalyzers).forEach(analyzer => {
             if (analyzer.stop) analyzer.stop();
