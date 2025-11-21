@@ -1274,6 +1274,18 @@
                     console.log(`Closed peer connection with ${data.username}`);
                 }
                 
+                // Clean up ICE candidate queue
+                if (iceCandidateQueue[data.username]) {
+                    delete iceCandidateQueue[data.username];
+                    console.log(`Cleared ICE candidate queue for ${data.username}`);
+                }
+                
+                // Clean up remote stream
+                if (window.remoteStreams && window.remoteStreams[data.username]) {
+                    window.remoteStreams[data.username].getTracks().forEach(track => track.stop());
+                    delete window.remoteStreams[data.username];
+                }
+                
                 // Remove the member from the grid
                 const participantDiv = document.getElementById(`participant-${data.username}`);
                 if (participantDiv) {
