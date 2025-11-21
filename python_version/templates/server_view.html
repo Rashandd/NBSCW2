@@ -921,6 +921,14 @@
         });
         audioAnalyzers = {};
         
+        // Clean up remote streams
+        if (window.remoteStreams) {
+            Object.values(window.remoteStreams).forEach(stream => {
+                stream.getTracks().forEach(track => track.stop());
+            });
+            window.remoteStreams = {};
+        }
+        
         // Unpin if pinned
         if (pinnedParticipant) {
             unpinParticipant();
@@ -1348,10 +1356,39 @@
             console.log(`Added ${track.kind} track to peer connection`);
         });
         
+        // Store remote streams per user to accumulate all tracks
+        if (!window.remoteStreams) {
+            window.remoteStreams = {};
+        }
+        if (!window.remoteStreams[username]) {
+            window.remoteStreams[username] = new MediaStream();
+        }
+        
         // Handle remote stream
         pc.ontrack = (event) => {
-            console.log(`Received remote ${event.track.kind} track from ${username}`);
-            const remoteStream = event.streams[0] || new MediaStream([event.track]);
+            console.log(`Received remote ${event.track.kind} track from ${username}`, {
+                trackId: event.track.id,
+                trackKind: event.track.kind,
+                trackEnabled: event.track.enabled,
+                trackReadyState: event.track.readyState,
+                streams: event.streams.length
+            });
+            
+            // Get or create remote stream for this user
+            let remoteStream = window.remoteStreams[username];
+            if (!remoteStream) {
+                remoteStream = new MediaStream();
+                window.remoteStreams[username] = remoteStream;
+            }
+            
+            // Add the new track to the stream if not already present
+            if (!remoteStream.getTracks().some(t => t.id === event.track.id)) {
+                remoteStream.addTrack(event.track);
+                console.log(`Added ${event.track.kind} track to remote stream for ${username}. Total tracks:`, {
+                    audio: remoteStream.getAudioTracks().length,
+                    video: remoteStream.getVideoTracks().length
+                });
+            }
             
             // Use setTimeout to ensure DOM is stable
             setTimeout(() => {
@@ -1378,41 +1415,43 @@
                     videoElement.autoplay = true;
                     videoElement.playsInline = true;
                     videoElement.muted = false;
+                    videoElement.volume = 1.0; // Ensure audio is at full volume
                     // Full cover video
                     videoElement.style.cssText = 'width: 100%; height: 100%; min-height: 200px; object-fit: cover; border-radius: 15px; position: absolute; inset: 0; z-index: 1;';
                     videoContainer.appendChild(videoElement);
-                    
-                    // Initialize voice activity detection for this video
-                    setupVoiceActivityDetection(username, remoteStream);
+                    console.log(`Created video element for ${username}`);
                 }
                 
                 if (videoElement && document.body.contains(videoElement)) {
-                    // Update or set stream - don't replace if already exists
-                    if (videoElement.srcObject) {
-                        const existingStream = videoElement.srcObject;
-                        remoteStream.getTracks().forEach(track => {
-                            const existingTrack = existingStream.getTracks().find(t => t.kind === track.kind && t.id !== track.id);
-                            if (existingTrack) {
-                                existingTrack.replaceWith(track);
-                            } else if (!existingStream.getTracks().some(t => t.id === track.id)) {
-                                existingStream.addTrack(track);
-                            }
-                        });
-                    } else {
-                        videoElement.srcObject = remoteStream;
+                    // Always update srcObject with the accumulated stream
+                    videoElement.srcObject = remoteStream;
+                    
+                    // Log track information
+                    console.log(`Setting stream for ${username}:`, {
+                        audioTracks: remoteStream.getAudioTracks().length,
+                        videoTracks: remoteStream.getVideoTracks().length,
+                        audioEnabled: remoteStream.getAudioTracks().every(t => t.enabled),
+                        videoEnabled: remoteStream.getVideoTracks().every(t => t.enabled)
+                    });
+                    
+                    // Initialize voice activity detection if we have audio
+                    if (remoteStream.getAudioTracks().length > 0 && !audioAnalyzers[username]) {
+                        setupVoiceActivityDetection(username, remoteStream);
                     }
                     
                     // Ensure video plays - check if element still exists
                     requestAnimationFrame(() => {
                         if (videoElement && document.body.contains(videoElement)) {
-                            videoElement.play().catch(err => {
+                            videoElement.play().then(() => {
+                                console.log(`Video/audio playing for ${username}`);
+                            }).catch(err => {
                                 if (err.name !== 'AbortError' && err.name !== 'NotAllowedError') {
-                                    console.warn('Video play error (non-critical):', err.name);
+                                    console.error(`Error playing video/audio for ${username}:`, err);
                                 }
                             });
                         }
                     });
-                    console.log(`Connected remote stream from ${username}`);
+                    console.log(`Connected remote stream from ${username} with ${remoteStream.getTracks().length} tracks`);
                 }
             }, 100);
         };
@@ -1539,10 +1578,59 @@
                 pc.addTrack(track, localStream);
             });
             
+            // Store remote streams per user to accumulate all tracks
+            if (!window.remoteStreams) {
+                window.remoteStreams = {};
+            }
+            if (!window.remoteStreams[username]) {
+                window.remoteStreams[username] = new MediaStream();
+            }
+            
             // Set up event handlers
             pc.ontrack = (event) => {
-                console.log(`Received remote track from ${username}`);
-                const remoteStream = event.streams[0] || new MediaStream([event.track]);
+                console.log(`Received remote ${event.track.kind} track from ${username} (from offer)`, {
+                    trackId: event.track.id,
+                    trackKind: event.track.kind,
+                    trackEnabled: event.track.enabled,
+                    trackReadyState: event.track.readyState,
+                    streams: event.streams.length
+                });
+                
+                // Get or create remote stream for this user
+                let remoteStream = window.remoteStreams[username];
+                if (!remoteStream) {
+                    remoteStream = new MediaStream();
+                    window.remoteStreams[username] = remoteStream;
+                }
+                
+                // Add the new track to the stream if not already present
+                if (!remoteStream.getTracks().some(t => t.id === event.track.id)) {
+                    remoteStream.addTrack(event.track);
+                    console.log(`Added ${event.track.kind} track to remote stream for ${username}. Total tracks:`, {
+                        audio: remoteStream.getAudioTracks().length,
+                        video: remoteStream.getVideoTracks().length
+                    });
+                    
+                    // If video element exists, ensure it's updated and playing
+                    const participantDiv = document.getElementById(`participant-${username}`);
+                    if (participantDiv) {
+                        const videoElement = participantDiv.querySelector('video');
+                        if (videoElement && videoElement.srcObject === remoteStream) {
+                            // Force play when new track is added
+                            requestAnimationFrame(() => {
+                                if (videoElement && document.body.contains(videoElement)) {
+                                    videoElement.play().then(() => {
+                                        console.log(`Video/audio playing after track addition for ${username}`);
+                                    }).catch(err => {
+                                        if (err.name !== 'AbortError' && err.name !== 'NotAllowedError') {
+                                            console.warn(`Play error after track addition for ${username}:`, err.name);
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    }
+                }
                 
                 setTimeout(() => {
                     const participantDiv = document.getElementById(`participant-${username}`);
@@ -1566,39 +1654,41 @@
                         videoElement.autoplay = true;
                         videoElement.playsInline = true;
                         videoElement.muted = false;
+                        videoElement.volume = 1.0; // Ensure audio is at full volume
                         videoElement.style.cssText = 'width: 100%; height: 100%; min-height: 200px; object-fit: cover; border-radius: 15px; position: absolute; inset: 0; z-index: 1;';
                         videoContainer.appendChild(videoElement);
-                        
-                        // Initialize voice activity detection
-                        setupVoiceActivityDetection(username, remoteStream);
+                        console.log(`Created video element for ${username} (from offer)`);
                     }
                     
                     if (videoElement && document.body.contains(videoElement)) {
-                        if (videoElement.srcObject) {
-                            const existingStream = videoElement.srcObject;
-                            remoteStream.getTracks().forEach(track => {
-                                const existingTrack = existingStream.getTracks().find(t => t.kind === track.kind);
-                                if (existingTrack) {
-                                    existingTrack.replaceWith(track);
-                                } else {
-                                    existingStream.addTrack(track);
-                                }
-                            });
-                        } else {
-                            videoElement.srcObject = remoteStream;
+                        // Always update srcObject with the accumulated stream
+                        videoElement.srcObject = remoteStream;
+                        
+                        // Log track information
+                        console.log(`Setting stream for ${username}:`, {
+                            audioTracks: remoteStream.getAudioTracks().length,
+                            videoTracks: remoteStream.getVideoTracks().length,
+                            audioEnabled: remoteStream.getAudioTracks().every(t => t.enabled),
+                            videoEnabled: remoteStream.getVideoTracks().every(t => t.enabled)
+                        });
+                        
+                        // Initialize voice activity detection if we have audio
+                        if (remoteStream.getAudioTracks().length > 0 && !audioAnalyzers[username]) {
                             setupVoiceActivityDetection(username, remoteStream);
                         }
                         
                         requestAnimationFrame(() => {
                             if (videoElement && document.body.contains(videoElement)) {
-                                videoElement.play().catch(err => {
+                                videoElement.play().then(() => {
+                                    console.log(`Video/audio playing for ${username} (from offer)`);
+                                }).catch(err => {
                                     if (err.name !== 'AbortError' && err.name !== 'NotAllowedError') {
-                                        console.error('Error playing remote video:', err);
+                                        console.error(`Error playing video/audio for ${username}:`, err);
                                     }
                                 });
                             }
                         });
-                        console.log(`Connected remote stream from ${username} to video element`);
+                        console.log(`Connected remote stream from ${username} with ${remoteStream.getTracks().length} tracks`);
                     }
                 }, 100);
             };
