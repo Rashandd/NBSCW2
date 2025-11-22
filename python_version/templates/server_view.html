@@ -143,6 +143,7 @@
         gap: 8px;
         color: #9CA3AF;
         font-size: 14px;
+        position: relative;
     }
     
     .channel-item:hover {
@@ -163,6 +164,9 @@
         align-items: center;
         gap: 8px;
         width: 100%;
+        pointer-events: auto;
+        z-index: 1;
+        position: relative;
     }
     
     /* Main Content Area */
@@ -1190,24 +1194,53 @@
     const chatArea = document.getElementById('chat-area');
     const voiceStage = document.getElementById('voice-stage');
     
-    // Channel click handlers
-    document.querySelectorAll('.channel-link').forEach(link => {
-        link.addEventListener('click', function(e) {
-            e.preventDefault();
-            const channelType = this.getAttribute('data-channel-type');
-            const channelSlug = this.getAttribute('data-channel-slug');
-            const channelName = this.getAttribute('data-channel-name');
-            
-            document.querySelectorAll('.channel-item').forEach(item => item.classList.remove('active'));
-            this.parentElement.classList.add('active');
-            
-            if (channelType === 'text') {
-                openTextChannel(channelSlug, channelName);
-            } else if (channelType === 'voice') {
-                openVoiceChannel(channelSlug, channelName);
-            }
-        });
-    });
+    // Channel click handlers - Use event delegation for dynamic content
+    function setupChannelHandlers() {
+        // Use event delegation on the server sidebar to catch all channel clicks
+        const serverSidebar = document.querySelector('.server-sidebar');
+        if (serverSidebar) {
+            serverSidebar.addEventListener('click', function(e) {
+                const link = e.target.closest('.channel-link');
+                if (!link) return;
+                
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const channelType = link.getAttribute('data-channel-type');
+                const channelSlug = link.getAttribute('data-channel-slug');
+                const channelName = link.getAttribute('data-channel-name');
+                
+                if (!channelType || !channelSlug || !channelName) {
+                    console.error('Missing channel data:', { channelType, channelSlug, channelName });
+                    return;
+                }
+                
+                // Remove active from all channels
+                document.querySelectorAll('.channel-item').forEach(item => item.classList.remove('active'));
+                // Add active to clicked channel
+                const channelItem = link.closest('.channel-item');
+                if (channelItem) {
+                    channelItem.classList.add('active');
+                }
+                
+                console.log('Opening channel:', channelType, channelSlug, channelName);
+                
+                if (channelType === 'text') {
+                    openTextChannel(channelSlug, channelName);
+                } else if (channelType === 'voice') {
+                    openVoiceChannel(channelSlug, channelName);
+                }
+            });
+        }
+    }
+    
+    // Setup handlers when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', setupChannelHandlers);
+    } else {
+        // DOM already loaded, setup immediately
+        setupChannelHandlers();
+    }
     
     function openTextChannel(slug, name) {
         if (currentChannelType === 'voice') {
