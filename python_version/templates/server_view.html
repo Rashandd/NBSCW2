@@ -926,6 +926,11 @@
         voiceStage.style.display = 'flex';
         document.getElementById('voice-channel-name').textContent = name;
         
+        // Show global voice call component (works across all pages)
+        if (window.showGlobalVoiceCall) {
+            window.showGlobalVoiceCall(name, slug);
+        }
+        
         // Clear video grid
         const videoGrid = document.getElementById('video-grid');
         videoGrid.innerHTML = '';
