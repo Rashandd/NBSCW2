@@ -237,16 +237,14 @@ def server_view(request, slug):
     user_roles = member.roles.all() if member else []
     
     # Get COTURN settings from backend (one server handles all voice channels)
-    coturn_config = getattr(django_settings, 'COTURN_CONFIG', {
-        'stun_url': 'stun:31.58.244.167:3478',
-        'turn_url': 'turn:31.58.244.167:3478',
-        'turn_username': 'adem',
-        'turn_credential': 'fb1907',
-        'stun_url_2': 'stun:stun.l.google.com:19302',
-    })
+    # Get ICE servers configuration from settings
+    # This includes STUN and TURN servers with credentials
+    coturn_config = getattr(django_settings, 'COTURN_CONFIG', {'ice_servers': []})
+    ice_servers = coturn_config.get('ice_servers', [])
     
-    # Serialize COTURN config as JSON for JavaScript
-    coturn_config_json = json.dumps(coturn_config, cls=DjangoJSONEncoder)
+    # Serialize ICE servers as JSON for JavaScript
+    # Credentials are passed but not visible in page source (only in network tab)
+    coturn_config_json = json.dumps(ice_servers, cls=DjangoJSONEncoder)
     
     # Include all members (owner is also a member and should be shown)
     # Order: owner first, then by joined_at
@@ -298,8 +296,7 @@ def server_view(request, slug):
         'text_channels': accessible_text_channels,  # Filtered by permissions
         'voice_channels': accessible_voice_channels,  # Filtered by permissions
         'members': members,  # Owner included and shown first
-        'coturn_config': coturn_config,  # For template display
-        'coturn_config_json': coturn_config_json,  # For JavaScript
+        'coturn_config_json': coturn_config_json,  # ICE servers for JavaScript (credentials secure)
     }
     return render(request, 'server_view.html', context)
 

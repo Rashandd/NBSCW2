@@ -1181,17 +1181,20 @@
 
 {% block extra_js %}
 <script>
-    // Get COTURN settings
-    const coturnConfig = JSON.parse('{{ coturn_config_json|escapejs }}');
-    const iceServers = [
-        { urls: coturnConfig.stun_url || 'stun:31.58.244.167:3478' },
-        {
-            urls: coturnConfig.turn_url || 'turn:31.58.244.167:3478',
-            username: coturnConfig.turn_username || 'adem',
-            credential: coturnConfig.turn_credential || 'fb1907'
-        },
-        { urls: coturnConfig.stun_url_2 || 'stun:stun.l.google.com:19302' }
-    ];
+    // Get ICE servers from backend (secure - credentials not exposed in frontend)
+    let iceServers = [];
+    try {
+        const coturnConfig = JSON.parse('{{ coturn_config_json|escapejs }}');
+        if (coturnConfig && Array.isArray(coturnConfig)) {
+            iceServers = coturnConfig;
+        } else {
+            console.error('Invalid ICE server configuration');
+            iceServers = [{ urls: 'stun:stun.l.google.com:19302' }];
+        }
+    } catch (e) {
+        console.error('Error parsing ICE servers:', e);
+        iceServers = [{ urls: 'stun:stun.l.google.com:19302' }];
+    }
     
     let currentChannelSlug = null;
     let currentChannelType = null;
