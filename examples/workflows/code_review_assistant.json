@@ -1,0 +1,92 @@
+{
+  "name": "Code Review Assistant",
+  "description": "Assists with code review by analyzing code changes and providing feedback",
+  "version": "1.0.0",
+  "category": "development",
+  "steps": [
+    {
+      "id": "step1",
+      "type": "action",
+      "action": "fetch_code_changes",
+      "params": {
+        "file_path": "{{input.file_path}}",
+        "commit_hash": "{{input.commit_hash}}"
+      },
+      "output": "code_changes"
+    },
+    {
+      "id": "step2",
+      "type": "action",
+      "action": "analyze_code",
+      "params": {
+        "code": "{{code_changes.diff}}",
+        "language": "{{code_changes.language}}",
+        "checks": [
+          "syntax",
+          "style",
+          "security",
+          "performance"
+        ]
+      },
+      "output": "analysis_results"
+    },
+    {
+      "id": "step3",
+      "type": "condition",
+      "condition": "analysis_results.issues_found > 0",
+      "then": "step4",
+      "else": "step5"
+    },
+    {
+      "id": "step4",
+      "type": "action",
+      "action": "generate_review_comments",
+      "params": {
+        "issues": "{{analysis_results.issues}}",
+        "suggestions": "{{analysis_results.suggestions}}"
+      },
+      "output": "review_comments",
+      "next": "step6"
+    },
+    {
+      "id": "step5",
+      "type": "action",
+      "action": "generate_approval_message",
+      "params": {
+        "code_quality_score": "{{analysis_results.score}}"
+      },
+      "output": "review_comments"
+    },
+    {
+      "id": "step6",
+      "type": "action",
+      "action": "post_review",
+      "params": {
+        "file_path": "{{input.file_path}}",
+        "comments": "{{review_comments}}",
+        "status": "{{analysis_results.status}}"
+      },
+      "next": "step7"
+    },
+    {
+      "id": "step7",
+      "type": "action",
+      "action": "store_in_memory",
+      "params": {
+        "memory_type": "code_context",
+        "title": "Code Review: {{input.file_path}}",
+        "content": "{{review_comments}}",
+        "tags": ["code_review", "{{code_changes.language}}"]
+      },
+      "next": "end"
+    }
+  ],
+  "variables": {
+    "min_quality_score": 7.0,
+    "max_issues_allowed": 5
+  },
+  "triggers": [
+    "code_commit",
+    "pull_request_created"
+  ]
+}

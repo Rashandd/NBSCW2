@@ -26,6 +26,7 @@ urlpatterns = [
 
 urlpatterns += i18n_patterns(
     path('admin/', admin.site.urls),
+    path('api/', include('main.api.urls')),  # AI Agent API
     path('', include('main.urls')),
     prefix_default_language=False,  # Don't prefix default language (en)
 )

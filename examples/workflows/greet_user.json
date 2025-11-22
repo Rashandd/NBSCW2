@@ -1,0 +1,52 @@
+{
+  "name": "Greet User",
+  "description": "Greets a user when they log in or join a server",
+  "version": "1.0.0",
+  "category": "user_interaction",
+  "steps": [
+    {
+      "id": "step1",
+      "type": "action",
+      "action": "get_user_info",
+      "params": {
+        "user_id": "{{input.user_id}}"
+      },
+      "output": "user_data"
+    },
+    {
+      "id": "step2",
+      "type": "condition",
+      "condition": "user_data.is_new_user",
+      "then": "step3",
+      "else": "step4"
+    },
+    {
+      "id": "step3",
+      "type": "action",
+      "action": "send_welcome_message",
+      "params": {
+        "user_id": "{{input.user_id}}",
+        "message": "Welcome to Rashigo! We're glad to have you here. Check out our games and join a server to get started!"
+      },
+      "next": "end"
+    },
+    {
+      "id": "step4",
+      "type": "action",
+      "action": "send_message",
+      "params": {
+        "user_id": "{{input.user_id}}",
+        "message": "Welcome back, {{user_data.username}}! You have {{user_data.unread_messages}} unread messages."
+      },
+      "next": "end"
+    }
+  ],
+  "variables": {
+    "greeting_time": "morning",
+    "default_channel": "general"
+  },
+  "triggers": [
+    "user_login",
+    "user_join_server"
+  ]
+}

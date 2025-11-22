@@ -176,21 +176,33 @@ CHANNEL_LAYERS = {
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # COTURN/WebRTC Configuration (Backend settings - one server handles all voice channels)
+# SECURITY: Load credentials from environment variables
+COTURN_HOST = os.getenv('COTURN_HOST', 'localhost')
+COTURN_PORT = os.getenv('COTURN_PORT', '3478')
+COTURN_USERNAME = os.getenv('COTURN_USERNAME', '')
+COTURN_PASSWORD = os.getenv('COTURN_PASSWORD', '')
+
 COTURN_CONFIG = {
-    'ice_servers': [
-        # Your COTURN server (most important - has TURN)
-        {
-            'urls': ['stun:31.58.244.167:3478', 'turn:31.58.244.167:3478'],
-            'username': 'adem',
-            'credential': 'fb1907',
-        },
-        # Google STUN servers (free, reliable)
-        {'urls': ['stun:stun.l.google.com:19302']},
-        {'urls': ['stun:stun1.l.google.com:19302']},
-        {'urls': ['stun:stun2.l.google.com:19302']},
-        {'urls': ['stun:stun3.l.google.com:19302']},
-        # Other public STUN servers
-        {'urls': ['stun:stun.stunprotocol.org:3478']},
-        {'urls': ['stun:stun.ekiga.net:3478']},
-    ]
+    'ice_servers': []
 }
+
+# Add COTURN server if credentials are provided
+if COTURN_HOST and COTURN_USERNAME and COTURN_PASSWORD:
+    COTURN_CONFIG['ice_servers'].append({
+        'urls': [
+            f'stun:{COTURN_HOST}:{COTURN_PORT}',
+            f'turn:{COTURN_HOST}:{COTURN_PORT}'
+        ],
+        'username': COTURN_USERNAME,
+        'credential': COTURN_PASSWORD,
+    })
+
+# Add public STUN servers (always available)
+COTURN_CONFIG['ice_servers'].extend([
+    {'urls': ['stun:stun.l.google.com:19302']},
+    {'urls': ['stun:stun1.l.google.com:19302']},
+    {'urls': ['stun:stun2.l.google.com:19302']},
+    {'urls': ['stun:stun3.l.google.com:19302']},
+    {'urls': ['stun:stun.stunprotocol.org:3478']},
+    {'urls': ['stun:stun.ekiga.net:3478']},
+])

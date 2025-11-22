@@ -278,3 +278,369 @@ class GameSession(models.Model):
         id_str = str(self.game_id)
         truncated_id = truncatechars(id_str, 8)
         return f"Masa {truncated_id}"
+
+
+# ============================================================================
+# AI AGENT & WORKFLOW REPOSITORY MODELS
+# ============================================================================
+
+class Workflow(models.Model):
+    """
+    Workflow definitions that can be executed by AI agents
+    Stores workflow templates, steps, and configurations
+    """
+    name = models.CharField(max_length=200, unique=True, verbose_name="Workflow Name")
+    slug = models.SlugField(max_length=200, unique=True, editable=False)
+    description = models.TextField(blank=True, null=True, verbose_name="Description")
+    
+    # Workflow definition as JSON
+    # Structure: {
+    #   "steps": [
+    #     {"id": "step1", "type": "action", "action": "send_message", "params": {...}},
+    #     {"id": "step2", "type": "condition", "condition": "...", "then": "...", "else": "..."}
+    #   ],
+    #   "variables": {...},
+    #   "triggers": [...]
+    # }
+    definition = models.JSONField(default=dict, verbose_name="Workflow Definition")
+    
+    # Workflow metadata
+    version = models.CharField(max_length=50, default="1.0.0", verbose_name="Version")
+    is_active = models.BooleanField(default=True, verbose_name="Active")
+    is_public = models.BooleanField(default=False, verbose_name="Public Workflow")
+    
+    # Ownership and permissions
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_workflows',
+        verbose_name="Created By"
+    )
+    
+    # Categories and tags
+    category = models.CharField(max_length=100, blank=True, null=True, verbose_name="Category")
+    tags = models.JSONField(default=list, blank=True, verbose_name="Tags")
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")
+    last_executed_at = models.DateTimeField(null=True, blank=True, verbose_name="Last Executed At")
+    
+    # Execution statistics
+    execution_count = models.PositiveIntegerField(default=0, verbose_name="Execution Count")
+    success_count = models.PositiveIntegerField(default=0, verbose_name="Success Count")
+    failure_count = models.PositiveIntegerField(default=0, verbose_name="Failure Count")
+    
+    class Meta:
+        verbose_name = "Workflow"
+        verbose_name_plural = "Workflows"
+        ordering = ['-updated_at', 'name']
+        indexes = [
+            models.Index(fields=['is_active', 'is_public']),
+            models.Index(fields=['category']),
+            models.Index(fields=['created_by']),
+        ]
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.name} v{self.version}"
+    
+    @property
+    def success_rate(self):
+        """Calculate success rate percentage"""
+        total = self.execution_count
+        if total == 0:
+            return 0.0
+        return round((self.success_count / total) * 100, 2)
+
+
+class WorkflowExecution(models.Model):
+    """
+    Tracks individual workflow executions
+    Stores execution state, results, and logs
+    """
+    STATUS_CHOICES = [
+        ('pending', 'Pending'),
+        ('running', 'Running'),
+        ('completed', 'Completed'),
+        ('failed', 'Failed'),
+        ('cancelled', 'Cancelled'),
+    ]
+    
+    workflow = models.ForeignKey(
+        Workflow,
+        on_delete=models.CASCADE,
+        related_name='executions',
+        verbose_name="Workflow"
+    )
+    
+    execution_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    
+    # Execution context
+    triggered_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='triggered_workflows',
+        verbose_name="Triggered By"
+    )
+    
+    agent_instance = models.ForeignKey(
+        'AIAgent',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='workflow_executions',
+        verbose_name="AI Agent Instance"
+    )
+    
+    # Execution state
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name="Status")
+    current_step = models.CharField(max_length=100, blank=True, null=True, verbose_name="Current Step")
+    
+    # Input/output data
+    input_data = models.JSONField(default=dict, blank=True, verbose_name="Input Data")
+    output_data = models.JSONField(default=dict, blank=True, verbose_name="Output Data")
+    execution_state = models.JSONField(default=dict, blank=True, verbose_name="Execution State")
+    
+    # Error handling
+    error_message = models.TextField(blank=True, null=True, verbose_name="Error Message")
+    error_traceback = models.TextField(blank=True, null=True, verbose_name="Error Traceback")
+    
+    # Timestamps
+    started_at = models.DateTimeField(null=True, blank=True, verbose_name="Started At")
+    completed_at = models.DateTimeField(null=True, blank=True, verbose_name="Completed At")
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
+    
+    # Execution metadata
+    execution_log = models.JSONField(default=list, blank=True, verbose_name="Execution Log")
+    duration_seconds = models.FloatField(null=True, blank=True, verbose_name="Duration (seconds)")
+    
+    class Meta:
+        verbose_name = "Workflow Execution"
+        verbose_name_plural = "Workflow Executions"
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['workflow', 'status']),
+            models.Index(fields=['triggered_by']),
+            models.Index(fields=['created_at']),
+        ]
+    
+    def __str__(self):
+        return f"Execution {str(self.execution_id)[:8]} - {self.workflow.name} - {self.status}"
+    
+    @property
+    def is_running(self):
+        return self.status == 'running'
+    
+    @property
+    def is_completed(self):
+        return self.status in ['completed', 'failed', 'cancelled']
+
+
+class MemoryBank(models.Model):
+    """
+    Memory storage for AI agents
+    Stores conversations, context, knowledge, and agent memories
+    """
+    MEMORY_TYPES = [
+        ('conversation', 'Conversation'),
+        ('context', 'Context'),
+        ('knowledge', 'Knowledge'),
+        ('episodic', 'Episodic'),
+        ('semantic', 'Semantic'),
+        ('working', 'Working Memory'),
+    ]
+    
+    PRIORITY_LEVELS = [
+        (1, 'Low'),
+        (2, 'Normal'),
+        (3, 'High'),
+        (4, 'Critical'),
+    ]
+    
+    # Basic information
+    title = models.CharField(max_length=500, verbose_name="Title")
+    content = models.TextField(verbose_name="Content")
+    memory_type = models.CharField(max_length=50, choices=MEMORY_TYPES, default='context', verbose_name="Memory Type")
+    
+    # Association with agent and user
+    agent = models.ForeignKey(
+        'AIAgent',
+        on_delete=models.CASCADE,
+        related_name='memories',
+        null=True,
+        blank=True,
+        verbose_name="AI Agent"
+    )
+    
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='agent_memories',
+        null=True,
+        blank=True,
+        verbose_name="User"
+    )
+    
+    # Context and metadata
+    context = models.JSONField(default=dict, blank=True, verbose_name="Context Data")
+    tags = models.JSONField(default=list, blank=True, verbose_name="Tags")
+    priority = models.IntegerField(choices=PRIORITY_LEVELS, default=2, verbose_name="Priority")
+    
+    # Memory relationships
+    related_memories = models.ManyToManyField(
+        'self',
+        symmetrical=False,
+        blank=True,
+        related_name='referenced_by',
+        verbose_name="Related Memories"
+    )
+    
+    # Source information
+    source_type = models.CharField(max_length=100, blank=True, null=True, verbose_name="Source Type")
+    source_id = models.CharField(max_length=200, blank=True, null=True, verbose_name="Source ID")
+    
+    # Access and relevance
+    access_count = models.PositiveIntegerField(default=0, verbose_name="Access Count")
+    relevance_score = models.FloatField(default=1.0, verbose_name="Relevance Score")
+    last_accessed_at = models.DateTimeField(null=True, blank=True, verbose_name="Last Accessed At")
+    
+    # Embedding vector for semantic search (optional, stored as JSON array)
+    embedding = models.JSONField(default=list, blank=True, null=True, verbose_name="Embedding Vector")
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")
+    expires_at = models.DateTimeField(null=True, blank=True, verbose_name="Expires At")
+    
+    class Meta:
+        verbose_name = "Memory Bank Entry"
+        verbose_name_plural = "Memory Bank Entries"
+        ordering = ['-updated_at', '-relevance_score']
+        indexes = [
+            models.Index(fields=['agent', 'memory_type']),
+            models.Index(fields=['user']),
+            models.Index(fields=['memory_type', 'relevance_score']),
+            models.Index(fields=['created_at']),
+            models.Index(fields=['expires_at']),
+        ]
+    
+    def __str__(self):
+        preview = self.content[:50] + '...' if len(self.content) > 50 else self.content
+        return f"[{self.memory_type}] {self.title}: {preview}"
+    
+    @property
+    def is_expired(self):
+        """Check if memory has expired"""
+        if self.expires_at:
+            from django.utils import timezone
+            return timezone.now() > self.expires_at
+        return False
+
+
+class AIAgent(models.Model):
+    """
+    AI Agent configurations and instances
+    Represents an AI agent that can execute workflows and use memory bank
+    """
+    AGENT_TYPES = [
+        ('assistant', 'Assistant'),
+        ('workflow_automation', 'Workflow Automation'),
+        ('conversational', 'Conversational'),
+        ('task_orchestrator', 'Task Orchestrator'),
+        ('custom', 'Custom'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('inactive', 'Inactive'),
+        ('active', 'Active'),
+        ('training', 'Training'),
+        ('error', 'Error'),
+    ]
+    
+    # Basic information
+    name = models.CharField(max_length=200, unique=True, verbose_name="Agent Name")
+    slug = models.SlugField(max_length=200, unique=True, editable=False)
+    description = models.TextField(blank=True, null=True, verbose_name="Description")
+    agent_type = models.CharField(max_length=50, choices=AGENT_TYPES, default='assistant', verbose_name="Agent Type")
+    
+    # Configuration
+    config = models.JSONField(default=dict, blank=True, verbose_name="Agent Configuration")
+    # Example config structure:
+    # {
+    #   "model": "gpt-4",
+    #   "temperature": 0.7,
+    #   "max_tokens": 2000,
+    #   "system_prompt": "...",
+    #   "tools": ["workflow_executor", "memory_bank"],
+    #   "parameters": {...}
+    # }
+    
+    # Ownership
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_agents',
+        verbose_name="Created By"
+    )
+    
+    # Status and capabilities
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='inactive', verbose_name="Status")
+    is_public = models.BooleanField(default=False, verbose_name="Public Agent")
+    enabled_workflows = models.ManyToManyField(
+        Workflow,
+        blank=True,
+        related_name='enabled_agents',
+        verbose_name="Enabled Workflows"
+    )
+    
+    # Memory and context settings
+    memory_enabled = models.BooleanField(default=True, verbose_name="Memory Enabled")
+    max_memory_entries = models.PositiveIntegerField(default=1000, verbose_name="Max Memory Entries")
+    memory_retention_days = models.PositiveIntegerField(null=True, blank=True, verbose_name="Memory Retention (days)")
+    
+    # Statistics
+    interaction_count = models.PositiveIntegerField(default=0, verbose_name="Interaction Count")
+    total_tokens_used = models.PositiveIntegerField(default=0, verbose_name="Total Tokens Used")
+    last_interaction_at = models.DateTimeField(null=True, blank=True, verbose_name="Last Interaction At")
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")
+    
+    class Meta:
+        verbose_name = "AI Agent"
+        verbose_name_plural = "AI Agents"
+        ordering = ['-updated_at', 'name']
+        indexes = [
+            models.Index(fields=['status', 'is_public']),
+            models.Index(fields=['agent_type']),
+            models.Index(fields=['created_by']),
+        ]
+    
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            self.slug = slugify(self.name)
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.name} ({self.agent_type})"
+    
+    @property
+    def is_active(self):
+        return self.status == 'active'
+    
+    @property
+    def memory_count(self):
+        """Get count of associated memories"""
+        return self.memories.count() if hasattr(self, 'memories') else 0

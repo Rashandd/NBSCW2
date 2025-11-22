@@ -1,0 +1,73 @@
+{
+  "name": "Game Moderator Bot",
+  "slug": "game-moderator",
+  "agent_type": "workflow_automation",
+  "description": "Automated moderator for game sessions, handling player reports, enforcing rules, and managing game flow",
+  "config": {
+    "model": "gpt-3.5-turbo",
+    "temperature": 0.3,
+    "max_tokens": 1000,
+    "system_prompt": "You are a game moderator bot responsible for maintaining fair play, handling player reports, and ensuring a positive gaming experience. You enforce game rules, detect suspicious behavior, and provide assistance to players.",
+    "tools": [
+      "workflow_executor",
+      "memory_bank",
+      "player_analytics",
+      "report_handler"
+    ],
+    "parameters": {
+      "auto_moderate": true,
+      "warning_threshold": 3,
+      "ban_threshold": 5,
+      "track_player_behavior": true,
+      "log_all_actions": true
+    },
+    "moderation_rules": {
+      "spam_detection": true,
+      "profanity_filter": true,
+      "cheating_detection": true,
+      "afk_timeout_minutes": 5,
+      "max_warnings_per_session": 3
+    }
+  },
+  "status": "active",
+  "is_public": false,
+  "memory_enabled": true,
+  "max_memory_entries": 5000,
+  "memory_retention_days": 180,
+  "enabled_workflows": [
+    "player_report_handler",
+    "auto_moderation",
+    "game_statistics_tracker"
+  ],
+  "capabilities": [
+    "Automatic spam detection",
+    "Player behavior tracking",
+    "Report handling and investigation",
+    "Rule enforcement",
+    "Player warnings and bans",
+    "Game statistics collection",
+    "Fair play monitoring"
+  ],
+  "moderation_actions": [
+    {
+      "action": "warn",
+      "trigger": "Minor rule violation",
+      "response": "Issue warning to player with explanation"
+    },
+    {
+      "action": "mute",
+      "trigger": "Repeated spam or profanity",
+      "response": "Temporarily mute player for specified duration"
+    },
+    {
+      "action": "kick",
+      "trigger": "Serious rule violation",
+      "response": "Remove player from current game session"
+    },
+    {
+      "action": "ban",
+      "trigger": "Multiple serious violations or cheating",
+      "response": "Ban player from platform for specified duration"
+    }
+  ]
+}

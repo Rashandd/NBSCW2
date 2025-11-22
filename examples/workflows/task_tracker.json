@@ -1,0 +1,103 @@
+{
+  "name": "Task Tracker",
+  "description": "Tracks development tasks and provides reminders",
+  "version": "1.0.0",
+  "category": "productivity",
+  "steps": [
+    {
+      "id": "step1",
+      "type": "action",
+      "action": "fetch_active_tasks",
+      "params": {
+        "user_id": "{{input.user_id}}",
+        "status": "in_progress"
+      },
+      "output": "active_tasks"
+    },
+    {
+      "id": "step2",
+      "type": "condition",
+      "condition": "active_tasks.count > 0",
+      "then": "step3",
+      "else": "step6"
+    },
+    {
+      "id": "step3",
+      "type": "loop",
+      "iterate_over": "active_tasks.tasks",
+      "item_name": "task",
+      "steps": [
+        {
+          "id": "step3a",
+          "type": "condition",
+          "condition": "task.is_overdue",
+          "then": "step4",
+          "else": "step5"
+        },
+        {
+          "id": "step4",
+          "type": "action",
+          "action": "send_reminder",
+          "params": {
+            "user_id": "{{input.user_id}}",
+            "task_id": "{{task.id}}",
+            "message": "Task '{{task.description}}' is overdue! Priority: {{task.priority}}",
+            "urgency": "high"
+          }
+        },
+        {
+          "id": "step5",
+          "type": "action",
+          "action": "send_status_update",
+          "params": {
+            "user_id": "{{input.user_id}}",
+            "task_id": "{{task.id}}",
+            "message": "Task '{{task.description}}' is in progress. Time remaining: {{task.time_remaining}}"
+          }
+        }
+      ],
+      "next": "step7"
+    },
+    {
+      "id": "step6",
+      "type": "action",
+      "action": "send_message",
+      "params": {
+        "user_id": "{{input.user_id}}",
+        "message": "You have no active tasks. Great job staying on top of things!"
+      },
+      "next": "end"
+    },
+    {
+      "id": "step7",
+      "type": "action",
+      "action": "generate_summary",
+      "params": {
+        "tasks": "{{active_tasks.tasks}}",
+        "include_stats": true
+      },
+      "output": "task_summary"
+    },
+    {
+      "id": "step8",
+      "type": "action",
+      "action": "store_in_memory",
+      "params": {
+        "memory_type": "working",
+        "title": "Task Summary {{current_date}}",
+        "content": "{{task_summary}}",
+        "tags": ["tasks", "summary"],
+        "expires_in_hours": 24
+      },
+      "next": "end"
+    }
+  ],
+  "variables": {
+    "reminder_frequency": "daily",
+    "check_time": "09:00"
+  },
+  "triggers": [
+    "scheduled_daily",
+    "user_request"
+  ]
+}

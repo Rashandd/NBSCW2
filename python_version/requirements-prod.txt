@@ -1,0 +1,35 @@
+# Production dependencies
+-r requirements.txt
+
+# Production Server
+gunicorn==23.0.0
+uvicorn[standard]==0.34.0
+
+# Caching
+redis==5.2.1
+django-redis==5.4.0
+
+# Channel Layers
+channels-redis==4.2.1
+
+# Monitoring & Logging
+sentry-sdk==2.21.0
+django-prometheus==2.3.1
+
+# Performance
+whitenoise==6.8.2  # Static file serving
+
+# Security
+django-cors-headers==4.6.0
+django-csp==3.8
+
+# Task Queue
+celery==5.4.0
+celery[redis]==5.4.0
+
+# Email
+django-anymail==13.1.0
+
+# Storage (if using cloud storage)
+boto3==1.35.94  # AWS S3
+django-storages==1.14.4
