@@ -177,9 +177,20 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # COTURN/WebRTC Configuration (Backend settings - one server handles all voice channels)
 COTURN_CONFIG = {
-    'stun_url': os.getenv('COTURN_STUN_URL', 'stun:31.58.244.167:3478'),
-    'turn_url': os.getenv('COTURN_TURN_URL', 'turn:31.58.244.167:3478'),
-    'turn_username': os.getenv('COTURN_USERNAME', 'adem'),
-    'turn_credential': os.getenv('COTURN_CREDENTIAL', 'fb1907'),
-    'stun_url_2': os.getenv('COTURN_STUN_URL_2', 'stun:stun.l.google.com:19302'),
+    'ice_servers': [
+        # Your COTURN server (most important - has TURN)
+        {
+            'urls': ['stun:31.58.244.167:3478', 'turn:31.58.244.167:3478'],
+            'username': 'adem',
+            'credential': 'fb1907',
+        },
+        # Google STUN servers (free, reliable)
+        {'urls': ['stun:stun.l.google.com:19302']},
+        {'urls': ['stun:stun1.l.google.com:19302']},
+        {'urls': ['stun:stun2.l.google.com:19302']},
+        {'urls': ['stun:stun3.l.google.com:19302']},
+        # Other public STUN servers
+        {'urls': ['stun:stun.stunprotocol.org:3478']},
+        {'urls': ['stun:stun.ekiga.net:3478']},
+    ]
 }
