@@ -14,6 +14,7 @@ from django.http import JsonResponse
 from django.urls import reverse
 
 from .models import CustomUser, Server, ServerRole, ServerMember, TextChannel, VoiceChannel, GameSession, MiniGame, ChatMessage
+from django.utils.text import slugify
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.forms import AuthenticationForm
 from django.conf import settings as django_settings
@@ -46,6 +47,111 @@ def index(request):
     
     # Not logged in state
     return render(request, 'index.html', {'title': _('Welcome to Rashigo')})
+
+
+@login_required
+def create_server(request):
+    """Create a new server with default roles"""
+    # Check server limit (e.g., max 5 servers per user)
+    MAX_SERVERS_PER_USER = 5
+    user_server_count = Server.objects.filter(owner=request.user).count()
+    
+    if user_server_count >= MAX_SERVERS_PER_USER:
+        messages.error(request, _("You have reached the maximum limit of {limit} servers.").format(limit=MAX_SERVERS_PER_USER))
+        return redirect('index')
+    
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        description = request.POST.get('description', '').strip()
+        is_private = request.POST.get('is_private') == 'on'
+        icon = request.POST.get('icon', '').strip() or None
+        
+        if not name:
+            messages.error(request, _("Server name is required."))
+            return render(request, 'create_server.html', {
+                'title': _('Create Server'),
+                'name': name,
+                'description': description,
+                'is_private': is_private,
+                'icon': icon,
+            })
+        
+        # Check if server name already exists
+        if Server.objects.filter(name=name).exists():
+            messages.error(request, _("A server with this name already exists. Please choose a different name."))
+            return render(request, 'create_server.html', {
+                'title': _('Create Server'),
+                'name': name,
+                'description': description,
+                'is_private': is_private,
+                'icon': icon,
+            })
+        
+        try:
+            # Create server
+            server = Server.objects.create(
+                name=name,
+                description=description,
+                owner=request.user,
+                is_private=is_private,
+                icon=icon
+            )
+            
+            # Create default roles: Admin and Normal User
+            admin_role = ServerRole.objects.create(
+                server=server,
+                name='Admin',
+                color='#ff4444',
+                position=100,  # Highest position
+                permissions={
+                    'manage_channels': True,
+                    'manage_roles': True,
+                    'kick_members': True,
+                    'ban_members': True,
+                    'manage_server': True,
+                    'delete_messages': True,
+                }
+            )
+            
+            normal_user_role = ServerRole.objects.create(
+                server=server,
+                name='Normal User',
+                color='#99aab5',
+                position=0,  # Lowest position
+                permissions={
+                    'send_messages': True,
+                    'read_messages': True,
+                    'join_voice': True,
+                }
+            )
+            
+            # Auto-join creator to their own server with Admin role
+            server_member = ServerMember.objects.create(
+                server=server,
+                user=request.user,
+                is_online=True
+            )
+            server_member.roles.add(admin_role)
+            
+            messages.success(request, _("Server '{server_name}' created successfully!").format(server_name=server.name))
+            return redirect('server_view', slug=server.slug)
+            
+        except Exception as e:
+            messages.error(request, _("Error creating server: {error}").format(error=str(e)))
+            return render(request, 'create_server.html', {
+                'title': _('Create Server'),
+                'name': name,
+                'description': description,
+                'is_private': is_private,
+                'icon': icon,
+            })
+    
+    # GET request - show form
+    return render(request, 'create_server.html', {
+        'title': _('Create Server'),
+        'max_servers': MAX_SERVERS_PER_USER,
+        'current_server_count': user_server_count,
+    })
 
 
 @login_required

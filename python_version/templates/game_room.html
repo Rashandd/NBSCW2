@@ -5,10 +5,42 @@
 
 {% block extra_css %}
     <style>
-        /* ... (Tüm CSS stil kodunuz aynı, değişiklik yok) ... */
+        /* Combined background theme for game room */
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #1e293b 75%, #0f172a 100%) !important;
+            background-size: 400% 400%;
+            background-attachment: fixed;
+            animation: gradientShift 20s ease infinite;
+            min-height: 100vh;
+        }
+        
+        @keyframes gradientShift {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+        
+        .page-shell {
+            background: transparent !important;
+            padding: 2rem 0;
+        }
+        
         :root {
             --p1-color: #d90429; --p2-color: #0077b6; --p3-color: #28a745; --p4-color: #ffc107;
-            --board-bg: #212529; --cell-border: #495057; --cell-hover: #343a40;
+            --board-bg: #1a1d29; --cell-border: #2d3748; --cell-hover: #3a4556;
+            --card-bg: rgba(30, 41, 59, 0.8);
+            --card-border: rgba(148, 163, 184, 0.2);
+        }
+        
+        .card {
+            background: var(--card-bg) !important;
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--card-border) !important;
+        }
+        
+        .card-header {
+            background: rgba(15, 23, 42, 0.6) !important;
+            border-bottom: 1px solid var(--card-border) !important;
         }
         #game-board-container { position: relative; width: 100%; max-width: 500px; margin: auto; }
         #game-board {

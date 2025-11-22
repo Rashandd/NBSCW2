@@ -316,9 +316,9 @@
                 <button class="btn btn-secondary-custom" onclick="alert('Filter coming soon!')">
                     <i class="fas fa-filter"></i> {% trans "Filter" %}
                 </button>
-                <button class="btn btn-primary-custom" onclick="alert('Create server coming soon!')">
+                <a href="{% url 'create_server' %}" class="btn btn-primary-custom">
                     <i class="fas fa-plus"></i> {% trans "Create Server" %}
-                </button>
+                </a>
     </div>
 </div>
 
@@ -442,9 +442,9 @@
                     <button class="btn btn-secondary-custom" data-bs-toggle="modal" data-bs-target="#joinServerModal">
                         <i class="fas fa-key"></i> {% trans "Join Private Server" %}
                     </button>
-                    <button class="btn btn-primary-custom" onclick="alert('Create server coming soon!')">
+                    <a href="{% url 'create_server' %}" class="btn btn-primary-custom">
                         <i class="fas fa-plus"></i> {% trans "Create Your First Server" %}
-                    </button>
+                    </a>
                 </div>
             </div>
         {% endif %}

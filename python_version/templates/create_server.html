@@ -1,0 +1,271 @@
+{% extends 'base.html' %}
+{% load i18n %}
+
+{% block title %}{% trans "Create Server" %} - Rashigo{% endblock %}
+
+{% block extra_css %}
+{{ block.super }}
+<style>
+    body {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #1e293b 75%, #0f172a 100%) !important;
+        background-size: 400% 400%;
+        background-attachment: fixed;
+        animation: gradientShift 20s ease infinite;
+        min-height: 100vh;
+    }
+    
+    @keyframes gradientShift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+    }
+    
+    .create-server-container {
+        max-width: 700px;
+        margin: 2rem auto;
+        padding: 2rem;
+    }
+    
+    .create-server-card {
+        background: rgba(30, 41, 59, 0.9);
+        backdrop-filter: blur(20px);
+        border-radius: 20px;
+        padding: 2.5rem;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    }
+    
+    .create-server-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    
+    .create-server-title {
+        font-size: 2.5rem;
+        font-weight: 700;
+        background: linear-gradient(135deg, #fff 0%, #e2e8f0 50%, #cbd5e1 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        margin-bottom: 0.5rem;
+    }
+    
+    .create-server-subtitle {
+        color: #94a3b8;
+        font-size: 1.1rem;
+    }
+    
+    .form-label {
+        color: #f1f5f9;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+    
+    .form-control, .form-select {
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        color: #f1f5f9;
+        padding: 0.75rem 1rem;
+        border-radius: 10px;
+    }
+    
+    .form-control:focus, .form-select:focus {
+        background: rgba(15, 23, 42, 0.8);
+        border-color: #667eea;
+        color: #f1f5f9;
+        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+    }
+    
+    .form-control::placeholder {
+        color: #64748b;
+    }
+    
+    .form-check-input {
+        background-color: rgba(15, 23, 42, 0.6);
+        border-color: rgba(148, 163, 184, 0.3);
+    }
+    
+    .form-check-input:checked {
+        background-color: #667eea;
+        border-color: #667eea;
+    }
+    
+    .form-check-label {
+        color: #cbd5e1;
+    }
+    
+    .info-box {
+        background: rgba(102, 126, 234, 0.1);
+        border-left: 4px solid #667eea;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1.5rem;
+    }
+    
+    .info-box p {
+        margin: 0;
+        color: #cbd5e1;
+        font-size: 0.9rem;
+    }
+    
+    .btn-create {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border: none;
+        color: white;
+        padding: 0.75rem 2rem;
+        border-radius: 12px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        width: 100%;
+    }
+    
+    .btn-create:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.5);
+        color: white;
+    }
+    
+    .btn-cancel {
+        background: rgba(102, 126, 234, 0.2);
+        border: 2px solid #667eea;
+        color: #cbd5e1;
+        padding: 0.75rem 2rem;
+        border-radius: 12px;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        width: 100%;
+        text-decoration: none;
+        display: inline-block;
+        text-align: center;
+    }
+    
+    .btn-cancel:hover {
+        background: #667eea;
+        color: white;
+        transform: translateY(-2px);
+    }
+    
+    .icon-preview {
+        font-size: 3rem;
+        text-align: center;
+        padding: 1rem;
+        background: rgba(15, 23, 42, 0.6);
+        border-radius: 10px;
+        margin-top: 0.5rem;
+        min-height: 80px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="create-server-container">
+    <div class="create-server-card">
+        <div class="create-server-header">
+            <h1 class="create-server-title">
+                <i class="fas fa-server me-2"></i>{% trans "Create Server" %}
+            </h1>
+            <p class="create-server-subtitle">
+                {% trans "Build your community and connect with others" %}
+            </p>
+        </div>
+        
+        {% if max_servers %}
+        <div class="info-box">
+            <p>
+                <i class="fas fa-info-circle me-2"></i>
+                {% trans "You have" %} {{ current_server_count }} / {{ max_servers }} {% trans "servers" %}
+            </p>
+        </div>
+        {% endif %}
+        
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="mb-4">
+                <label for="name" class="form-label">
+                    <i class="fas fa-tag me-2"></i>{% trans "Server Name" %} <span class="text-danger">*</span>
+                </label>
+                <input type="text" class="form-control" id="name" name="name" 
+                       value="{{ name|default:'' }}" required 
+                       placeholder="{% trans 'Enter server name...' %}" maxlength="100">
+                <small class="form-text text-muted">
+                    {% trans "Choose a unique name for your server" %}
+                </small>
+            </div>
+            
+            <div class="mb-4">
+                <label for="description" class="form-label">
+                    <i class="fas fa-align-left me-2"></i>{% trans "Description" %}
+                </label>
+                <textarea class="form-control" id="description" name="description" rows="3" 
+                          placeholder="{% trans 'Describe your server...' %}">{{ description|default:'' }}</textarea>
+                <small class="form-text text-muted">
+                    {% trans "Optional: Add a description to help others understand your server" %}
+                </small>
+            </div>
+            
+            <div class="mb-4">
+                <label for="icon" class="form-label">
+                    <i class="fas fa-image me-2"></i>{% trans "Icon (Emoji)" %}
+                </label>
+                <input type="text" class="form-control" id="icon" name="icon" 
+                       value="{{ icon|default:'' }}" 
+                       placeholder="🎮" maxlength="100">
+                <div class="icon-preview" id="iconPreview">
+                    {{ icon|default:"🎮" }}
+                </div>
+                <small class="form-text text-muted">
+                    {% trans "Optional: Add an emoji or icon name for your server" %}
+                </small>
+            </div>
+            
+            <div class="mb-4">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="is_private" name="is_private" 
+                           {% if is_private %}checked{% endif %}>
+                    <label class="form-check-label" for="is_private">
+                        <i class="fas fa-lock me-2"></i>{% trans "Private Server" %}
+                    </label>
+                </div>
+                <small class="form-text text-muted d-block mt-2">
+                    {% trans "Private servers require an invite code to join" %}
+                </small>
+            </div>
+            
+            <div class="info-box">
+                <p>
+                    <i class="fas fa-shield-alt me-2"></i>
+                    <strong>{% trans "Default Roles:" %}</strong><br>
+                    {% trans "• Admin" %} - {% trans "Full server management permissions" %}<br>
+                    {% trans "• Normal User" %} - {% trans "Basic permissions (send messages, join voice)" %}
+                </p>
+                <p class="mt-2 mb-0">
+                    <i class="fas fa-user-check me-2"></i>
+                    {% trans "You will automatically be added as Admin when you create the server." %}
+                </p>
+            </div>
+            
+            <div class="d-flex gap-3 mt-4">
+                <a href="{% url 'index' %}" class="btn-cancel">
+                    <i class="fas fa-times me-2"></i>{% trans "Cancel" %}
+                </a>
+                <button type="submit" class="btn btn-create">
+                    <i class="fas fa-plus me-2"></i>{% trans "Create Server" %}
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Icon preview update
+    document.getElementById('icon').addEventListener('input', function(e) {
+        const preview = document.getElementById('iconPreview');
+        preview.textContent = e.target.value || '🎮';
+    });
+</script>
+{% endblock %}
+
