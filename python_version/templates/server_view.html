@@ -2344,11 +2344,24 @@
         }
     }
     
-    // Expose functions
+    // Expose functions globally
     window.openUserProfile = openUserProfile;
     window.startPrivateMessage = startPrivateMessage;
     window.sendPrivateMessage = sendPrivateMessage;
     window.toggleScreenShare = toggleScreenShare;
     window.stopScreenShare = stopScreenShare;
+    
+    // Debug: Check if functions are defined
+    console.log('=== Script loaded ===');
+    console.log('openTextChannel:', typeof window.openTextChannel);
+    console.log('openVoiceChannel:', typeof window.openVoiceChannel);
+    
+    // If functions aren't defined, there was a syntax error above
+    if (typeof window.openTextChannel === 'undefined') {
+        console.error('ERROR: openTextChannel is not defined! Check for syntax errors above.');
+    }
+    if (typeof window.openVoiceChannel === 'undefined') {
+        console.error('ERROR: openVoiceChannel is not defined! Check for syntax errors above.');
+    }
 </script>
 {% endblock %}
