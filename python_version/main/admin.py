@@ -20,10 +20,10 @@ class MiniGameAdmin(admin.ModelAdmin):
     MiniGame modeli için gelişmiş admin ayarları.
     Oyunları dinamik olarak eklemek ve yönetmek için optimize edilmiş.
     """
-    list_display = ['name', 'slug', 'min_players', 'max_players', 'is_active', 'active_sessions_count', 'created_at']
-    list_filter = ['is_active', 'min_players', 'max_players', 'created_at']
+    list_display = ['name', 'slug', 'min_players', 'max_players', 'is_active', 'active_sessions_count']
+    list_filter = ['is_active', 'min_players', 'max_players']
     search_fields = ['name', 'description', 'slug']
-    readonly_fields = ['slug', 'created_at', 'updated_at']
+    readonly_fields = ['slug']
     ordering = ['name']
     
     fieldsets = (
@@ -34,7 +34,7 @@ class MiniGameAdmin(admin.ModelAdmin):
             'fields': ('min_players', 'max_players')
         }),
         ('Sistem Bilgileri', {
-            'fields': ('created_at', 'updated_at'),
+            'fields': (),
             'classes': ('collapse',)
         }),
     )
@@ -315,73 +315,67 @@ class ChatMessageAdmin(admin.ModelAdmin):
 @admin.register(Workflow)
 class WorkflowAdmin(admin.ModelAdmin):
     """Admin interface for Workflow model"""
-    list_display = ('name', 'version', 'category', 'is_active', 'is_public', 'execution_count', 'success_rate_display', 'created_by', 'updated_at')
-    list_filter = ('is_active', 'is_public', 'category', 'created_at')
-    search_fields = ('name', 'slug', 'description', 'category', 'tags')
+    list_display = ('name', 'agent', 'slug', 'is_active', 'execution_count', 'created_at')
+    list_filter = ('is_active', 'agent', 'created_at')
+    search_fields = ('name', 'slug', 'description')
     prepopulated_fields = {'slug': ('name',)}
-    readonly_fields = ('slug', 'created_at', 'updated_at', 'last_executed_at', 'execution_count', 'success_count', 'failure_count', 'success_rate_display')
+    readonly_fields = ('slug', 'created_at')
     filter_horizontal = ()
     date_hierarchy = 'created_at'
     
     fieldsets = (
         ('Basic Information', {
-            'fields': ('name', 'slug', 'description', 'category', 'tags')
+            'fields': ('agent', 'name', 'slug', 'description')
         }),
         ('Workflow Definition', {
-            'fields': ('definition',),
-            'description': 'JSON structure defining workflow steps, variables, and triggers'
+            'fields': ('steps',),
+            'description': 'JSON structure defining workflow steps'
         }),
         ('Settings', {
-            'fields': ('version', 'is_active', 'is_public', 'created_by')
+            'fields': ('is_active',)
         }),
         ('Statistics', {
-            'fields': ('execution_count', 'success_count', 'failure_count', 'success_rate_display', 'last_executed_at'),
+            'fields': ('execution_count',),
             'classes': ('collapse',)
         }),
         ('Timestamps', {
-            'fields': ('created_at', 'updated_at'),
+            'fields': ('created_at',),
             'classes': ('collapse',)
         }),
     )
     
-    def success_rate_display(self, obj):
-        """Display success rate"""
-        rate = obj.success_rate
-        color = 'success' if rate >= 80 else 'warning' if rate >= 50 else 'danger'
-        return format_html('<span class="badge bg-{}">{}%</span>', color, rate)
-    success_rate_display.short_description = 'Success Rate'
+    def execution_count(self, obj):
+        """Display execution count"""
+        count = obj.executions.count()
+        return format_html('<span class="badge bg-info">{}</span>', count)
+    execution_count.short_description = 'Executions'
 
 
 @admin.register(WorkflowExecution)
 class WorkflowExecutionAdmin(admin.ModelAdmin):
     """Admin interface for WorkflowExecution model"""
-    list_display = ('execution_id_short', 'workflow', 'status_badge', 'triggered_by', 'agent_instance', 'duration_display', 'created_at')
-    list_filter = ('status', 'workflow', 'created_at')
-    search_fields = ('execution_id', 'workflow__name', 'triggered_by__username', 'error_message')
-    readonly_fields = ('execution_id', 'created_at', 'duration_display', 'is_running', 'is_completed')
-    date_hierarchy = 'created_at'
+    list_display = ('id', 'workflow', 'status_badge', 'user', 'duration_display', 'started_at')
+    list_filter = ('status', 'workflow', 'started_at')
+    search_fields = ('workflow__name', 'user__username', 'error_message')
+    readonly_fields = ('duration_display', 'is_running', 'is_completed')
+    date_hierarchy = 'started_at'
     
     fieldsets = (
         ('Execution Information', {
-            'fields': ('execution_id', 'workflow', 'status', 'triggered_by', 'agent_instance')
+            'fields': ('workflow', 'status', 'user')
         }),
         ('Execution State', {
-            'fields': ('current_step', 'input_data', 'output_data', 'execution_state')
+            'fields': ('input_data', 'output_data')
         }),
         ('Results', {
-            'fields': ('error_message', 'error_traceback', 'execution_log'),
+            'fields': ('error_message',),
             'classes': ('collapse',)
         }),
         ('Timestamps', {
-            'fields': ('created_at', 'started_at', 'completed_at', 'duration_display'),
+            'fields': ('started_at', 'completed_at', 'duration_display'),
             'classes': ('collapse',)
         }),
     )
-    
-    def execution_id_short(self, obj):
-        """Display short execution ID"""
-        return str(obj.execution_id)[:8]
-    execution_id_short.short_description = 'Execution ID'
     
     def status_badge(self, obj):
         """Display status as badge"""
@@ -398,10 +392,23 @@ class WorkflowExecutionAdmin(admin.ModelAdmin):
     
     def duration_display(self, obj):
         """Display duration"""
-        if obj.duration_seconds:
-            return f"{obj.duration_seconds:.2f}s"
+        if obj.completed_at and obj.started_at:
+            duration = (obj.completed_at - obj.started_at).total_seconds()
+            return f"{duration:.2f}s"
         return '-'
     duration_display.short_description = 'Duration'
+    
+    def is_running(self, obj):
+        """Check if execution is running"""
+        return obj.status == 'running'
+    is_running.boolean = True
+    is_running.short_description = 'Running'
+    
+    def is_completed(self, obj):
+        """Check if execution is completed"""
+        return obj.status == 'completed'
+    is_completed.boolean = True
+    is_completed.short_description = 'Completed'
 
 
 @admin.register(MemoryBank)
@@ -409,7 +416,7 @@ class MemoryBankAdmin(admin.ModelAdmin):
     """Admin interface for MemoryBank model"""
     list_display = ('title_preview', 'memory_type_badge', 'agent', 'user', 'priority_badge', 'access_count', 'relevance_score', 'created_at')
     list_filter = ('memory_type', 'priority', 'agent', 'created_at')
-    search_fields = ('title', 'content', 'tags', 'agent__name', 'user__username')
+    search_fields = ('title', 'content', 'agent__name', 'user__username')
     readonly_fields = ('created_at', 'updated_at', 'access_count', 'last_accessed_at', 'is_expired')
     date_hierarchy = 'created_at'
     filter_horizontal = ('related_memories',)
@@ -465,34 +472,40 @@ class MemoryBankAdmin(admin.ModelAdmin):
         color = colors.get(obj.priority, 'secondary')
         return format_html('<span class="badge bg-{}">{}</span>', color, obj.get_priority_display())
     priority_badge.short_description = 'Priority'
+    
+    def is_expired(self, obj):
+        """Check if memory is expired"""
+        if obj.expires_at:
+            from django.utils import timezone
+            return timezone.now() > obj.expires_at
+        return False
+    is_expired.boolean = True
+    is_expired.short_description = 'Expired'
 
 
 @admin.register(AIAgent)
 class AIAgentAdmin(admin.ModelAdmin):
     """Admin interface for AIAgent model"""
-    list_display = ('name', 'agent_type_badge', 'status_badge', 'created_by', 'is_public', 'interaction_count', 'memory_count_display', 'updated_at')
-    list_filter = ('status', 'agent_type', 'is_public', 'memory_enabled', 'created_at')
-    search_fields = ('name', 'slug', 'description', 'created_by__username')
+    list_display = ('name', 'agent_type_badge', 'is_active', 'memory_count_display', 'updated_at')
+    list_filter = ('agent_type', 'is_active', 'created_at')
+    search_fields = ('name', 'slug', 'description')
     prepopulated_fields = {'slug': ('name',)}
-    readonly_fields = ('slug', 'created_at', 'updated_at', 'last_interaction_at', 'interaction_count', 'total_tokens_used', 'memory_count_display', 'is_active')
-    filter_horizontal = ('enabled_workflows',)
+    readonly_fields = ('slug', 'created_at', 'updated_at', 'memory_count_display')
+    filter_horizontal = ()
     
     fieldsets = (
         ('Basic Information', {
             'fields': ('name', 'slug', 'description', 'agent_type')
         }),
         ('Configuration', {
-            'fields': ('config',),
-            'description': 'JSON configuration for model, parameters, system prompts, tools, etc.'
+            'fields': ('system_prompt',),
+            'description': 'System prompt for the AI agent'
         }),
         ('Settings', {
-            'fields': ('status', 'is_public', 'created_by', 'enabled_workflows')
-        }),
-        ('Memory Settings', {
-            'fields': ('memory_enabled', 'max_memory_entries', 'memory_retention_days')
+            'fields': ('is_active', 'max_memory_entries')
         }),
         ('Statistics', {
-            'fields': ('interaction_count', 'total_tokens_used', 'memory_count_display', 'last_interaction_at'),
+            'fields': ('memory_count_display',),
             'classes': ('collapse',)
         }),
         ('Timestamps', {
@@ -505,29 +518,15 @@ class AIAgentAdmin(admin.ModelAdmin):
         """Display agent type as badge"""
         colors = {
             'assistant': 'primary',
-            'workflow_automation': 'info',
+            'workflow': 'info',
             'conversational': 'success',
-            'task_orchestrator': 'warning',
-            'custom': 'secondary',
         }
         color = colors.get(obj.agent_type, 'secondary')
         return format_html('<span class="badge bg-{}">{}</span>', color, obj.get_agent_type_display())
     agent_type_badge.short_description = 'Type'
     
-    def status_badge(self, obj):
-        """Display status as badge"""
-        colors = {
-            'inactive': 'secondary',
-            'active': 'success',
-            'training': 'info',
-            'error': 'danger',
-        }
-        color = colors.get(obj.status, 'secondary')
-        return format_html('<span class="badge bg-{}">{}</span>', color, obj.get_status_display())
-    status_badge.short_description = 'Status'
-    
     def memory_count_display(self, obj):
         """Display memory count"""
-        count = obj.memory_count
+        count = obj.memories.count()
         return format_html('<span class="badge bg-info">{}</span>', count)
     memory_count_display.short_description = 'Memories'
