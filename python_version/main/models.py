@@ -16,6 +16,9 @@ class CustomUser(AbstractUser):
     """
     # Core game/profile fields
     rank_point = models.PositiveIntegerField(null=True, blank=True, default=0)
+    total_games = models.PositiveIntegerField(default=0, help_text="Total games played")
+    total_wins = models.PositiveIntegerField(default=0, help_text="Total games won")
+    total_losses = models.PositiveIntegerField(default=0, help_text="Total games lost")
     avatar_url = models.URLField(blank=True, null=True, help_text="User avatar image URL")
     bio = models.TextField(blank=True, null=True, max_length=500, help_text="User biography")
     
@@ -92,6 +95,13 @@ class CustomUser(AbstractUser):
     def get_metadata(self, key, default=None):
         """Get user metadata"""
         return self.metadata.get(key, default) if self.metadata else default
+    
+    @property
+    def win_rate(self):
+        """Calculate win rate percentage"""
+        if self.total_games == 0:
+            return 0.0
+        return round((self.total_wins * 100.0) / self.total_games, 2)
 
 
 class Server(models.Model):
@@ -475,6 +485,11 @@ class GameSession(models.Model):
     def __str__(self):
         return f"{self.game_type.name} - {self.game_id}"
 
+    @property
+    def player_count(self):
+        """Get current number of players"""
+        return self.players.count()
+    
     @property
     def is_full(self):
         return self.players.count() >= self.game_type.max_players

@@ -335,9 +335,9 @@ def voice_channel_view(request, slug):
 
     channel = get_object_or_404(VoiceChannel, slug=slug)
     
-    # Get recent chat messages (last 50)
-    recent_messages = ChatMessage.objects.filter(channel=channel).select_related('user').order_by('-created_at')[:50]
-    recent_messages = list(reversed(recent_messages))  # Reverse to show oldest first
+    # Voice channels don't have chat messages - ChatMessage only references TextChannel
+    # Return empty list for voice channels
+    recent_messages = []
     
     # Get online and all members (from the server if it exists)
     if channel.server:
@@ -362,16 +362,12 @@ def voice_channel_view(request, slug):
 
 @login_required
 def chat_messages_api(request, slug):
-    """API endpoint to fetch chat messages for a channel (TextChannel or VoiceChannel)"""
-    # Try TextChannel first, then VoiceChannel
-    channel = None
+    """API endpoint to fetch chat messages for a TextChannel only"""
+    # ChatMessage only references TextChannel, not VoiceChannel
     try:
         channel = TextChannel.objects.get(slug=slug)
     except TextChannel.DoesNotExist:
-        try:
-            channel = VoiceChannel.objects.get(slug=slug)
-        except VoiceChannel.DoesNotExist:
-            return JsonResponse({'error': 'Channel not found'}, status=404)
+        return JsonResponse({'error': 'Text channel not found'}, status=404)
     
     limit = int(request.GET.get('limit', 50))
     
