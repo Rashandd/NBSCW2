@@ -102,13 +102,20 @@ A comprehensive Django-based platform combining real-time gaming, Discord-like c
 
 ### Core Documentation
 - [Development Guide](DEVELOPMENT_GUIDE.md) - Setup and development workflow
+- [Project Structure](docs/PROJECT_STRUCTURE.md) - Project organization and structure
 - [AI Agents & Memory Bank](docs/AI_AGENTS.md) - AI agent system guide
 - [API Documentation](docs/API.md) - REST API reference
 - [Deployment Guide](docs/DEPLOYMENT.md) - Production deployment
 - [Gaming Platform](docs/GAMING.md) - Game development guide
 - [Communication System](docs/COMMUNICATION.md) - Chat and voice features
-- [PostgreSQL Setup](POSTGRESQL_SETUP.md) - Database configuration
-- [Server Structure](SERVER_STRUCTURE.md) - Server and channel system
+
+### Setup Guides
+- [PostgreSQL Setup](docs/setup/POSTGRESQL_SETUP.md) - Database configuration
+- [Quick Start Production](docs/setup/QUICK_START_PRODUCTION.md) - Production setup guide
+
+### Feature Documentation
+- [Server Structure](docs/features/SERVER_STRUCTURE.md) - Server and channel system
+- [Discord Integration](docs/features/DISCORD_INTEGRATION.md) - Discord-like features
 
 ### API Documentation
 
@@ -161,50 +168,26 @@ Content-Type: application/json
 
 ## 🏗️ Project Structure
 
+For a detailed project structure, see [PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md).
+
 ```
 NBSCW2/
-├── python_version/
+├── docs/                          # Project documentation
+│   ├── setup/                     # Setup guides
+│   ├── features/                  # Feature documentation
+│   └── [core docs]                # API, deployment, etc.
+├── examples/                      # Example configurations
+│   ├── agents/                    # AI agent examples
+│   └── workflows/                 # Workflow examples
+├── python_version/                # Main Django application
 │   ├── main/                      # Main Django app
-│   │   ├── agents/                # AI agent implementations
-│   │   │   ├── base_agent.py      # Base AI agent class
-│   │   │   └── __init__.py
-│   │   ├── api/                   # REST API endpoints
-│   │   │   ├── views.py           # API views
-│   │   │   ├── urls.py            # API URL routing
-│   │   │   └── __init__.py
-│   │   ├── integrations/          # External integrations
-│   │   │   ├── cursor_memory.py   # Cursor AI memory bank
-│   │   │   └── __init__.py
-│   │   ├── management/            # Django management commands
-│   │   │   └── commands/
-│   │   │       └── cleanup_stale_games.py
-│   │   ├── migrations/            # Database migrations
-│   │   ├── services/              # Business logic services
-│   │   │   ├── ai_agent_service.py
-│   │   │   ├── memory_bank_service.py
-│   │   │   ├── workflow_service.py
-│   │   │   └── __init__.py
-│   │   ├── templatetags/          # Custom template tags
-│   │   ├── admin.py               # Admin interface
-│   │   ├── consumers.py           # WebSocket consumers
-│   │   ├── middleware.py          # Custom middleware
-│   │   ├── models.py              # Database models
-│   │   ├── routing.py             # WebSocket routing
-│   │   ├── urls.py                # URL routing
-│   │   └── views.py               # View functions
 │   ├── python_version/            # Project settings
-│   │   ├── asgi.py                # ASGI configuration
-│   │   ├── settings.py            # Django settings
-│   │   ├── urls.py                # Root URL configuration
-│   │   └── wsgi.py                # WSGI configuration
 │   ├── static/                    # Static files
 │   ├── templates/                 # HTML templates
 │   ├── locale/                    # Translations
-│   ├── manage.py                  # Django management script
-│   └── requirements.txt           # Python dependencies
-├── .gitignore                     # Git ignore rules
-├── README.md                      # This file
-└── LICENSE                        # License file
+│   └── requirements*.txt          # Dependencies
+├── scripts/                       # Utility scripts
+└── [config files]                 # Docker, gitignore, etc.
 ```
 
 ## 🗃️ Database Models

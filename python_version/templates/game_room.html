@@ -138,8 +138,62 @@
         }
         #wheel-spinner { font-size: 100px; margin-bottom: 20px; animation: spin 1.5s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        #message-log { height: 250px; overflow-y: scroll; background: #343a40; border-radius: 0.25rem; border: 1px solid #495057; color: #f8f9fa; }
-        #message-log p { margin: 0; padding: 2px 8px; }
+        /* Alert container for game messages */
+        #game-alert-container {
+            min-height: 50px;
+        }
+        .game-alert {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            animation: slideInAlert 0.3s ease-out;
+            border-left: 4px solid;
+        }
+        .game-alert.alert-info {
+            background: rgba(13, 110, 253, 0.15);
+            border-color: #0d6efd;
+            color: #cfe2ff;
+        }
+        .game-alert.alert-success {
+            background: rgba(25, 135, 84, 0.15);
+            border-color: #198754;
+            color: #d1e7dd;
+        }
+        .game-alert.alert-warning {
+            background: rgba(255, 193, 7, 0.15);
+            border-color: #ffc107;
+            color: #fff3cd;
+        }
+        .game-alert.alert-danger {
+            background: rgba(220, 53, 69, 0.15);
+            border-color: #dc3545;
+            color: #f8d7da;
+        }
+        @keyframes slideInAlert {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .game-alert i {
+            font-size: 1.1rem;
+        }
+        .game-alert .alert-content {
+            flex: 1;
+            font-size: 0.9rem;
+        }
+        .game-alert .alert-time {
+            font-size: 0.75rem;
+            opacity: 0.7;
+            margin-left: auto;
+        }
         .player-box {
             padding: 0.75rem 1rem; border-radius: 8px; border: 2px solid transparent;
             transition: all 0.3s ease-in-out; margin-bottom: 0.5rem;
@@ -320,9 +374,12 @@
                     </div>
                     {% endif %}
 
-                    <label for="message-log" class="form-label mt-3">{% trans "Game Log:" %}</label>
-                    <div id="message-log" class="p-2"></div>
-                    <a href="{% url 'game_specific_lobby' game_slug=game.game_type.slug %}" class="btn btn-secondary mt-3 w-100">{% trans "Leave Lobby" %}</a>
+                    <!-- Alert for game status messages -->
+                    <div id="game-alert-container" class="mt-3"></div>
+                    
+                    <a href="{% url 'game_specific_lobby' game_slug=game.game_type.slug %}" class="btn btn-secondary mt-3 w-100">
+                        <i class="fas fa-door-open me-1"></i> {% trans "Leave Lobby" %}
+                    </a>
                 </div>
             </div>
         </div>
@@ -360,7 +417,7 @@
 
         const boardElement = document.getElementById('game-board');
         const turnIndicator = document.getElementById('turn-indicator');
-        const messageLog = document.getElementById('message-log');
+        const gameAlertContainer = document.getElementById('game-alert-container');
         const playerListContainer = document.getElementById('player-list-container');
         const gameOverOverlay = document.getElementById('game-over-overlay');
         const winnerNameEl = document.getElementById('winner-name');
@@ -1040,18 +1097,42 @@
             }
         }
 
-        // ... (logMessage ve createExplosion aynı) ...
+        // Improved alert system instead of log
         function logMessage(msg, type = 'info') {
-            if (!msg) return; // Boş mesajları loglama
-            let textClass = 'text-info';
-            if (type === 'danger') { textClass = 'text-danger'; }
-            else if (type === 'success') { textClass = 'text-success'; }
-            else if (type === 'warning') { textClass = 'text-warning'; }
-            const p = document.createElement('p');
-            p.classList.add('m-0', 'small', textClass);
-            p.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-            messageLog.appendChild(p);
-            messageLog.scrollTop = messageLog.scrollHeight;
+            if (!msg || !gameAlertContainer) return;
+            
+            // Remove old alerts if there are more than 5
+            const alerts = gameAlertContainer.querySelectorAll('.game-alert');
+            if (alerts.length >= 5) {
+                alerts[0].remove();
+            }
+            
+            const alert = document.createElement('div');
+            alert.className = `game-alert alert-${type}`;
+            
+            // Icon based on type
+            let icon = 'fa-info-circle';
+            if (type === 'success') icon = 'fa-check-circle';
+            else if (type === 'warning') icon = 'fa-exclamation-triangle';
+            else if (type === 'danger') icon = 'fa-times-circle';
+            
+            const time = new Date().toLocaleTimeString();
+            alert.innerHTML = `
+                <i class="fas ${icon}"></i>
+                <span class="alert-content">${msg}</span>
+                <span class="alert-time">${time}</span>
+            `;
+            
+            gameAlertContainer.appendChild(alert);
+            
+            // Auto-remove after 5 seconds for info/success, 8 seconds for warnings
+            const removeDelay = (type === 'warning' || type === 'danger') ? 8000 : 5000;
+            setTimeout(() => {
+                if (alert.parentElement) {
+                    alert.style.animation = 'slideInAlert 0.3s ease-out reverse';
+                    setTimeout(() => alert.remove(), 300);
+                }
+            }, removeDelay);
         }
         function createExplosion(cellEl, color) {
             const gameBoardContainer = document.getElementById('game-board-container');

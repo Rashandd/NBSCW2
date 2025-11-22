@@ -149,6 +149,14 @@ media/
 *.sqlite3
 *.db
 
+# Django specific
+python_version/staticfiles/
+python_version/media/
+python_version/*.sqlite3
+python_version/*.db
+python_version/__pycache__/
+python_version/**/__pycache__/
+
 # Node modules (if using frontend)
 node_modules/
 npm-debug.log

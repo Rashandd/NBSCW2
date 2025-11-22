@@ -32,23 +32,44 @@ class OnlineStatusMiddleware:
         Users are considered online if they've been active in the last 5 minutes
         """
         try:
-            # Update user's last activity (if you add this field to CustomUser)
-            # For now, we'll update ServerMember.is_online based on activity
-            
             # Get all server memberships for this user
             server_memberships = ServerMember.objects.filter(user=user)
             
-            # Mark as online (we can refine this logic later)
-            # For now, if user is authenticated and making requests, they're online
+            # Mark as online (user is making requests, so they're online)
             server_memberships.update(is_online=True)
             
-            # Note: We could implement a more sophisticated system:
-            # - Store last_activity timestamp on CustomUser
-            # - Check if last_activity is within last 5 minutes
-            # - Set is_online accordingly
+            # Also update last_activity if the field exists
+            # This helps with more accurate offline detection
+            if hasattr(user, 'last_activity'):
+                user.last_activity = timezone.now()
+                user.save(update_fields=['last_activity'])
             
         except Exception as e:
             # Don't break the request if there's an error
+            pass
+    
+    @staticmethod
+    def mark_users_offline():
+        """
+        Static method to mark users as offline if they haven't been active in 5 minutes
+        This should be called periodically (e.g., via cron or celery)
+        """
+        try:
+            five_minutes_ago = timezone.now() - timedelta(minutes=5)
+            
+            # If CustomUser has last_activity field, use it
+            # Otherwise, we'll mark all users as potentially offline
+            # and let the middleware mark them online on next request
+            offline_members = ServerMember.objects.filter(
+                is_online=True
+            ).select_related('user')
+            
+            # For now, we'll keep the simple approach:
+            # Users are marked online by middleware, and we rely on
+            # periodic cleanup or logout signals to mark them offline
+            # This is a placeholder for more sophisticated tracking
+            
+        except Exception as e:
             pass
 
 

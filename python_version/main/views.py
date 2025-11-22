@@ -142,6 +142,9 @@ def server_view(request, slug):
     # Serialize COTURN config as JSON for JavaScript
     coturn_config_json = json.dumps(coturn_config, cls=DjangoJSONEncoder)
     
+    # Exclude owner from members list (owner is shown separately)
+    members = server.members.select_related('user').exclude(user=server.owner).all()
+    
     context = {
         'server': server,
         'user': request.user,
@@ -150,7 +153,7 @@ def server_view(request, slug):
         'user_roles': user_roles,
         'text_channels': server.text_channels.all(),
         'voice_channels': server.voice_channels.all(),
-        'members': server.members.select_related('user').all(),
+        'members': members,  # Owner excluded
         'coturn_config': coturn_config,  # For template display
         'coturn_config_json': coturn_config_json,  # For JavaScript
     }
