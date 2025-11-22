@@ -260,25 +260,31 @@ def server_view(request, slug):
     
     # Get current user's member object for permission checking
     current_member = server.members.filter(user=request.user).first()
-    if server.owner == request.user:
+    is_owner = server.owner == request.user
+    
+    if is_owner:
         # Owner has all permissions, create a dummy member object
         from .models import ServerMember
         current_member = type('obj', (object,), {
-            'has_permission': lambda perm: True,
-            'can_access_channel': lambda ch: True,
+            'has_permission': lambda self, perm: True,
+            'has_perm': lambda self, perm: True,
+            'can_access_channel': lambda self, ch: True,
             'roles': server.roles.none()
         })()
+    
+    # Pre-check common permissions for template (avoids template method call issues)
+    can_manage_channels = is_owner or (current_member and current_member.has_perm('manage_channels'))
     
     # Filter channels based on permissions
     accessible_text_channels = []
     accessible_voice_channels = []
     
     for channel in server.text_channels.all():
-        if current_member and current_member.can_access_channel(channel):
+        if server.owner == request.user or (current_member and current_member.can_access_channel(channel)):
             accessible_text_channels.append(channel)
     
     for channel in server.voice_channels.all():
-        if current_member and current_member.can_access_channel(channel):
+        if server.owner == request.user or (current_member and current_member.can_access_channel(channel)):
             accessible_voice_channels.append(channel)
     
     context = {
@@ -288,6 +294,7 @@ def server_view(request, slug):
         'is_member': is_member,
         'user_roles': user_roles,
         'current_member': current_member,
+        'can_manage_channels': can_manage_channels,  # Pre-checked permission for template
         'text_channels': accessible_text_channels,  # Filtered by permissions
         'voice_channels': accessible_voice_channels,  # Filtered by permissions
         'members': members,  # Owner included and shown first

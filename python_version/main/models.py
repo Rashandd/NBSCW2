@@ -298,6 +298,10 @@ class ServerMember(models.Model):
                 return True
         return False
     
+    def has_perm(self, permission_name):
+        """Alias for has_permission - cleaner template usage"""
+        return self.has_permission(permission_name)
+    
     def can_access_channel(self, channel):
         """Check if member can access a channel based on allowed_roles"""
         if self.server.owner == self.user:
