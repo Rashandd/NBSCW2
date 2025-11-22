@@ -14,6 +14,9 @@ urlpatterns = [
     path('server/<slug:server_slug>/channel/<slug:channel_slug>/', views.channel_view, name='channel_view'),
     path('oda/<slug:slug>/', views.voice_channel_view, name='odasayfasi'),  # Legacy support
     path('api/chat/<slug:slug>/messages/', views.chat_messages_api, name='chat_messages_api'),
+    path('api/user/<str:username>/profile/', views.user_profile_api, name='user_profile_api'),
+    path('api/private-messages/<str:username>/', views.private_messages_api, name='private_messages_api'),
+    path('api/private-messages/<str:username>/send/', views.send_private_message_api, name='send_private_message_api'),
     path('settings/', views.settings_view, name='settings'),
 
     path('game-lobby/', views.all_games_lobby, name='all_games_lobby'),

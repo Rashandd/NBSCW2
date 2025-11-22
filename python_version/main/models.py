@@ -13,39 +13,13 @@ class CustomUser(AbstractUser):
     # AbstractUser, username, first_name, last_name, email, is_staff, is_active, date_joined gibi alanları zaten içerir.
 
     rank_point = models.PositiveIntegerField(null=True, blank=True, default=0)
-    total_wins = models.PositiveIntegerField(default=0, verbose_name="Toplam Kazanma")
-    total_losses = models.PositiveIntegerField(default=0, verbose_name="Toplam Kayıp")
-    total_games = models.PositiveIntegerField(default=0, verbose_name="Toplam Oyun")
-    # Oyun bazlı istatistikler:
-    # {
-    #   "dice-wars": {"rank_point": 120, "wins": 4, "losses": 2, "games": 6},
-    #   "another-game": {...}
-    # }
-    per_game_stats = JSONField(default=dict, verbose_name="Oyun Bazlı İstatistikler")
-    user_settings = JSONField(default=dict, verbose_name="Kullanıcı Ayarları")
-    
-    @property
-    def win_rate(self):
-        """Kazanma oranını hesaplar (0-100)"""
-        if self.total_games == 0:
-            return 0.0
-        return round((self.total_wins / self.total_games) * 100, 2)
-    groups = models.ManyToManyField(
-        'auth.Group',
-        related_name='custom_user_groups',  # Burayı değiştirdik
-        blank=True,
-        help_text=('The groups this user belongs to. A user will get all permissions '
-                   'granted to each of their groups.'),
-        verbose_name=('groups'),
-    )
+    user_settings = models.JSONField(default=dict, blank=True, null=True)
+    last_activity = models.DateTimeField(auto_now=True, null=True, blank=True)
 
-    user_permissions = models.ManyToManyField(
-        'auth.Permission',
-        related_name='custom_user_permissions',  # Burayı değiştirdik
-        blank=True,
-        help_text='Specific permissions for this user.',
-        verbose_name=('user permissions'),
-    )
+    class Meta:
+        verbose_name = "User"
+        verbose_name_plural = "Users"
+
     def __str__(self):
         # Admin panelinde ve diğer yerlerde nasıl görüneceğini belirler
         return self.username
@@ -109,6 +83,29 @@ class ServerMember(models.Model):
 
     def get_display_name(self):
         return self.nickname or self.user.username
+    
+    def has_permission(self, permission_name):
+        """Check if member has a specific permission through their roles"""
+        if self.server.owner == self.user:
+            return True  # Owner has all permissions
+        
+        for role in self.roles.all():
+            if role.permissions.get(permission_name, False):
+                return True
+        return False
+    
+    def can_access_channel(self, channel):
+        """Check if member can access a channel based on allowed_roles"""
+        if self.server.owner == self.user:
+            return True  # Owner can access all channels
+        
+        # If channel has no allowed_roles, everyone can access
+        if hasattr(channel, 'allowed_roles') and channel.allowed_roles.exists():
+            # Check if user has any of the allowed roles
+            user_roles = self.roles.all()
+            return channel.allowed_roles.filter(id__in=user_roles.values_list('id', flat=True)).exists()
+        
+        return True  # Default: accessible to all
 
 
 class TextChannel(models.Model):
@@ -119,6 +116,7 @@ class TextChannel(models.Model):
     description = models.TextField(blank=True, null=True)
     position = models.IntegerField(default=0)
     is_private = models.BooleanField(default=False)
+    allowed_roles = models.ManyToManyField(ServerRole, blank=True, related_name='text_channels', help_text="Roles that can access this channel. Empty = all roles")
     created_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -144,6 +142,7 @@ class VoiceChannel(models.Model):
     position = models.IntegerField(default=0)
     user_limit = models.IntegerField(default=0, help_text="0 = unlimited")
     is_private = models.BooleanField(default=False)
+    allowed_roles = models.ManyToManyField(ServerRole, blank=True, related_name='voice_channels', help_text="Roles that can access this channel. Empty = all roles")
     created_at = models.DateTimeField(auto_now=True)
 
     class Meta:
@@ -161,11 +160,11 @@ class VoiceChannel(models.Model):
 
 
 class ChatMessage(models.Model):
-    """Chat messages stored in text channels"""
+    """Messages in text channels"""
     channel = models.ForeignKey(TextChannel, on_delete=models.CASCADE, related_name='messages')
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='chat_messages')
     content = models.TextField()
-    created_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
     edited_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
@@ -175,38 +174,52 @@ class ChatMessage(models.Model):
         ]
 
     def __str__(self):
-        if self.channel:
-            return f"{self.user.username} in #{self.channel.name}: {self.content[:50]}"
-        return f"{self.user.username}: {self.content[:50]}"
+        return f"{self.user.username} in {self.channel.name}: {truncatechars(self.content, 50)}"
 
 
+# Private Message System
+class PrivateConversation(models.Model):
+    """Private conversation between two users"""
+    participants = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='private_conversations')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        return f"Private: {', '.join([p.username for p in self.participants.all()])}"
 
 
-# 5x5'lik boş bir tahta oluşturan varsayılan fonksiyon
-def default_board():
-    return [[None for _ in range(5)] for _ in range(5)]
-    # Her hücre: { 'owner': 'username', 'count': 2 } veya None olabilir
+class PrivateMessage(models.Model):
+    """Private messages between users"""
+    conversation = models.ForeignKey(PrivateConversation, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='sent_private_messages')
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    edited_at = models.DateTimeField(null=True, blank=True)
+    is_read = models.BooleanField(default=False)
+
+    class Meta:
+        ordering = ['created_at']
+        indexes = [
+            models.Index(fields=['conversation', 'created_at']),
+        ]
+
+    def __str__(self):
+        return f"{self.sender.username}: {truncatechars(self.content, 50)}"
 
 
 class MiniGame(models.Model):
-    name = models.CharField(max_length=100, unique=True, verbose_name="Oyun Adı")
-    slug = models.SlugField(max_length=100, unique=True, editable=False)
-    description = models.TextField(blank=True, null=True, verbose_name="Açıklama")
-    min_players = models.PositiveSmallIntegerField(default=2, verbose_name="Min. Oyuncu")
-    max_players = models.PositiveSmallIntegerField(default=2, verbose_name="Max. Oyuncu")
-    is_active = models.BooleanField(default=True, verbose_name="Aktif")
-    created_at = models.DateTimeField(auto_now=True, verbose_name="Oluşturulma Tarihi")
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="Güncellenme Tarihi")
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(unique=True)
+    description = models.TextField(blank=True, null=True)
+    min_players = models.PositiveIntegerField(default=2)
+    max_players = models.PositiveIntegerField(default=4)
+    is_active = models.BooleanField(default=True)
 
     class Meta:
-        verbose_name = "Mini Oyun"
-        verbose_name_plural = "Mini Oyunlar"
         ordering = ['name']
-
-    def save(self, *args, **kwargs):
-        if not self.slug:
-            self.slug = slugify(self.name)
-        super().save(*args, **kwargs)
 
     def __str__(self):
         return self.name
@@ -262,385 +275,127 @@ class GameSession(models.Model):
         related_name='rematch_children'
     )
 
-    @property
-    def player_count(self):
-        return self.players.count()
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.game_type.name} - {self.game_id}"
 
     @property
     def is_full(self):
         return self.players.count() >= self.game_type.max_players
 
-    @property
-    def is_ready_to_start(self):
-        return self.players.count() >= self.game_type.min_players
+
+# AI Agent Models
+class AIAgent(models.Model):
+    """AI Agent configuration"""
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(unique=True)
+    description = models.TextField(blank=True, null=True)
+    agent_type = models.CharField(
+        max_length=50,
+        choices=[
+            ('assistant', 'Assistant'),
+            ('workflow', 'Workflow Automation'),
+            ('conversational', 'Conversational'),
+        ],
+        default='assistant'
+    )
+    system_prompt = models.TextField(blank=True, null=True)
+    is_active = models.BooleanField(default=True)
+    max_memory_entries = models.PositiveIntegerField(default=1000, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['name']
 
     def __str__(self):
-        id_str = str(self.game_id)
-        truncated_id = truncatechars(id_str, 8)
-        return f"Masa {truncated_id}"
+        return self.name
 
-
-# ============================================================================
-# AI AGENT & WORKFLOW REPOSITORY MODELS
-# ============================================================================
 
 class Workflow(models.Model):
-    """
-    Workflow definitions that can be executed by AI agents
-    Stores workflow templates, steps, and configurations
-    """
-    name = models.CharField(max_length=200, unique=True, verbose_name="Workflow Name")
-    slug = models.SlugField(max_length=200, unique=True, editable=False)
-    description = models.TextField(blank=True, null=True, verbose_name="Description")
-    
-    # Workflow definition as JSON
-    # Structure: {
-    #   "steps": [
-    #     {"id": "step1", "type": "action", "action": "send_message", "params": {...}},
-    #     {"id": "step2", "type": "condition", "condition": "...", "then": "...", "else": "..."}
-    #   ],
-    #   "variables": {...},
-    #   "triggers": [...]
-    # }
-    definition = models.JSONField(default=dict, verbose_name="Workflow Definition")
-    
-    # Workflow metadata
-    version = models.CharField(max_length=50, default="1.0.0", verbose_name="Version")
-    is_active = models.BooleanField(default=True, verbose_name="Active")
-    is_public = models.BooleanField(default=False, verbose_name="Public Workflow")
-    
-    # Ownership and permissions
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='created_workflows',
-        verbose_name="Created By"
-    )
-    
-    # Categories and tags
-    category = models.CharField(max_length=100, blank=True, null=True, verbose_name="Category")
-    tags = models.JSONField(default=list, blank=True, verbose_name="Tags")
-    
-    # Timestamps
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")
-    last_executed_at = models.DateTimeField(null=True, blank=True, verbose_name="Last Executed At")
-    
-    # Execution statistics
-    execution_count = models.PositiveIntegerField(default=0, verbose_name="Execution Count")
-    success_count = models.PositiveIntegerField(default=0, verbose_name="Success Count")
-    failure_count = models.PositiveIntegerField(default=0, verbose_name="Failure Count")
-    
+    """Workflow definition for automation"""
+    agent = models.ForeignKey(AIAgent, on_delete=models.CASCADE, related_name='workflows')
+    name = models.CharField(max_length=100)
+    slug = models.SlugField()
+    description = models.TextField(blank=True, null=True)
+    steps = models.JSONField(default=list, help_text="List of workflow steps")
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
     class Meta:
-        verbose_name = "Workflow"
-        verbose_name_plural = "Workflows"
-        ordering = ['-updated_at', 'name']
-        indexes = [
-            models.Index(fields=['is_active', 'is_public']),
-            models.Index(fields=['category']),
-            models.Index(fields=['created_by']),
-        ]
-    
-    def save(self, *args, **kwargs):
-        if not self.slug:
-            self.slug = slugify(self.name)
-        super().save(*args, **kwargs)
-    
+        ordering = ['name']
+        unique_together = ('agent', 'slug')
+
     def __str__(self):
-        return f"{self.name} v{self.version}"
-    
-    @property
-    def success_rate(self):
-        """Calculate success rate percentage"""
-        total = self.execution_count
-        if total == 0:
-            return 0.0
-        return round((self.success_count / total) * 100, 2)
+        return f"{self.agent.name} - {self.name}"
 
 
 class WorkflowExecution(models.Model):
-    """
-    Tracks individual workflow executions
-    Stores execution state, results, and logs
-    """
-    STATUS_CHOICES = [
-        ('pending', 'Pending'),
-        ('running', 'Running'),
-        ('completed', 'Completed'),
-        ('failed', 'Failed'),
-        ('cancelled', 'Cancelled'),
-    ]
-    
-    workflow = models.ForeignKey(
-        Workflow,
-        on_delete=models.CASCADE,
-        related_name='executions',
-        verbose_name="Workflow"
+    """Workflow execution tracking"""
+    workflow = models.ForeignKey(Workflow, on_delete=models.CASCADE, related_name='executions')
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='workflow_executions', null=True, blank=True)
+    status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending', 'Pending'),
+            ('running', 'Running'),
+            ('completed', 'Completed'),
+            ('failed', 'Failed'),
+        ],
+        default='pending'
     )
-    
-    execution_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    
-    # Execution context
-    triggered_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='triggered_workflows',
-        verbose_name="Triggered By"
-    )
-    
-    agent_instance = models.ForeignKey(
-        'AIAgent',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='workflow_executions',
-        verbose_name="AI Agent Instance"
-    )
-    
-    # Execution state
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name="Status")
-    current_step = models.CharField(max_length=100, blank=True, null=True, verbose_name="Current Step")
-    
-    # Input/output data
-    input_data = models.JSONField(default=dict, blank=True, verbose_name="Input Data")
-    output_data = models.JSONField(default=dict, blank=True, verbose_name="Output Data")
-    execution_state = models.JSONField(default=dict, blank=True, verbose_name="Execution State")
-    
-    # Error handling
-    error_message = models.TextField(blank=True, null=True, verbose_name="Error Message")
-    error_traceback = models.TextField(blank=True, null=True, verbose_name="Error Traceback")
-    
-    # Timestamps
-    started_at = models.DateTimeField(null=True, blank=True, verbose_name="Started At")
-    completed_at = models.DateTimeField(null=True, blank=True, verbose_name="Completed At")
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
-    
-    # Execution metadata
-    execution_log = models.JSONField(default=list, blank=True, verbose_name="Execution Log")
-    duration_seconds = models.FloatField(null=True, blank=True, verbose_name="Duration (seconds)")
-    
+    input_data = models.JSONField(default=dict)
+    output_data = models.JSONField(default=dict, null=True, blank=True)
+    error_message = models.TextField(null=True, blank=True)
+    started_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
     class Meta:
-        verbose_name = "Workflow Execution"
-        verbose_name_plural = "Workflow Executions"
-        ordering = ['-created_at']
-        indexes = [
-            models.Index(fields=['workflow', 'status']),
-            models.Index(fields=['triggered_by']),
-            models.Index(fields=['created_at']),
-        ]
-    
+        ordering = ['-started_at']
+
     def __str__(self):
-        return f"Execution {str(self.execution_id)[:8]} - {self.workflow.name} - {self.status}"
-    
-    @property
-    def is_running(self):
-        return self.status == 'running'
-    
-    @property
-    def is_completed(self):
-        return self.status in ['completed', 'failed', 'cancelled']
+        return f"{self.workflow.name} - {self.status}"
 
 
 class MemoryBank(models.Model):
-    """
-    Memory storage for AI agents
-    Stores conversations, context, knowledge, and agent memories
-    """
-    MEMORY_TYPES = [
-        ('conversation', 'Conversation'),
-        ('context', 'Context'),
-        ('knowledge', 'Knowledge'),
-        ('episodic', 'Episodic'),
-        ('semantic', 'Semantic'),
-        ('working', 'Working Memory'),
-    ]
-    
-    PRIORITY_LEVELS = [
-        (1, 'Low'),
-        (2, 'Normal'),
-        (3, 'High'),
-        (4, 'Critical'),
-    ]
-    
-    # Basic information
-    title = models.CharField(max_length=500, verbose_name="Title")
-    content = models.TextField(verbose_name="Content")
-    memory_type = models.CharField(max_length=50, choices=MEMORY_TYPES, default='context', verbose_name="Memory Type")
-    
-    # Association with agent and user
-    agent = models.ForeignKey(
-        'AIAgent',
-        on_delete=models.CASCADE,
-        related_name='memories',
-        null=True,
-        blank=True,
-        verbose_name="AI Agent"
+    """AI memory storage with semantic search capabilities"""
+    agent = models.ForeignKey(AIAgent, on_delete=models.CASCADE, related_name='memories', null=True, blank=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='ai_memories', null=True, blank=True)
+    title = models.CharField(max_length=200)
+    content = models.TextField()
+    memory_type = models.CharField(
+        max_length=50,
+        choices=[
+            ('conversation', 'Conversation'),
+            ('context', 'Context'),
+            ('knowledge', 'Knowledge'),
+            ('preference', 'Preference'),
+        ],
+        default='context'
     )
-    
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name='agent_memories',
-        null=True,
-        blank=True,
-        verbose_name="User"
-    )
-    
-    # Context and metadata
-    context = models.JSONField(default=dict, blank=True, verbose_name="Context Data")
-    tags = models.JSONField(default=list, blank=True, verbose_name="Tags")
-    priority = models.IntegerField(choices=PRIORITY_LEVELS, default=2, verbose_name="Priority")
-    
-    # Memory relationships
-    related_memories = models.ManyToManyField(
-        'self',
-        symmetrical=False,
-        blank=True,
-        related_name='referenced_by',
-        verbose_name="Related Memories"
-    )
-    
-    # Source information
-    source_type = models.CharField(max_length=100, blank=True, null=True, verbose_name="Source Type")
-    source_id = models.CharField(max_length=200, blank=True, null=True, verbose_name="Source ID")
-    
-    # Access and relevance
-    access_count = models.PositiveIntegerField(default=0, verbose_name="Access Count")
-    relevance_score = models.FloatField(default=1.0, verbose_name="Relevance Score")
-    last_accessed_at = models.DateTimeField(null=True, blank=True, verbose_name="Last Accessed At")
-    
-    # Embedding vector for semantic search (optional, stored as JSON array)
-    embedding = models.JSONField(default=list, blank=True, null=True, verbose_name="Embedding Vector")
-    
-    # Timestamps
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")
-    expires_at = models.DateTimeField(null=True, blank=True, verbose_name="Expires At")
-    
+    context = models.JSONField(default=dict, blank=True)
+    tags = models.JSONField(default=list, blank=True)
+    priority = models.IntegerField(default=2, help_text="1=Critical, 2=High, 3=Medium, 4=Low")
+    relevance_score = models.FloatField(default=0.0)
+    access_count = models.PositiveIntegerField(default=0)
+    last_accessed_at = models.DateTimeField(null=True, blank=True)
+    source_type = models.CharField(max_length=50, null=True, blank=True, help_text="e.g., 'conversation', 'workflow', 'manual'")
+    source_id = models.CharField(max_length=100, null=True, blank=True)
+    embedding = models.JSONField(null=True, blank=True, help_text="Vector embedding for semantic search")
+    expires_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    related_memories = models.ManyToManyField('self', symmetrical=True, blank=True)
+
     class Meta:
-        verbose_name = "Memory Bank Entry"
-        verbose_name_plural = "Memory Bank Entries"
-        ordering = ['-updated_at', '-relevance_score']
+        ordering = ['-relevance_score', '-updated_at']
         indexes = [
             models.Index(fields=['agent', 'memory_type']),
-            models.Index(fields=['user']),
-            models.Index(fields=['memory_type', 'relevance_score']),
+            models.Index(fields=['user', 'memory_type']),
             models.Index(fields=['created_at']),
-            models.Index(fields=['expires_at']),
         ]
-    
-    def __str__(self):
-        preview = self.content[:50] + '...' if len(self.content) > 50 else self.content
-        return f"[{self.memory_type}] {self.title}: {preview}"
-    
-    @property
-    def is_expired(self):
-        """Check if memory has expired"""
-        if self.expires_at:
-            from django.utils import timezone
-            return timezone.now() > self.expires_at
-        return False
 
-
-class AIAgent(models.Model):
-    """
-    AI Agent configurations and instances
-    Represents an AI agent that can execute workflows and use memory bank
-    """
-    AGENT_TYPES = [
-        ('assistant', 'Assistant'),
-        ('workflow_automation', 'Workflow Automation'),
-        ('conversational', 'Conversational'),
-        ('task_orchestrator', 'Task Orchestrator'),
-        ('custom', 'Custom'),
-    ]
-    
-    STATUS_CHOICES = [
-        ('inactive', 'Inactive'),
-        ('active', 'Active'),
-        ('training', 'Training'),
-        ('error', 'Error'),
-    ]
-    
-    # Basic information
-    name = models.CharField(max_length=200, unique=True, verbose_name="Agent Name")
-    slug = models.SlugField(max_length=200, unique=True, editable=False)
-    description = models.TextField(blank=True, null=True, verbose_name="Description")
-    agent_type = models.CharField(max_length=50, choices=AGENT_TYPES, default='assistant', verbose_name="Agent Type")
-    
-    # Configuration
-    config = models.JSONField(default=dict, blank=True, verbose_name="Agent Configuration")
-    # Example config structure:
-    # {
-    #   "model": "gpt-4",
-    #   "temperature": 0.7,
-    #   "max_tokens": 2000,
-    #   "system_prompt": "...",
-    #   "tools": ["workflow_executor", "memory_bank"],
-    #   "parameters": {...}
-    # }
-    
-    # Ownership
-    created_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='created_agents',
-        verbose_name="Created By"
-    )
-    
-    # Status and capabilities
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='inactive', verbose_name="Status")
-    is_public = models.BooleanField(default=False, verbose_name="Public Agent")
-    enabled_workflows = models.ManyToManyField(
-        Workflow,
-        blank=True,
-        related_name='enabled_agents',
-        verbose_name="Enabled Workflows"
-    )
-    
-    # Memory and context settings
-    memory_enabled = models.BooleanField(default=True, verbose_name="Memory Enabled")
-    max_memory_entries = models.PositiveIntegerField(default=1000, verbose_name="Max Memory Entries")
-    memory_retention_days = models.PositiveIntegerField(null=True, blank=True, verbose_name="Memory Retention (days)")
-    
-    # Statistics
-    interaction_count = models.PositiveIntegerField(default=0, verbose_name="Interaction Count")
-    total_tokens_used = models.PositiveIntegerField(default=0, verbose_name="Total Tokens Used")
-    last_interaction_at = models.DateTimeField(null=True, blank=True, verbose_name="Last Interaction At")
-    
-    # Timestamps
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Created At")
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="Updated At")
-    
-    class Meta:
-        verbose_name = "AI Agent"
-        verbose_name_plural = "AI Agents"
-        ordering = ['-updated_at', 'name']
-        indexes = [
-            models.Index(fields=['status', 'is_public']),
-            models.Index(fields=['agent_type']),
-            models.Index(fields=['created_by']),
-        ]
-    
-    def save(self, *args, **kwargs):
-        if not self.slug:
-            self.slug = slugify(self.name)
-        super().save(*args, **kwargs)
-    
     def __str__(self):
-        return f"{self.name} ({self.agent_type})"
-    
-    @property
-    def is_active(self):
-        return self.status == 'active'
-    
-    @property
-    def memory_count(self):
-        """Get count of associated memories"""
-        return self.memories.count() if hasattr(self, 'memories') else 0
+        return f"{self.title} ({self.memory_type})"

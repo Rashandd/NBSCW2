@@ -158,17 +158,7 @@
         </div>
     </nav>
 
-    {% if 'server_view' in request.resolver_match.url_name %}
-        {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert" style="position: fixed; top: 60px; left: 50%; transform: translateX(-50%); z-index: 9999; min-width: 300px;">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-        {% endfor %}
-        {% block content %}
-        {% endblock %}
-    {% else %}
-    <main class="container mt-4">
+    <main class="{% if 'server_view' in request.resolver_match.url_name %}no-container{% else %}container{% endif %} mt-4">
         {% for message in messages %}
         <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
             {{ message }}
@@ -179,117 +169,27 @@
         {% block content %}
         {% endblock %}
     </main>
-    {% endif %}
     
-    <!-- Global Voice Call Component (works across all pages) -->
-    {% if user.is_authenticated %}
-    <div id="global-voice-call" style="display: none; position: fixed; bottom: 1rem; right: 1rem; z-index: 10000; background: #2f3136; border-radius: 12px; padding: 1rem; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5); border: 1px solid #202225; min-width: 300px;">
-        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <i class="fas fa-phone-alt" style="color: #5865f2;"></i>
-                <span style="color: #ffffff; font-weight: 600; font-size: 0.9375rem;" id="global-voice-channel-name">Voice Channel</span>
-            </div>
-            <button onclick="closeGlobalVoiceCall()" style="background: transparent; border: none; color: #b9bbbe; cursor: pointer; padding: 0.25rem;">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <div style="display: flex; gap: 0.5rem; justify-content: center;">
-            <button id="global-mic-btn" onclick="toggleGlobalMic()" style="width: 40px; height: 40px; border-radius: 50%; background: #3c3f44; border: none; color: #b9bbbe; cursor: pointer;">
-                <i class="fas fa-microphone"></i>
-            </button>
-            <button id="global-video-btn" onclick="toggleGlobalVideo()" style="width: 40px; height: 40px; border-radius: 50%; background: #3c3f44; border: none; color: #b9bbbe; cursor: pointer;">
-                <i class="fas fa-video"></i>
-            </button>
-            <button onclick="leaveGlobalVoiceCall()" style="width: 40px; height: 40px; border-radius: 50%; background: #ed4245; border: none; color: #ffffff; cursor: pointer;">
-                <i class="fas fa-phone-slash"></i>
-            </button>
-        </div>
-    </div>
-    
-    <script>
-        // Global voice call state
-        let globalVoiceCallActive = false;
-        let globalVoiceChannelSlug = null;
-        let globalVoiceSocket = null;
-        let globalLocalStream = null;
-        let globalPeerConnections = {};
-        
-        function showGlobalVoiceCall(channelName, channelSlug) {
-            globalVoiceCallActive = true;
-            globalVoiceChannelSlug = channelSlug;
-            document.getElementById('global-voice-channel-name').textContent = channelName;
-            document.getElementById('global-voice-call').style.display = 'block';
-            // Initialize voice connection
-            initializeGlobalVoice();
+    <style>
+        /* Allow full-width for server view */
+        main.no-container {
+            max-width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
         }
         
-        function closeGlobalVoiceCall() {
-            leaveGlobalVoiceCall();
+        body:has(.server-container) main {
+            max-width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
         }
         
-        function leaveGlobalVoiceCall() {
-            // Cleanup
-            if (globalLocalStream) {
-                globalLocalStream.getTracks().forEach(track => track.stop());
-                globalLocalStream = null;
-            }
-            Object.values(globalPeerConnections).forEach(pc => pc.close());
-            globalPeerConnections = {};
-            if (globalVoiceSocket) {
-                globalVoiceSocket.close();
-                globalVoiceSocket = null;
-            }
-            document.getElementById('global-voice-call').style.display = 'none';
-            globalVoiceCallActive = false;
-            globalVoiceChannelSlug = null;
+        body:has(.server-container) {
+            overflow: hidden;
         }
-        
-        async function initializeGlobalVoice() {
-            try {
-                globalLocalStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
-                connectGlobalVoiceWebSocket();
-            } catch (error) {
-                console.error('Error accessing microphone:', error);
-            }
-        }
-        
-        function connectGlobalVoiceWebSocket() {
-            if (!globalVoiceChannelSlug) return;
-            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${wsProtocol}//${window.location.host}/ws/voice/?channel_slug=${globalVoiceChannelSlug}&channel_type=voice`;
-            globalVoiceSocket = new WebSocket(wsUrl);
-            // Handle WebSocket events...
-        }
-        
-        function toggleGlobalMic() {
-            const btn = document.getElementById('global-mic-btn');
-            if (globalLocalStream) {
-                const audioTracks = globalLocalStream.getAudioTracks();
-                const isMuted = audioTracks[0]?.enabled;
-                audioTracks.forEach(track => track.enabled = !isMuted);
-                btn.style.background = isMuted ? '#ed4245' : '#3c3f44';
-                btn.querySelector('i').className = isMuted ? 'fas fa-microphone-slash' : 'fas fa-microphone';
-            }
-        }
-        
-        function toggleGlobalVideo() {
-            const btn = document.getElementById('global-video-btn');
-            if (globalLocalStream) {
-                const videoTracks = globalLocalStream.getVideoTracks();
-                if (videoTracks.length > 0) {
-                    const isEnabled = videoTracks[0]?.enabled;
-                    videoTracks.forEach(track => track.enabled = !isEnabled);
-                    btn.style.background = isEnabled ? '#ed4245' : '#3c3f44';
-                    btn.querySelector('i').className = isEnabled ? 'fas fa-video-slash' : 'fas fa-video';
-                }
-            }
-        }
-        
-        // Expose globally
-        window.showGlobalVoiceCall = showGlobalVoiceCall;
-        window.leaveGlobalVoiceCall = leaveGlobalVoiceCall;
-    </script>
-    {% endif %}
+    </style>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
     

@@ -13,7 +13,7 @@ from django.utils.translation import gettext_lazy as _
 from django.http import JsonResponse
 from django.urls import reverse
 
-from .models import CustomUser, Server, ServerRole, ServerMember, TextChannel, VoiceChannel, GameSession, MiniGame, ChatMessage
+from .models import CustomUser, Server, ServerRole, ServerMember, TextChannel, VoiceChannel, GameSession, MiniGame, ChatMessage, PrivateConversation, PrivateMessage
 from django.utils.text import slugify
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.forms import AuthenticationForm
@@ -258,14 +258,38 @@ def server_view(request, slug):
         )
     ).order_by('-is_owner_field', 'joined_at')
     
+    # Get current user's member object for permission checking
+    current_member = server.members.filter(user=request.user).first()
+    if server.owner == request.user:
+        # Owner has all permissions, create a dummy member object
+        from .models import ServerMember
+        current_member = type('obj', (object,), {
+            'has_permission': lambda perm: True,
+            'can_access_channel': lambda ch: True,
+            'roles': server.roles.none()
+        })()
+    
+    # Filter channels based on permissions
+    accessible_text_channels = []
+    accessible_voice_channels = []
+    
+    for channel in server.text_channels.all():
+        if current_member and current_member.can_access_channel(channel):
+            accessible_text_channels.append(channel)
+    
+    for channel in server.voice_channels.all():
+        if current_member and current_member.can_access_channel(channel):
+            accessible_voice_channels.append(channel)
+    
     context = {
         'server': server,
         'user': request.user,
         'is_owner': server.owner == request.user,
         'is_member': is_member,
         'user_roles': user_roles,
-        'text_channels': server.text_channels.all(),
-        'voice_channels': server.voice_channels.all(),
+        'current_member': current_member,
+        'text_channels': accessible_text_channels,  # Filtered by permissions
+        'voice_channels': accessible_voice_channels,  # Filtered by permissions
         'members': members,  # Owner included and shown first
         'coturn_config': coturn_config,  # For template display
         'coturn_config_json': coturn_config_json,  # For JavaScript
@@ -284,6 +308,13 @@ def channel_view(request, server_slug, channel_slug):
     if not is_member and server.is_private:
         messages.error(request, _("You don't have access to this server."))
         return redirect('index')
+    
+    # Check channel permissions
+    member = server.members.filter(user=request.user).first()
+    if server.owner != request.user:
+        if not member or not member.can_access_channel(channel):
+            messages.error(request, _("You don't have permission to access this channel."))
+            return redirect('server_view', slug=server.slug)
     
     # Get recent messages
     recent_messages = ChatMessage.objects.filter(channel=channel).select_related('user').order_by('-created_at')[:50]
@@ -867,3 +898,108 @@ def game_leaderboard(request, game_slug):
         'game_type': game_type,  # Per-game leaderboard
     }
     return render(request, 'leaderboard.html', context)
+
+
+# User Profile Views
+@login_required
+def user_profile_api(request, username):
+    """API endpoint to get user profile"""
+    try:
+        user = CustomUser.objects.get(username=username)
+        return JsonResponse({
+            'username': user.username,
+            'bio': getattr(user, 'bio', ''),
+            'rank_point': user.rank_point or 0,
+            'date_joined': user.date_joined.isoformat(),
+        })
+    except CustomUser.DoesNotExist:
+        return JsonResponse({'error': 'User not found'}, status=404)
+
+
+# Private Messaging Views
+@login_required
+def private_messages_api(request, username):
+    """Get private messages with a user"""
+    try:
+        other_user = CustomUser.objects.get(username=username)
+        
+        # Get or create conversation
+        conversation = PrivateConversation.objects.filter(
+            participants=request.user
+        ).filter(
+            participants=other_user
+        ).distinct().first()
+        
+        if not conversation:
+            conversation = PrivateConversation.objects.create()
+            conversation.participants.add(request.user, other_user)
+        
+        messages = PrivateMessage.objects.filter(
+            conversation=conversation
+        ).select_related('sender').order_by('created_at')
+        
+        # Mark messages as read
+        PrivateMessage.objects.filter(
+            conversation=conversation,
+            sender=other_user,
+            is_read=False
+        ).update(is_read=True)
+        
+        messages_data = [{
+            'sender': msg.sender.username,
+            'content': msg.content,
+            'timestamp': msg.created_at.isoformat(),
+            'is_read': msg.is_read,
+        } for msg in messages]
+        
+        return JsonResponse({'messages': messages_data})
+    except CustomUser.DoesNotExist:
+        return JsonResponse({'error': 'User not found'}, status=404)
+
+
+@login_required
+def send_private_message_api(request, username):
+    """Send a private message to a user"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    try:
+        other_user = CustomUser.objects.get(username=username)
+        
+        if other_user == request.user:
+            return JsonResponse({'error': 'Cannot message yourself'}, status=400)
+        
+        content = json.loads(request.body).get('content', '').strip()
+        if not content:
+            return JsonResponse({'error': 'Message content required'}, status=400)
+        
+        # Get or create conversation
+        conversation = PrivateConversation.objects.filter(
+            participants=request.user
+        ).filter(
+            participants=other_user
+        ).distinct().first()
+        
+        if not conversation:
+            conversation = PrivateConversation.objects.create()
+            conversation.participants.add(request.user, other_user)
+        
+        # Create message
+        message = PrivateMessage.objects.create(
+            conversation=conversation,
+            sender=request.user,
+            content=content
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': {
+                'sender': message.sender.username,
+                'content': message.content,
+                'timestamp': message.created_at.isoformat(),
+            }
+        })
+    except CustomUser.DoesNotExist:
+        return JsonResponse({'error': 'User not found'}, status=404)
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
