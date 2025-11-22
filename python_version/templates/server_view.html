@@ -164,9 +164,14 @@
         align-items: center;
         gap: 8px;
         width: 100%;
-        pointer-events: auto;
-        z-index: 1;
+        pointer-events: auto !important;
+        z-index: 10;
         position: relative;
+        cursor: pointer;
+    }
+    
+    .channel-item {
+        pointer-events: auto !important;
     }
     
     /* Main Content Area */
@@ -873,7 +878,11 @@
                 <ul class="channel-list">
                     {% for channel in text_channels %}
                     <li class="channel-item">
-                        <a href="#" class="channel-link" data-channel-type="text" data-channel-slug="{{ channel.slug }}" data-channel-name="{{ channel.name }}">
+                        <a href="javascript:void(0)" class="channel-link" 
+                           data-channel-type="text" 
+                           data-channel-slug="{{ channel.slug }}" 
+                           data-channel-name="{{ channel.name }}"
+                           onclick="openTextChannel('{{ channel.slug }}', '{{ channel.name }}'); return false;">
                             <i class="fas fa-hashtag"></i>
                             <span>{{ channel.name }}</span>
                         </a>
@@ -906,7 +915,11 @@
                 <ul class="channel-list">
                     {% for channel in voice_channels %}
                     <li class="channel-item">
-                        <a href="#" class="channel-link" data-channel-type="voice" data-channel-slug="{{ channel.slug }}" data-channel-name="{{ channel.name }}">
+                        <a href="javascript:void(0)" class="channel-link" 
+                           data-channel-type="voice" 
+                           data-channel-slug="{{ channel.slug }}" 
+                           data-channel-name="{{ channel.name }}"
+                           onclick="openVoiceChannel('{{ channel.slug }}', '{{ channel.name }}'); return false;">
                             <i class="fas fa-volume-up"></i>
                             <span>{{ channel.name }}</span>
                         </a>
@@ -1194,61 +1207,112 @@
     const chatArea = document.getElementById('chat-area');
     const voiceStage = document.getElementById('voice-stage');
     
-    // Channel click handlers - Use event delegation for dynamic content
+    // Channel click handler - Simple and direct
+    function handleChannelClick(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        const link = e.currentTarget;
+        const channelType = link.getAttribute('data-channel-type');
+        const channelSlug = link.getAttribute('data-channel-slug');
+        const channelName = link.getAttribute('data-channel-name');
+        
+        console.log('Channel clicked:', channelType, channelSlug, channelName);
+        
+        if (!channelType || !channelSlug || !channelName) {
+            console.error('Missing channel data');
+            return false;
+        }
+        
+        // Remove active from all channels
+        document.querySelectorAll('.channel-item').forEach(item => item.classList.remove('active'));
+        // Add active to clicked channel
+        const channelItem = link.closest('.channel-item');
+        if (channelItem) {
+            channelItem.classList.add('active');
+        }
+        
+        if (channelType === 'text') {
+            openTextChannel(channelSlug, channelName);
+        } else if (channelType === 'voice') {
+            openVoiceChannel(channelSlug, channelName);
+        }
+        
+        return false;
+    }
+    
+    // Setup channel handlers - Multiple methods to ensure it works
     function setupChannelHandlers() {
-        // Use event delegation on the server sidebar to catch all channel clicks
+        console.log('Setting up channel handlers...');
+        
+        // Method 1: Direct onclick attributes (most reliable)
+        const channelLinks = document.querySelectorAll('.channel-link');
+        console.log('Found', channelLinks.length, 'channel links');
+        
+        channelLinks.forEach((link, index) => {
+            // Remove any existing listeners
+            const newLink = link.cloneNode(true);
+            link.parentNode.replaceChild(newLink, link);
+            
+            // Add onclick directly
+            newLink.onclick = handleChannelClick;
+            
+            // Also add event listener as backup
+            newLink.addEventListener('click', handleChannelClick, true);
+            
+            console.log(`Handler attached to channel ${index + 1}:`, newLink.getAttribute('data-channel-name'));
+        });
+        
+        // Method 2: Event delegation on server sidebar
         const serverSidebar = document.querySelector('.server-sidebar');
         if (serverSidebar) {
-            serverSidebar.addEventListener('click', function(e) {
+            // Remove old listener if exists
+            const newSidebar = serverSidebar.cloneNode(false);
+            while (serverSidebar.firstChild) {
+                newSidebar.appendChild(serverSidebar.firstChild);
+            }
+            serverSidebar.parentNode.replaceChild(newSidebar, serverSidebar);
+            
+            newSidebar.addEventListener('click', function(e) {
                 const link = e.target.closest('.channel-link');
-                if (!link) return;
-                
-                e.preventDefault();
-                e.stopPropagation();
-                
-                const channelType = link.getAttribute('data-channel-type');
-                const channelSlug = link.getAttribute('data-channel-slug');
-                const channelName = link.getAttribute('data-channel-name');
-                
-                if (!channelType || !channelSlug || !channelName) {
-                    console.error('Missing channel data:', { channelType, channelSlug, channelName });
-                    return;
+                if (link && !link.onclick) {
+                    handleChannelClick(e);
                 }
-                
-                // Remove active from all channels
-                document.querySelectorAll('.channel-item').forEach(item => item.classList.remove('active'));
-                // Add active to clicked channel
-                const channelItem = link.closest('.channel-item');
-                if (channelItem) {
-                    channelItem.classList.add('active');
-                }
-                
-                console.log('Opening channel:', channelType, channelSlug, channelName);
-                
-                if (channelType === 'text') {
-                    openTextChannel(channelSlug, channelName);
-                } else if (channelType === 'voice') {
-                    openVoiceChannel(channelSlug, channelName);
-                }
-            });
+            }, true);
         }
     }
     
-    // Setup handlers when DOM is ready
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', setupChannelHandlers);
-    } else {
-        // DOM already loaded, setup immediately
-        setupChannelHandlers();
-    }
+    // Initialize immediately and on DOM ready
+    (function() {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', function() {
+                setTimeout(setupChannelHandlers, 50);
+            });
+        } else {
+            setTimeout(setupChannelHandlers, 50);
+        }
+        
+        // Also try on window load
+        window.addEventListener('load', function() {
+            setTimeout(setupChannelHandlers, 100);
+        });
+    })();
     
-    function openTextChannel(slug, name) {
+    // Make functions globally accessible
+    window.openTextChannel = function(slug, name) {
         if (currentChannelType === 'voice') {
             cleanupVoiceChannel();
         }
         
         currentChannelSlug = slug;
         currentChannelType = 'text';
+        
+        // Update active state
+        document.querySelectorAll('.channel-item').forEach(item => item.classList.remove('active'));
+        const activeLink = document.querySelector(`.channel-link[data-channel-slug="${slug}"]`);
+        if (activeLink) {
+            activeLink.closest('.channel-item').classList.add('active');
+        }
         
         if (chatSocket) {
             chatSocket.close();
@@ -1270,10 +1334,17 @@
         loadChatHistory();
     }
     
-    function openVoiceChannel(slug, name) {
+    window.openVoiceChannel = function(slug, name) {
         cleanupVoiceChannel();
         currentChannelSlug = slug;
         currentChannelType = 'voice';
+        
+        // Update active state
+        document.querySelectorAll('.channel-item').forEach(item => item.classList.remove('active'));
+        const activeLink = document.querySelector(`.channel-link[data-channel-slug="${slug}"]`);
+        if (activeLink) {
+            activeLink.closest('.channel-item').classList.add('active');
+        }
         
         welcomeMessage.style.display = 'none';
         chatArea.classList.remove('active');
