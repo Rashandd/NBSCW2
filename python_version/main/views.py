@@ -6,7 +6,7 @@ from django.contrib import messages
 from django.core.serializers.json import DjangoJSONEncoder
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.db.models import Count, Q, Case, When, FloatField, F
+from django.db.models import Count, Q, Case, When, FloatField, F, Value, IntegerField
 from django.db import models
 from django.shortcuts import redirect, get_object_or_404, render
 from django.utils.translation import gettext_lazy as _
@@ -248,8 +248,15 @@ def server_view(request, slug):
     # Serialize COTURN config as JSON for JavaScript
     coturn_config_json = json.dumps(coturn_config, cls=DjangoJSONEncoder)
     
-    # Exclude owner from members list (owner is shown separately)
-    members = server.members.select_related('user').exclude(user=server.owner).all()
+    # Include all members (owner is also a member and should be shown)
+    # Order: owner first, then by joined_at
+    members = server.members.select_related('user').annotate(
+        is_owner_field=Case(
+            When(user=server.owner, then=Value(1)),
+            default=Value(0),
+            output_field=IntegerField()
+        )
+    ).order_by('-is_owner_field', 'joined_at')
     
     context = {
         'server': server,
@@ -259,7 +266,7 @@ def server_view(request, slug):
         'user_roles': user_roles,
         'text_channels': server.text_channels.all(),
         'voice_channels': server.voice_channels.all(),
-        'members': members,  # Owner excluded
+        'members': members,  # Owner included and shown first
         'coturn_config': coturn_config,  # For template display
         'coturn_config_json': coturn_config_json,  # For JavaScript
     }

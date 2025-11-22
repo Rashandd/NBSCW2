@@ -7,11 +7,11 @@
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
     
     body {
-        font-family: 'Inter', sans-serif !important;
-        background: linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #1e293b 75%, #0f172a 100%) !important;
-        background-size: 400% 400%;
-        animation: gradientShift 20s ease infinite;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
+        background: #36393f !important; /* Discord background */
         min-height: 100vh;
+        margin: 0;
+        padding: 0;
     }
     
     @keyframes gradientShift {
@@ -33,40 +33,50 @@
     }
     
     .server-sidebar {
-        background: rgba(30, 41, 59, 0.9);
-        backdrop-filter: blur(20px);
-        border-radius: 20px;
-        padding: 1.5rem;
-        border: 1px solid rgba(148, 163, 184, 0.2);
-        height: fit-content;
-        max-height: calc(100vh - 120px);
+        background: #2f3136; /* Discord sidebar color */
+        padding: 1rem 0.5rem;
+        height: 100vh;
         overflow-y: auto;
-        position: sticky;
-        top: 1.5rem;
+        overflow-x: hidden;
+        border-right: 1px solid #202225;
+    }
+    
+    .server-sidebar::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    .server-sidebar::-webkit-scrollbar-track {
+        background: #2f3136;
+    }
+    
+    .server-sidebar::-webkit-scrollbar-thumb {
+        background: #202225;
+        border-radius: 4px;
+    }
+    
+    .server-sidebar::-webkit-scrollbar-thumb:hover {
+        background: #1a1c1f;
     }
     
     .server-header {
-        background: rgba(30, 41, 59, 0.9);
-        backdrop-filter: blur(20px);
-        border-radius: 20px;
-        padding: 2.5rem;
-        margin-bottom: 1.5rem;
-        border: 1px solid rgba(148, 163, 184, 0.2);
+        background: #36393f; /* Discord main area color */
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #202225;
         display: flex;
         align-items: center;
-        gap: 2rem;
+        gap: 1rem;
+        box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
     }
     
     .server-icon-large {
-        width: 100px;
-        height: 100px;
-        border-radius: 25px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #5865f2; /* Discord blurple */
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 3rem;
-        box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        font-size: 1.25rem;
         flex-shrink: 0;
     }
     
@@ -75,17 +85,17 @@
     }
     
     .server-info h2 {
-        color: #f1f5f9;
-        font-weight: 700;
-        margin: 0 0 0.75rem 0;
-        font-size: 2rem;
+        color: #ffffff; /* Discord white text */
+        font-weight: 600;
+        margin: 0 0 0.5rem 0;
+        font-size: 1.25rem;
     }
     
     .server-info p {
-        color: #94a3b8;
-        margin: 0 0 1rem 0;
-        font-size: 1.1rem;
-        line-height: 1.6;
+        color: #b9bbbe; /* Discord secondary text - better visibility */
+        margin: 0;
+        font-size: 0.9375rem;
+        line-height: 1.375;
     }
     
     .channel-section {
@@ -100,42 +110,44 @@
     }
     
     .channel-section-title {
-        color: #94a3b8;
+        color: #8e9297; /* Discord muted text - improved visibility */
         font-size: 0.75rem;
-        font-weight: 700;
+        font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 0.5px;
         display: flex;
         align-items: center;
         gap: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        margin-top: 1rem;
     }
     
     .channel-count {
-        color: #667eea;
+        color: #8e9297;
         font-size: 0.7rem;
-        font-weight: 600;
+        font-weight: 500;
     }
     
     .add-channel-btn {
-        background: rgba(102, 126, 234, 0.2);
-        border: 1px solid rgba(102, 126, 234, 0.3);
-        color: #667eea;
-        padding: 0.4rem 0.8rem;
-        border-radius: 8px;
-        font-size: 0.85rem;
-        font-weight: 600;
+        background: transparent;
+        border: none;
+        color: #8e9297;
+        padding: 0.25rem;
+        border-radius: 4px;
+        font-size: 1rem;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: all 0.15s ease;
         text-decoration: none;
         display: inline-flex;
         align-items: center;
-        gap: 0.5rem;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
     }
     
     .add-channel-btn:hover {
-        background: rgba(102, 126, 234, 0.3);
-        color: #f1f5f9;
-        transform: scale(1.05);
+        background: #3c3f44;
+        color: #dcddde;
     }
     
     .add-channel-btn:disabled {
@@ -150,65 +162,77 @@
     }
     
     .channel-item {
-        padding: 0.75rem 1rem;
-        border-radius: 10px;
-        margin-bottom: 0.5rem;
-        transition: all 0.2s ease;
+        padding: 0.5rem 0.75rem;
+        border-radius: 4px;
+        margin: 0.125rem 0.5rem;
+        transition: all 0.15s ease;
         cursor: pointer;
+        color: #96989d;
     }
     
     .channel-item:hover {
-        background: rgba(102, 126, 234, 0.15);
-        transform: translateX(5px);
+        background: #3c3f44;
+        color: #dcddde;
     }
     
     .channel-item.active {
-        background: rgba(102, 126, 234, 0.3);
-        border-left: 3px solid #667eea;
+        background: #393c43;
+        color: #ffffff;
     }
     
     .channel-item a {
-        color: #cbd5e1;
+        color: inherit;
         text-decoration: none;
         display: flex;
         align-items: center;
-        gap: 0.75rem;
+        gap: 0.5rem;
         font-weight: 500;
         font-size: 1rem;
+        width: 100%;
     }
     
     .channel-item a:hover {
-        color: #f1f5f9;
-    }
-    
-    .channel-item.active {
-        background: rgba(102, 126, 234, 0.3);
+        color: #dcddde;
     }
     
     .channel-item.active a {
-        color: #f1f5f9;
+        color: #ffffff;
     }
     
     .members-sidebar {
-        background: rgba(30, 41, 59, 0.9);
-        backdrop-filter: blur(20px);
-        border-radius: 20px;
-        padding: 1.5rem;
-        border: 1px solid rgba(148, 163, 184, 0.2);
-        height: fit-content;
-        max-height: calc(100vh - 120px);
+        background: #2f3136; /* Discord members sidebar color */
+        padding: 1rem 0.75rem;
+        height: 100vh;
         overflow-y: auto;
-        position: sticky;
-        top: 1.5rem;
+        overflow-x: hidden;
+        border-left: 1px solid #202225;
+    }
+    
+    .members-sidebar::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    .members-sidebar::-webkit-scrollbar-track {
+        background: #2f3136;
+    }
+    
+    .members-sidebar::-webkit-scrollbar-thumb {
+        background: #202225;
+        border-radius: 4px;
+    }
+    
+    .members-sidebar::-webkit-scrollbar-thumb:hover {
+        background: #1a1c1f;
     }
     
     .members-section-title {
-        color: #94a3b8;
+        color: #8e9297; /* Discord muted text - better visibility */
         font-size: 0.75rem;
-        font-weight: 700;
+        font-weight: 600;
         text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-bottom: 1rem;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.5rem;
+        padding: 0.5rem 0.75rem;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -217,15 +241,16 @@
     .member-item {
         display: flex;
         align-items: center;
-        gap: 1rem;
-        padding: 0.75rem;
-        border-radius: 10px;
-        margin-bottom: 0.5rem;
-        transition: all 0.2s ease;
+        gap: 0.75rem;
+        padding: 0.5rem 0.75rem;
+        border-radius: 4px;
+        margin: 0.125rem 0;
+        transition: all 0.15s ease;
+        cursor: pointer;
     }
     
     .member-item:hover {
-        background: rgba(102, 126, 234, 0.1);
+        background: #393c43;
     }
     
     .member-avatar {
@@ -248,17 +273,28 @@
     }
     
     .member-name {
-        color: #f1f5f9;
-        font-weight: 600;
-        font-size: 1rem;
+        color: #dcddde; /* Discord text color - better contrast */
+        font-weight: 500;
+        font-size: 0.9375rem;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
     
+    .member-name .owner-crown {
+        color: #faa61a; /* Discord gold color for owner */
+        margin-left: 0.25rem;
+    }
+    
     .member-status {
         font-size: 0.8rem;
-        color: #94a3b8;
+        color: #cbd5e1; /* Improved contrast for better visibility */
+        font-weight: 500;
+    }
+    
+    .member-status .offline-text {
+        color: #64748b; /* Muted but still visible */
+        opacity: 0.8;
     }
     
     .online-indicator {
@@ -272,58 +308,54 @@
     }
     
     .main-content {
-        background: rgba(30, 41, 59, 0.9);
-        backdrop-filter: blur(20px);
-        border-radius: 20px;
-        padding: 3rem;
-        border: 1px solid rgba(148, 163, 184, 0.2);
-        min-height: 700px;
+        background: #36393f; /* Discord main content area */
+        padding: 0;
+        min-height: 100vh;
         display: flex;
         flex-direction: column;
+        overflow: hidden;
     }
     
     .welcome-message {
         text-align: center;
-        padding: 4rem 2rem;
+        padding: 2rem;
         flex: 1;
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
+        background: #36393f;
     }
     
     .welcome-icon {
-        font-size: 5rem;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        margin-bottom: 1.5rem;
+        font-size: 4rem;
+        color: #5865f2; /* Discord blurple */
+        margin-bottom: 1rem;
     }
     
     .welcome-title {
-        color: #f1f5f9;
-        font-size: 2rem;
-        font-weight: 700;
-        margin-bottom: 0.75rem;
+        color: #ffffff; /* Discord white */
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
     }
     
     .welcome-text {
-        color: #94a3b8;
-        font-size: 1.1rem;
+        color: #b9bbbe; /* Discord secondary text - better visibility */
+        font-size: 1rem;
         max-width: 500px;
+        line-height: 1.5;
     }
     
     .role-badge {
         display: inline-block;
-        padding: 0.35rem 0.75rem;
-        border-radius: 8px;
+        padding: 0.125rem 0.5rem;
+        border-radius: 4px;
         font-size: 0.75rem;
-        font-weight: 600;
+        font-weight: 500;
         margin-left: 0.5rem;
-        background: rgba(102, 126, 234, 0.2);
-        color: #f8fafc;
-        border: 1px solid rgba(102, 126, 234, 0.35);
+        background: #5865f2; /* Discord blurple */
+        color: #ffffff;
     }
     
     /* Channel Creation Modal */
@@ -566,28 +598,28 @@
         </div>
         
         <!-- Chat Area (hidden by default, shown when text channel selected) -->
-        <div id="chat-area" class="hidden" style="display: none; flex-direction: column; height: calc(100vh - 200px);">
+        <div id="chat-area" class="hidden" style="display: none; flex-direction: column; height: 100vh; flex: 1;">
             <!-- Chat Header -->
-            <div style="padding: 1rem; border-bottom: 1px solid rgba(148, 163, 184, 0.2); display: flex; align-items: center; gap: 1rem;">
-                <i class="fas fa-hashtag" style="color: #94a3b8;"></i>
-                <h4 style="margin: 0; color: #f1f5f9; font-weight: 600;" id="chat-channel-name">{% trans "Channel" %}</h4>
+            <div style="padding: 0 1rem; height: 48px; border-bottom: 1px solid #202225; display: flex; align-items: center; gap: 0.5rem; background: #36393f; box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);">
+                <i class="fas fa-hashtag" style="color: #8e9297; font-size: 1.25rem;"></i>
+                <h4 style="margin: 0; color: #ffffff; font-weight: 600; font-size: 1rem;" id="chat-channel-name">{% trans "Channel" %}</h4>
             </div>
             
             <!-- Messages Container -->
-            <div id="discord-messages" style="flex: 1; overflow-y: auto; padding: 1.5rem; background: rgba(15, 23, 42, 0.3);">
+            <div id="discord-messages" style="flex: 1; overflow-y: auto; padding: 1rem; background: #36393f;">
                 <!-- Messages will be loaded here -->
             </div>
             
             <!-- Chat Input -->
-            <div style="padding: 1rem; border-top: 1px solid rgba(148, 163, 184, 0.2);">
-                <div style="display: flex; align-items: center; gap: 0.75rem; background: rgba(30, 41, 59, 0.8); padding: 0.75rem; border-radius: 10px;">
-                    <button class="btn btn-sm" style="background: transparent; border: none; color: #94a3b8;">
+            <div style="padding: 0 1rem 1rem; background: #36393f;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; background: #40444b; padding: 0.5rem 1rem; border-radius: 8px; border: 1px solid transparent;">
+                    <button class="btn btn-sm" style="background: transparent; border: none; color: #b9bbbe; padding: 0.5rem;">
                         <i class="fas fa-plus-circle"></i>
                     </button>
                     <input type="text" id="discord-chat-input" 
-                           style="flex: 1; background: transparent; border: none; outline: none; color: #f1f5f9; padding: 0.5rem;"
+                           style="flex: 1; background: transparent; border: none; outline: none; color: #dcddde; padding: 0.5rem; font-size: 0.9375rem;"
                            placeholder="{% trans 'Type a message...' %}" autocomplete="off">
-                    <button onclick="sendChatMessage()" class="btn btn-sm" style="background: transparent; border: none; color: #94a3b8;">
+                    <button onclick="sendChatMessage()" class="btn btn-sm" style="background: transparent; border: none; color: #b9bbbe; padding: 0.5rem;">
                         <i class="fas fa-paper-plane"></i>
                     </button>
                 </div>
@@ -675,14 +707,14 @@
                     <div class="member-name">
                         {{ member.get_display_name }}
                         {% if member.user == server.owner %}
-                        <i class="fas fa-crown text-warning ms-1" style="font-size: 0.7rem;"></i>
+                        <i class="fas fa-crown owner-crown" style="font-size: 0.75rem;"></i>
                         {% endif %}
                     </div>
                     <div class="member-status">
                         {% if member.is_online %}
-                        <span class="online-indicator"></span>{% trans "Online" %}
+                        <span class="online-indicator"></span><span style="color: #10b981; font-weight: 600;">{% trans "Online" %}</span>
                         {% else %}
-                        <span style="color: #64748b;">{% trans "Offline" %}</span>
+                        <span class="offline-text">{% trans "Offline" %}</span>
                         {% endif %}
                     </div>
                 </div>
@@ -1003,21 +1035,28 @@
     
     function addMessageToList(username, content, timestamp) {
         const div = document.createElement('div');
-        div.style.cssText = 'display: flex; gap: 1rem; padding: 0.75rem; margin-bottom: 0.5rem; border-radius: 8px; transition: background 0.2s;';
+        div.style.cssText = 'display: flex; gap: 1rem; padding: 0.25rem 1rem; margin: 0.0625rem 0; transition: background 0.15s;';
         div.className = 'message-item';
+        
+        div.addEventListener('mouseenter', function() {
+            this.style.background = '#32353b';
+        });
+        div.addEventListener('mouseleave', function() {
+            this.style.background = 'transparent';
+        });
         
         const date = timestamp ? new Date(timestamp) : new Date();
         const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
         
         div.innerHTML = `
-            <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=random" 
-                 style="width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;">
-            <div style="flex: 1;">
-                <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
-                    <span style="color: #f1f5f9; font-weight: 600;">${escapeHtml(username)}</span>
-                    <span style="color: #64748b; font-size: 0.85rem;">${timeStr}</span>
+            <img src="https://ui-avatars.com/api/?name=${encodeURIComponent(username)}&background=5865f2&color=ffffff&size=40" 
+                 style="width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0; cursor: pointer;">
+            <div style="flex: 1; min-width: 0;">
+                <div style="display: flex; align-items: baseline; gap: 0.5rem; margin-bottom: 0.125rem;">
+                    <span style="color: #ffffff; font-weight: 500; font-size: 1rem; cursor: pointer;">${escapeHtml(username)}</span>
+                    <span style="color: #72767d; font-size: 0.75rem; font-weight: 500;">${timeStr}</span>
                 </div>
-                <p style="color: #cbd5e1; margin: 0;">${escapeHtml(content)}</p>
+                <div style="color: #dcddde; font-size: 1rem; line-height: 1.375; word-wrap: break-word;">${escapeHtml(content)}</div>
             </div>
         `;
         
@@ -2287,6 +2326,11 @@
     
     function leaveVoiceChannel() {
         cleanupVoiceChannel();
+        
+        // Hide global voice call
+        if (window.leaveGlobalVoiceCall) {
+            window.leaveGlobalVoiceCall();
+        }
         
         // Reset UI
         welcomeMessage.style.display = 'block';
