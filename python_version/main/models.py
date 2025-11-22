@@ -10,34 +10,171 @@ from django.utils.text import slugify
 
 
 class CustomUser(AbstractUser):
-    # AbstractUser, username, first_name, last_name, email, is_staff, is_active, date_joined gibi alanları zaten içerir.
-
+    """
+    Flexible and dynamic user model with extensible JSON fields.
+    Supports custom attributes, preferences, and metadata without schema changes.
+    """
+    # Core game/profile fields
     rank_point = models.PositiveIntegerField(null=True, blank=True, default=0)
-    user_settings = models.JSONField(default=dict, blank=True, null=True)
+    avatar_url = models.URLField(blank=True, null=True, help_text="User avatar image URL")
+    bio = models.TextField(blank=True, null=True, max_length=500, help_text="User biography")
+    
+    # Flexible JSON fields for extensibility
+    user_settings = models.JSONField(
+        default=dict, 
+        blank=True, 
+        null=True,
+        help_text="User preferences and settings (theme, notifications, etc.)"
+    )
+    metadata = models.JSONField(
+        default=dict,
+        blank=True,
+        null=True,
+        help_text="Additional user metadata (custom fields, stats, etc.)"
+    )
+    per_game_stats = models.JSONField(
+        default=dict,
+        blank=True,
+        null=True,
+        help_text="Statistics per game type"
+    )
+    
+    # Activity tracking
     last_activity = models.DateTimeField(auto_now=True, null=True, blank=True)
+    last_login_ip = models.GenericIPAddressField(null=True, blank=True)
+    
+    # Status fields
+    is_online = models.BooleanField(default=False)
+    status_message = models.CharField(max_length=200, blank=True, null=True)
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = "User"
         verbose_name_plural = "Users"
+        indexes = [
+            models.Index(fields=['username']),
+            models.Index(fields=['email']),
+            models.Index(fields=['is_online', 'last_activity']),
+        ]
 
     def __str__(self):
-        # Admin panelinde ve diğer yerlerde nasıl görüneceğini belirler
         return self.username
+    
+    def get_display_name(self):
+        """Get display name (nickname or username)"""
+        return self.metadata.get('display_name') or self.username
+    
+    def get_avatar(self):
+        """Get avatar URL or default"""
+        return self.avatar_url or f"https://ui-avatars.com/api/?name={self.username}&background=random"
+    
+    def update_setting(self, key, value):
+        """Update a user setting"""
+        if not self.user_settings:
+            self.user_settings = {}
+        self.user_settings[key] = value
+        self.save(update_fields=['user_settings'])
+    
+    def get_setting(self, key, default=None):
+        """Get a user setting"""
+        return self.user_settings.get(key, default) if self.user_settings else default
+    
+    def update_metadata(self, key, value):
+        """Update user metadata"""
+        if not self.metadata:
+            self.metadata = {}
+        self.metadata[key] = value
+        self.save(update_fields=['metadata'])
+    
+    def get_metadata(self, key, default=None):
+        """Get user metadata"""
+        return self.metadata.get(key, default) if self.metadata else default
 
 
 class Server(models.Model):
-    """Servers contain channels, roles, and members"""
+    """
+    Flexible and dynamic server model with extensible JSON fields.
+    Supports custom settings, features, and metadata without schema changes.
+    """
+    # Core server fields
     name = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(unique=True)
-    description = models.TextField(blank=True, null=True)
-    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='owned_servers')
-    icon = models.CharField(max_length=100, blank=True, null=True, help_text="Icon name or emoji")
-    is_private = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now=True)
+    description = models.TextField(blank=True, null=True, max_length=1000)
+    owner = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.CASCADE, 
+        related_name='owned_servers'
+    )
+    icon = models.CharField(
+        max_length=100, 
+        blank=True, 
+        null=True, 
+        help_text="Icon name or emoji"
+    )
+    banner_url = models.URLField(
+        blank=True, 
+        null=True, 
+        help_text="Server banner image URL"
+    )
+    
+    # Privacy and visibility
+    is_private = models.BooleanField(
+        default=False,
+        help_text="Private servers require invitation"
+    )
+    is_verified = models.BooleanField(
+        default=False,
+        help_text="Verified servers (official/trusted)"
+    )
+    
+    # Flexible JSON fields for extensibility
+    settings = models.JSONField(
+        default=dict,
+        blank=True,
+        null=True,
+        help_text="Server settings (notifications, moderation, etc.)"
+    )
+    features = models.JSONField(
+        default=dict,
+        blank=True,
+        null=True,
+        help_text="Enabled features and capabilities"
+    )
+    metadata = models.JSONField(
+        default=dict,
+        blank=True,
+        null=True,
+        help_text="Additional server metadata (custom fields, stats, etc.)"
+    )
+    
+    # Limits and constraints
+    max_members = models.PositiveIntegerField(
+        default=1000,
+        null=True,
+        blank=True,
+        help_text="Maximum number of members (null = unlimited)"
+    )
+    max_channels = models.PositiveIntegerField(
+        default=100,
+        null=True,
+        blank=True,
+        help_text="Maximum number of channels (null = unlimited)"
+    )
+    
+    # Timestamps
+    created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ['name']
+        indexes = [
+            models.Index(fields=['slug']),
+            models.Index(fields=['owner', 'created_at']),
+            models.Index(fields=['is_private', 'is_verified']),
+        ]
 
     def __str__(self):
         return self.name
@@ -46,6 +183,63 @@ class Server(models.Model):
         if not self.slug:
             self.slug = slugify(self.name)
         super().save(*args, **kwargs)
+    
+    def get_member_count(self):
+        """Get current member count"""
+        return self.members.count() + 1  # +1 for owner
+    
+    def can_add_member(self):
+        """Check if server can accept more members"""
+        if self.max_members is None:
+            return True
+        return self.get_member_count() < self.max_members
+    
+    def can_add_channel(self):
+        """Check if server can add more channels"""
+        if self.max_channels is None:
+            return True
+        total_channels = self.text_channels.count() + self.voice_channels.count()
+        return total_channels < self.max_channels
+    
+    def update_setting(self, key, value):
+        """Update a server setting"""
+        if not self.settings:
+            self.settings = {}
+        self.settings[key] = value
+        self.save(update_fields=['settings'])
+    
+    def get_setting(self, key, default=None):
+        """Get a server setting"""
+        return self.settings.get(key, default) if self.settings else default
+    
+    def enable_feature(self, feature_name):
+        """Enable a server feature"""
+        if not self.features:
+            self.features = {}
+        self.features[feature_name] = True
+        self.save(update_fields=['features'])
+    
+    def disable_feature(self, feature_name):
+        """Disable a server feature"""
+        if not self.features:
+            self.features = {}
+        self.features[feature_name] = False
+        self.save(update_fields=['features'])
+    
+    def has_feature(self, feature_name):
+        """Check if a feature is enabled"""
+        return self.features.get(feature_name, False) if self.features else False
+    
+    def update_metadata(self, key, value):
+        """Update server metadata"""
+        if not self.metadata:
+            self.metadata = {}
+        self.metadata[key] = value
+        self.save(update_fields=['metadata'])
+    
+    def get_metadata(self, key, default=None):
+        """Get server metadata"""
+        return self.metadata.get(key, default) if self.metadata else default
 
 
 class ServerRole(models.Model):
@@ -55,7 +249,7 @@ class ServerRole(models.Model):
     color = models.CharField(max_length=7, default='#99aab5', help_text="Hex color code")
     permissions = models.JSONField(default=dict, help_text="Dictionary of permission flags")
     position = models.IntegerField(default=0, help_text="Higher position = higher priority")
-    created_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['-position', 'name']
@@ -71,7 +265,7 @@ class ServerMember(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='server_memberships')
     roles = models.ManyToManyField(ServerRole, blank=True, related_name='members')
     nickname = models.CharField(max_length=100, blank=True, null=True)
-    joined_at = models.DateTimeField(auto_now=True)
+    joined_at = models.DateTimeField(auto_now_add=True)
     is_online = models.BooleanField(default=False)
 
     class Meta:
@@ -117,7 +311,7 @@ class TextChannel(models.Model):
     position = models.IntegerField(default=0)
     is_private = models.BooleanField(default=False)
     allowed_roles = models.ManyToManyField(ServerRole, blank=True, related_name='text_channels', help_text="Roles that can access this channel. Empty = all roles")
-    created_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['position', 'name']
@@ -143,7 +337,7 @@ class VoiceChannel(models.Model):
     user_limit = models.IntegerField(default=0, help_text="0 = unlimited")
     is_private = models.BooleanField(default=False)
     allowed_roles = models.ManyToManyField(ServerRole, blank=True, related_name='voice_channels', help_text="Roles that can access this channel. Empty = all roles")
-    created_at = models.DateTimeField(auto_now=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['position', 'name']
