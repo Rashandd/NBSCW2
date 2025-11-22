@@ -574,24 +574,37 @@
         flex: 1;
         overflow-y: auto;
         padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+        background: #141414;
+    }
+    
+    #screen-shares-container {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 16px;
+        margin-bottom: 16px;
+    }
+    
+    .participants-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
         gap: 16px;
         align-content: start;
-        background: #141414;
     }
     
     .participant-card {
         background: #1A1A1A;
         border: 1px solid #2A2A2A;
         border-radius: 12px;
-        padding: 16px;
+        padding: 0;
         display: flex;
         flex-direction: column;
-        align-items: center;
-        gap: 12px;
         transition: all 0.15s ease;
         position: relative;
+        overflow: hidden;
+        min-height: 200px;
     }
     
     .participant-card:hover {
@@ -605,9 +618,20 @@
         box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
     }
     
+    .participant-video-container {
+        width: 100%;
+        height: 150px;
+        background: #0F0F0F;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+    }
+    
     .participant-avatar {
-        width: 64px;
-        height: 64px;
+        width: 80px;
+        height: 80px;
         border-radius: 50%;
         background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
         display: flex;
@@ -615,7 +639,7 @@
         justify-content: center;
         color: white;
         font-weight: 600;
-        font-size: 24px;
+        font-size: 32px;
         position: relative;
         overflow: hidden;
     }
@@ -624,8 +648,10 @@
         width: 100%;
         height: 100%;
         object-fit: cover;
-        border-radius: 50%;
         display: none;
+        position: absolute;
+        top: 0;
+        left: 0;
     }
     
     .participant-video.active {
@@ -635,18 +661,26 @@
     .participant-avatar.muted::after {
         content: '🔇';
         position: absolute;
-        bottom: -2px;
-        right: -2px;
-        background: #1A1A1A;
+        bottom: 4px;
+        right: 4px;
+        background: rgba(26, 26, 26, 0.9);
         border-radius: 50%;
-        width: 24px;
-        height: 24px;
+        width: 28px;
+        height: 28px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 12px;
+        font-size: 14px;
         border: 2px solid #2A2A2A;
         z-index: 10;
+    }
+    
+    .participant-info {
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
     }
     
     .participant-name {
@@ -662,6 +696,61 @@
         display: flex;
         align-items: center;
         gap: 6px;
+    }
+    
+    /* Screen Share Card */
+    .screen-share-card {
+        background: #1A1A1A;
+        border: 2px solid #6366F1;
+        border-radius: 12px;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        transition: all 0.15s ease;
+        position: relative;
+        overflow: hidden;
+        min-height: 300px;
+        grid-column: 1 / -1; /* Full width */
+    }
+    
+    .screen-share-header {
+        padding: 12px 16px;
+        background: rgba(99, 102, 241, 0.1);
+        border-bottom: 1px solid #2A2A2A;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .screen-share-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: #6366F1;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .screen-share-video-container {
+        width: 100%;
+        flex: 1;
+        min-height: 300px;
+        background: #0F0F0F;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .screen-share-video {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        display: none;
+    }
+    
+    .screen-share-video.active {
+        display: block;
     }
     
     .status-dot {
@@ -892,7 +981,7 @@
                         <i class="fas fa-microphone"></i>
                         <span>{% trans "Mute" %}</span>
                     </button>
-                    <button id="voice-deafen-btn" class="voice-control-btn" onclick="toggleDeafen()">
+                    <button id="voice-deafen-btn" class="voice-control-btn" onclick="toggleDeafen()" title="{% trans 'Deafen: Mute all incoming audio from other participants' %}">
                         <i class="fas fa-volume-mute"></i>
                         <span>{% trans "Deafen" %}</span>
                     </button>
@@ -900,11 +989,20 @@
                         <i class="fas fa-video"></i>
                         <span>{% trans "Video" %}</span>
                     </button>
+                    <button id="voice-screenshare-btn" class="voice-control-btn" onclick="toggleScreenShare()">
+                        <i class="fas fa-desktop"></i>
+                        <span>{% trans "Share Screen" %}</span>
+                    </button>
                 </div>
             </div>
             
             <div class="voice-participants" id="voice-participants">
-                <!-- Participants will be added here dynamically -->
+                <!-- Screen shares will appear here first -->
+                <div id="screen-shares-container"></div>
+                <!-- Participants grid -->
+                <div class="participants-grid" id="participants-grid">
+                    <!-- Participants will be added here dynamically -->
+                </div>
             </div>
             
             <div class="voice-footer">
@@ -1169,6 +1267,10 @@
             localVideoTrack.stop();
             localVideoTrack = null;
         }
+        if (localScreenShareTrack) {
+            localScreenShareTrack.stop();
+            localScreenShareTrack = null;
+        }
         
         // Close peer connections and remove audio elements
         Object.values(peerConnections).forEach(pc => {
@@ -1179,11 +1281,16 @@
         });
         peerConnections = {};
         
-        // Clear participants
+        // Clear participants and screen shares
         voiceParticipants.clear();
+        screenShares.clear();
+        
         const container = document.getElementById('voice-participants');
         if (container) {
-            container.innerHTML = '';
+            container.innerHTML = `
+                <div id="screen-shares-container"></div>
+                <div class="participants-grid" id="participants-grid"></div>
+            `;
         }
         
         // Close WebSocket
@@ -1199,11 +1306,13 @@
         isMuted = false;
         isDeafened = false;
         isVideoOn = false;
+        isScreenSharing = false;
         
         // Reset UI
         const muteBtn = document.getElementById('voice-mute-btn');
         const deafenBtn = document.getElementById('voice-deafen-btn');
         const videoBtn = document.getElementById('voice-video-btn');
+        const screenshareBtn = document.getElementById('voice-screenshare-btn');
         
         if (muteBtn) {
             muteBtn.classList.remove('muted');
@@ -1216,6 +1325,10 @@
         if (videoBtn) {
             videoBtn.classList.remove('active');
             videoBtn.innerHTML = '<i class="fas fa-video-slash"></i> <span>{% trans "Start Video" %}</span>';
+        }
+        if (screenshareBtn) {
+            screenshareBtn.classList.remove('active');
+            screenshareBtn.innerHTML = '<i class="fas fa-desktop"></i> <span>{% trans "Share Screen" %}</span>';
         }
     }
     
@@ -1465,8 +1578,11 @@
     let voiceParticipants = new Map();
     let localAudioTrack = null;
     let localVideoTrack = null;
+    let localScreenShareTrack = null;
     let isDeafened = false;
     let isVideoOn = false;
+    let isScreenSharing = false;
+    let screenShares = new Map(); // Track screen shares by username
     
     async function initializeVoice() {
         try {
@@ -1569,6 +1685,16 @@
                     updateParticipantStatus(data.username, 'video', data.enabled);
                     break;
                     
+                case 'screen_share_state_change':
+                    if (data.enabled && data.username !== '{{ user.username }}') {
+                        // Remote user started sharing - will be handled by ontrack
+                        console.log(`${data.username} started screen sharing`);
+                    } else if (!data.enabled && data.username !== '{{ user.username }}') {
+                        // Remote user stopped sharing
+                        removeScreenShare(data.username);
+                    }
+                    break;
+                    
                 case 'system_notification':
                     console.log("System:", data.message);
                     break;
@@ -1600,17 +1726,25 @@
         const avatarColor = `hsl(${username.charCodeAt(0) * 137.508 % 360}, 70%, 50%)`;
         
         card.innerHTML = `
-            <div class="participant-avatar ${isMuted ? 'muted' : ''} ${isDeafened ? 'deafened' : ''}" style="background: ${avatarColor};">
-                ${avatarLetter}
+            <div class="participant-video-container">
+                <div class="participant-avatar ${isMuted ? 'muted' : ''} ${isDeafened ? 'deafened' : ''}" style="background: ${avatarColor};">
+                    ${avatarLetter}
+                </div>
+                <video class="participant-video" autoplay playsInline></video>
             </div>
-            <div class="participant-name">${escapeHtml(username)}</div>
-            <div class="participant-status">
-                <span class="status-dot"></span>
-                <span>${isLocal ? '{% trans "You" %}' : '{% trans "Connected" %}'}</span>
+            <div class="participant-info">
+                <div class="participant-name">${escapeHtml(username)}</div>
+                <div class="participant-status">
+                    <span class="status-dot"></span>
+                    <span>${isLocal ? '{% trans "You" %}' : '{% trans "Connected" %}'}</span>
+                </div>
             </div>
         `;
         
-        container.appendChild(card);
+        const participantsGrid = document.getElementById('participants-grid');
+        if (participantsGrid) {
+            participantsGrid.appendChild(card);
+        }
         voiceParticipants.set(username, { element: card, isMuted, isDeafened, isLocal });
     }
     
@@ -1716,7 +1850,7 @@
                     // Display local video in participant card
                     const participant = voiceParticipants.get('{{ user.username }}');
                     if (participant) {
-                        const avatar = participant.element.querySelector('.participant-avatar');
+                        const videoContainer = participant.element.querySelector('.participant-video-container');
                         let videoElement = participant.element.querySelector('.participant-video');
                         
                         if (!videoElement) {
@@ -1725,12 +1859,16 @@
                             videoElement.autoplay = true;
                             videoElement.playsInline = true;
                             videoElement.muted = true; // Mute local video to avoid feedback
-                            avatar.appendChild(videoElement);
+                            videoContainer.appendChild(videoElement);
                         }
                         
                         const localVideoStream = new MediaStream([localVideoTrack]);
                         videoElement.srcObject = localVideoStream;
                         videoElement.classList.add('active');
+                        
+                        // Hide avatar when video is active
+                        const avatar = participant.element.querySelector('.participant-avatar');
+                        if (avatar) avatar.style.display = 'none';
                     }
                     
                     // Add video track to all existing peer connections
@@ -1760,6 +1898,9 @@
                     videoElement.srcObject = null;
                     videoElement.classList.remove('active');
                 }
+                // Show avatar again
+                const avatar = participant.element.querySelector('.participant-avatar');
+                if (avatar) avatar.style.display = 'flex';
             }
             
             // Remove video track from all peer connections
@@ -1828,7 +1969,7 @@
             if (videoTracks.length > 0) {
                 const participant = voiceParticipants.get(pc.username || 'user');
                 if (participant) {
-                    const avatar = participant.element.querySelector('.participant-avatar');
+                    const videoContainer = participant.element.querySelector('.participant-video-container');
                     let videoElement = participant.element.querySelector('.participant-video');
                     
                     if (!videoElement) {
@@ -1836,11 +1977,31 @@
                         videoElement.className = 'participant-video';
                         videoElement.autoplay = true;
                         videoElement.playsInline = true;
-                        avatar.appendChild(videoElement);
+                        videoContainer.appendChild(videoElement);
                     }
                     
-                    videoElement.srcObject = remoteStream;
-                    videoElement.classList.add('active');
+                    // Check if it's a screen share track
+                    const isScreenShare = videoTracks[0].label.toLowerCase().includes('screen') || 
+                                         videoTracks[0].label.toLowerCase().includes('display');
+                    
+                    if (isScreenShare) {
+                        // Handle as screen share
+                        handleRemoteScreenShare(pc.username || 'user', remoteStream);
+                    } else {
+                        // Regular camera video
+                        videoElement.srcObject = remoteStream;
+                        videoElement.classList.add('active');
+                        // Hide avatar when video is active
+                        const avatar = participant.element.querySelector('.participant-avatar');
+                        if (avatar) avatar.style.display = 'none';
+                    }
+                } else {
+                    // Participant not found, but we have a screen share - create it anyway
+                    if (videoTracks[0].label.toLowerCase().includes('screen') || 
+                        videoTracks[0].label.toLowerCase().includes('display')) {
+                        handleRemoteScreenShare(pc.username || 'user', remoteStream);
+                    }
+                }
                 }
             }
         };
@@ -1910,9 +2071,172 @@
         }
     }
     
+    // Screen Sharing Functions
+    async function toggleScreenShare() {
+        if (!isScreenSharing) {
+            try {
+                const stream = await navigator.mediaDevices.getDisplayMedia({ 
+                    video: true, 
+                    audio: true 
+                });
+                
+                localScreenShareTrack = stream.getVideoTracks()[0];
+                const audioTrack = stream.getAudioTracks()[0];
+                
+                // Handle screen share end
+                localScreenShareTrack.onended = () => {
+                    stopScreenShare();
+                };
+                
+                isScreenSharing = true;
+                const btn = document.getElementById('voice-screenshare-btn');
+                btn.classList.add('active');
+                btn.innerHTML = '<i class="fas fa-stop"></i> <span>{% trans "Stop Sharing" %}</span>';
+                
+                // Display local screen share
+                addLocalScreenShare(stream);
+                
+                // Add screen share track to all peer connections
+                Object.values(peerConnections).forEach(pc => {
+                    if (pc.signalingState !== 'closed') {
+                        pc.addTrack(localScreenShareTrack, stream);
+                        if (audioTrack) {
+                            pc.addTrack(audioTrack, stream);
+                        }
+                    }
+                });
+                
+                // Send status update
+                if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+                    chatSocket.send(JSON.stringify({
+                        signal_type: 'screen_share_state_change',
+                        data: { enabled: true }
+                    }));
+                }
+            } catch (err) {
+                console.error("Error accessing screen share:", err);
+                alert("{% trans 'Could not access screen share. Please check permissions.' %}");
+            }
+        } else {
+            stopScreenShare();
+        }
+    }
+    
+    function stopScreenShare() {
+        if (localScreenShareTrack) {
+            localScreenShareTrack.stop();
+            localScreenShareTrack = null;
+        }
+        
+        isScreenSharing = false;
+        const btn = document.getElementById('voice-screenshare-btn');
+        btn.classList.remove('active');
+        btn.innerHTML = '<i class="fas fa-desktop"></i> <span>{% trans "Share Screen" %}</span>';
+        
+        // Remove local screen share
+        removeScreenShare('{{ user.username }}');
+        
+        // Remove screen share track from all peer connections
+        Object.values(peerConnections).forEach(pc => {
+            if (pc.signalingState !== 'closed') {
+                const senders = pc.getSenders().filter(s => 
+                    s.track && (s.track.label.toLowerCase().includes('screen') || 
+                               s.track.label.toLowerCase().includes('display'))
+                );
+                senders.forEach(sender => {
+                    pc.removeTrack(sender);
+                });
+            }
+        });
+        
+        // Send status update
+        if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+            chatSocket.send(JSON.stringify({
+                signal_type: 'screen_share_state_change',
+                data: { enabled: false }
+            }));
+        }
+    }
+    
+    function addLocalScreenShare(stream) {
+        const container = document.getElementById('screen-shares-container');
+        if (!container) return;
+        
+        const card = document.createElement('div');
+        card.className = 'screen-share-card';
+        card.id = `screen-share-{{ user.username }}`;
+        card.dataset.username = '{{ user.username }}';
+        
+        card.innerHTML = `
+            <div class="screen-share-header">
+                <div class="screen-share-title">
+                    <i class="fas fa-desktop"></i>
+                    <span>{% trans "You are sharing your screen" %}</span>
+                </div>
+                <button onclick="stopScreenShare()" style="background: #EF4444; color: white; border: none; padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;">
+                    <i class="fas fa-stop"></i> {% trans "Stop" %}
+                </button>
+            </div>
+            <div class="screen-share-video-container">
+                <video class="screen-share-video" autoplay playsInline></video>
+            </div>
+        `;
+        
+        const videoElement = card.querySelector('.screen-share-video');
+        videoElement.srcObject = stream;
+        videoElement.classList.add('active');
+        
+        container.appendChild(card);
+        screenShares.set('{{ user.username }}', { element: card, stream: stream });
+    }
+    
+    function handleRemoteScreenShare(username, stream) {
+        const container = document.getElementById('screen-shares-container');
+        if (!container) return;
+        
+        // Remove existing screen share if any
+        if (screenShares.has(username)) {
+            removeScreenShare(username);
+        }
+        
+        const card = document.createElement('div');
+        card.className = 'screen-share-card';
+        card.id = `screen-share-${username}`;
+        card.dataset.username = username;
+        
+        card.innerHTML = `
+            <div class="screen-share-header">
+                <div class="screen-share-title">
+                    <i class="fas fa-desktop"></i>
+                    <span>${escapeHtml(username)} {% trans "is sharing their screen" %}</span>
+                </div>
+            </div>
+            <div class="screen-share-video-container">
+                <video class="screen-share-video" autoplay playsInline></video>
+            </div>
+        `;
+        
+        const videoElement = card.querySelector('.screen-share-video');
+        videoElement.srcObject = stream;
+        videoElement.classList.add('active');
+        
+        container.appendChild(card);
+        screenShares.set(username, { element: card, stream: stream });
+    }
+    
+    function removeScreenShare(username) {
+        const share = screenShares.get(username);
+        if (share) {
+            share.element.remove();
+            screenShares.delete(username);
+        }
+    }
+    
     // Expose functions
     window.openUserProfile = openUserProfile;
     window.startPrivateMessage = startPrivateMessage;
     window.sendPrivateMessage = sendPrivateMessage;
+    window.toggleScreenShare = toggleScreenShare;
+    window.stopScreenShare = stopScreenShare;
 </script>
 {% endblock %}
