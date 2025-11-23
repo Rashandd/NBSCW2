@@ -13,11 +13,154 @@ from django.utils.translation import gettext_lazy as _
 from django.http import JsonResponse
 from django.urls import reverse
 
-from .models import CustomUser, Server, ServerRole, ServerMember, TextChannel, VoiceChannel, GameSession, MiniGame, ChatMessage, PrivateConversation, PrivateMessage
+from .models import CustomUser, Server, ServerRole, ServerMember, TextChannel, VoiceChannel, GameSession, MiniGame, ChatMessage, PrivateConversation, PrivateMessage, RegistrationAttempt
 from django.utils.text import slugify
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.forms import AuthenticationForm
 from django.conf import settings as django_settings
+from datetime import timedelta
+from django.utils import timezone
+
+
+def get_client_ip(request):
+    """Get the client's real IP address"""
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
+
+
+def register(request):
+    """Secure registration with fingerprint and IP tracking"""
+    if request.user.is_authenticated:
+        return redirect('index')
+    
+    if request.method == 'POST':
+        username = request.POST.get('username', '').strip()
+        email = request.POST.get('email', '').strip()
+        password1 = request.POST.get('password1', '')
+        password2 = request.POST.get('password2', '')
+        fingerprint = request.POST.get('fingerprint', '')
+        timezone_str = request.POST.get('timezone', '')
+        
+        ip_address = get_client_ip(request)
+        user_agent = request.META.get('HTTP_USER_AGENT', '')
+        
+        # Security checks
+        errors = []
+        
+        # Check if fingerprint is provided
+        if not fingerprint:
+            errors.append(_("Security verification failed. Please enable JavaScript."))
+        
+        # Check password match
+        if password1 != password2:
+            errors.append(_("Passwords do not match."))
+        
+        # Check password strength
+        if len(password1) < 8:
+            errors.append(_("Password must be at least 8 characters long."))
+        if not any(c.isupper() for c in password1):
+            errors.append(_("Password must contain at least one uppercase letter."))
+        if not any(c.islower() for c in password1):
+            errors.append(_("Password must contain at least one lowercase letter."))
+        if not any(c.isdigit() for c in password1):
+            errors.append(_("Password must contain at least one number."))
+        
+        # Check if username already exists
+        if CustomUser.objects.filter(username=username).exists():
+            errors.append(_("Username already taken."))
+        
+        # Check if email already exists
+        if CustomUser.objects.filter(email=email).exists():
+            errors.append(_("Email already registered."))
+        
+        # Check for recent registration attempts from same IP (rate limiting)
+        recent_attempts = RegistrationAttempt.objects.filter(
+            ip_address=ip_address,
+            attempt_time__gte=timezone.now() - timedelta(hours=1)
+        ).count()
+        
+        if recent_attempts >= 5:
+            errors.append(_("Too many registration attempts. Please try again later."))
+            RegistrationAttempt.objects.create(
+                ip_address=ip_address,
+                fingerprint=fingerprint,
+                user_agent=user_agent,
+                success=False,
+                username_attempted=username,
+                blocked_reason="Rate limit exceeded"
+            )
+        
+        # Check for recent registrations from same fingerprint
+        if fingerprint:
+            recent_fingerprint_registrations = RegistrationAttempt.objects.filter(
+                fingerprint=fingerprint,
+                success=True,
+                attempt_time__gte=timezone.now() - timedelta(days=1)
+            ).count()
+            
+            if recent_fingerprint_registrations >= 3:
+                errors.append(_("Maximum accounts per device reached. Contact support if this is an error."))
+                RegistrationAttempt.objects.create(
+                    ip_address=ip_address,
+                    fingerprint=fingerprint,
+                    user_agent=user_agent,
+                    success=False,
+                    username_attempted=username,
+                    blocked_reason="Device limit exceeded"
+                )
+        
+        if errors:
+            for error in errors:
+                messages.error(request, error)
+            return render(request, 'register.html')
+        
+        # Create user
+        try:
+            with transaction.atomic():
+                user = CustomUser.objects.create_user(
+                    username=username,
+                    email=email,
+                    password=password1,
+                    registration_ip=ip_address,
+                    registration_fingerprint=fingerprint
+                )
+                
+                # Store timezone in metadata
+                if timezone_str:
+                    user.metadata = user.metadata or {}
+                    user.metadata['timezone'] = timezone_str
+                    user.save()
+                
+                # Log successful registration
+                RegistrationAttempt.objects.create(
+                    ip_address=ip_address,
+                    fingerprint=fingerprint,
+                    user_agent=user_agent,
+                    success=True,
+                    username_attempted=username
+                )
+                
+                # Log the user in
+                login(request, user)
+                messages.success(request, _("Account created successfully! Welcome to Rashigo!"))
+                return redirect('index')
+        
+        except Exception as e:
+            messages.error(request, _("An error occurred during registration. Please try again."))
+            RegistrationAttempt.objects.create(
+                ip_address=ip_address,
+                fingerprint=fingerprint,
+                user_agent=user_agent,
+                success=False,
+                username_attempted=username,
+                blocked_reason=f"Error: {str(e)}"
+            )
+    
+    return render(request, 'register.html')
 
 
 def index(request):

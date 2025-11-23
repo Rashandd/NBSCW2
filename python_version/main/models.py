@@ -9,6 +9,27 @@ from django.template.defaultfilters import truncatechars
 from django.utils.text import slugify
 
 
+class RegistrationAttempt(models.Model):
+    """Track registration attempts for security and fraud prevention"""
+    ip_address = models.GenericIPAddressField()
+    fingerprint = models.CharField(max_length=255, db_index=True)
+    user_agent = models.TextField()
+    attempt_time = models.DateTimeField(auto_now_add=True)
+    success = models.BooleanField(default=False)
+    username_attempted = models.CharField(max_length=150, blank=True, null=True)
+    blocked_reason = models.CharField(max_length=255, blank=True, null=True)
+    
+    class Meta:
+        ordering = ['-attempt_time']
+        indexes = [
+            models.Index(fields=['ip_address', 'attempt_time']),
+            models.Index(fields=['fingerprint', 'attempt_time']),
+        ]
+    
+    def __str__(self):
+        return f"{self.ip_address} - {self.fingerprint[:20]} - {self.attempt_time}"
+
+
 class CustomUser(AbstractUser):
     """
     Flexible and dynamic user model with extensible JSON fields.
@@ -42,7 +63,9 @@ class CustomUser(AbstractUser):
         help_text="Statistics per game type"
     )
     
-    # Activity tracking
+    # Security tracking
+    registration_ip = models.GenericIPAddressField(null=True, blank=True)
+    registration_fingerprint = models.CharField(max_length=255, blank=True, null=True)
     last_activity = models.DateTimeField(auto_now=True, null=True, blank=True)
     last_login_ip = models.GenericIPAddressField(null=True, blank=True)
     
@@ -68,7 +91,9 @@ class CustomUser(AbstractUser):
     
     def get_display_name(self):
         """Get display name (nickname or username)"""
-        return self.metadata.get('display_name') or self.username
+        if self.metadata and isinstance(self.metadata, dict):
+            return self.metadata.get('display_name') or self.username
+        return self.username
     
     def get_avatar(self):
         """Get avatar URL or default"""

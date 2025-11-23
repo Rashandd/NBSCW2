@@ -8,7 +8,7 @@ from django.utils.html import format_html
 from .models import (
     MiniGame, GameSession, VoiceChannel, Server, ServerRole, 
     ServerMember, TextChannel, ChatMessage, Workflow, WorkflowExecution,
-    MemoryBank, AIAgent
+    MemoryBank, AIAgent, RegistrationAttempt
 )
 
 User = get_user_model()
@@ -334,10 +334,6 @@ class WorkflowAdmin(admin.ModelAdmin):
         ('Settings', {
             'fields': ('is_active',)
         }),
-        ('Statistics', {
-            'fields': ('execution_count',),
-            'classes': ('collapse',)
-        }),
         ('Timestamps', {
             'fields': ('created_at',),
             'classes': ('collapse',)
@@ -458,9 +454,7 @@ class MemoryBankAdmin(admin.ModelAdmin):
             'conversation': 'primary',
             'context': 'info',
             'knowledge': 'success',
-            'episodic': 'warning',
-            'semantic': 'secondary',
-            'working': 'danger',
+            'preference': 'warning',
         }
         color = colors.get(obj.memory_type, 'secondary')
         return format_html('<span class="badge bg-{}">{}</span>', color, obj.get_memory_type_display())
@@ -530,3 +524,29 @@ class AIAgentAdmin(admin.ModelAdmin):
         count = obj.memories.count()
         return format_html('<span class="badge bg-info">{}</span>', count)
     memory_count_display.short_description = 'Memories'
+
+
+@admin.register(RegistrationAttempt)
+class RegistrationAttemptAdmin(admin.ModelAdmin):
+    """Admin interface for tracking registration attempts"""
+    list_display = ('username_attempted', 'ip_address', 'fingerprint_short', 'attempt_time', 'success', 'blocked_reason')
+    list_filter = ('success', 'attempt_time')
+    search_fields = ('ip_address', 'fingerprint', 'username_attempted', 'user_agent')
+    readonly_fields = ('ip_address', 'fingerprint', 'user_agent', 'attempt_time', 'success', 'username_attempted', 'blocked_reason')
+    date_hierarchy = 'attempt_time'
+    ordering = ('-attempt_time',)
+    
+    def fingerprint_short(self, obj):
+        """Display shortened fingerprint"""
+        if obj.fingerprint:
+            return obj.fingerprint[:20] + '...'
+        return '-'
+    fingerprint_short.short_description = 'Fingerprint'
+    
+    def has_add_permission(self, request):
+        """Disable manual addition"""
+        return False
+    
+    def has_change_permission(self, request, obj=None):
+        """Disable editing"""
+        return False
