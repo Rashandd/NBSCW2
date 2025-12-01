@@ -23,7 +23,6 @@ class MiniGameAdmin(admin.ModelAdmin):
     list_display = ['name', 'slug', 'min_players', 'max_players', 'is_active', 'active_sessions_count']
     list_filter = ['is_active', 'min_players', 'max_players']
     search_fields = ['name', 'description', 'slug']
-    readonly_fields = ['slug']
     ordering = ['name']
     
     fieldsets = (
