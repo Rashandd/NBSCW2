@@ -310,7 +310,7 @@
                     <i class="fas fa-users"></i>
                     {{ game.min_players }} - {{ game.max_players }} {% trans "Players" %}
                 </span>
-                <a href="{% url 'game_specific_lobby' game.game_slug %}" class="btn-game">
+                <a href="{% url 'game_specific_lobby' game.slug %}" class="btn-game">
                     {% trans "Go to" %} {{ game.name }} {% trans "Lobby" %}
                     <i class="fas fa-arrow-right"></i>
                 </a>
