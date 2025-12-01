@@ -4,8 +4,39 @@
 
 {% block title %}{{ server.name }} - Rashigo{% endblock %}
 
-{# Hide the navbar for server view - full screen HUD #}
-{% block navbar %}{% endblock %}
+{# Custom compact navbar for server view with navigation links #}
+{% block navbar %}
+<nav class="server-navbar">
+    <div class="server-navbar-left">
+        <a href="/" class="server-navbar-brand" title="{% trans 'Home' %}">
+            <i class="fas fa-bolt"></i>
+            <span>RASHIGO</span>
+        </a>
+        <span class="server-navbar-separator">|</span>
+        <span class="server-navbar-server">
+            <i class="fas fa-server"></i>
+            {{ server.name|upper }}
+        </span>
+    </div>
+    <div class="server-navbar-right">
+        <a href="/" class="server-nav-link" title="{% trans 'Home' %}">
+            <i class="fas fa-home"></i>
+            <span class="nav-link-text">{% trans "Home" %}</span>
+        </a>
+        <a href="{% url 'all_games_lobby' %}" class="server-nav-link" title="{% trans 'Minigames' %}">
+            <i class="fas fa-gamepad"></i>
+            <span class="nav-link-text">{% trans "Minigames" %}</span>
+        </a>
+        <a href="{% url 'leaderboard' %}" class="server-nav-link" title="{% trans 'Leaderboard' %}">
+            <i class="fas fa-trophy"></i>
+            <span class="nav-link-text">{% trans "Leaderboard" %}</span>
+        </a>
+        <a href="{% url 'settings' %}" class="server-nav-link" title="{% trans 'Settings' %}">
+            <i class="fas fa-cog"></i>
+        </a>
+    </div>
+</nav>
+{% endblock %}
 
 {# Full-width layout, no container padding #}
 {% block main_class %}full-width{% endblock %}
@@ -37,36 +68,143 @@
     }
     
     /* Remove container padding for full-screen */
-    main.container, main.no-container {
+    main.container, main.no-container, main.full-width {
         max-width: 100% !important;
         padding: 0 !important;
         margin: 0 !important;
     }
     
     /* ============================================
-       MAIN CONTAINER - RESPONSIVE LAYOUT
+       COMPACT SERVER NAVBAR - Cyberpunk Style
        ============================================ */
     
-    .gaming-hud-container {
+    .server-navbar {
+        height: 48px;
+        background: rgba(10, 14, 39, 0.95);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid rgba(0, 255, 255, 0.2);
         display: flex;
-        height: 100vh;
-        width: 100vw;
-        position: relative;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        box-shadow: 0 2px 15px rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+    }
+    
+    .server-navbar-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .server-navbar-brand {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #00FFFF;
+        text-decoration: none;
+        font-size: 14px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        transition: all 0.3s ease;
+    }
+    
+    .server-navbar-brand:hover {
+        color: #00FF80;
+        text-shadow: 0 0 15px rgba(0, 255, 128, 0.6);
+    }
+    
+    .server-navbar-brand i {
+        color: #00FF80;
+        filter: drop-shadow(0 0 5px rgba(0, 255, 128, 0.5));
+    }
+    
+    .server-navbar-separator {
+        color: rgba(0, 255, 255, 0.3);
+        font-weight: 300;
+    }
+    
+    .server-navbar-server {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #B0B0B0;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 1px;
+    }
+    
+    .server-navbar-server i {
+        color: #00FFFF;
+        font-size: 12px;
+    }
+    
+    .server-navbar-right {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+    
+    .server-nav-link {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 8px 12px;
+        color: #B0B0B0;
+        text-decoration: none;
+        font-size: 12px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        border-radius: 6px;
+        transition: all 0.3s ease;
+    }
+    
+    .server-nav-link:hover {
+        color: #00FFFF;
+        background: rgba(0, 255, 255, 0.1);
+        text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+    }
+    
+    .server-nav-link i {
+        font-size: 14px;
+    }
+    
+    @media (max-width: 768px) {
+        .nav-link-text {
+            display: none;
+        }
+        .server-navbar-server span {
+            display: none;
+        }
     }
     
     /* ============================================
-       SIDEBAR - GLASSMORPHISM PANEL
+       MAIN CONTAINER - 3 COLUMN LAYOUT
+       ============================================ */
+    
+    .gaming-hud-container {
+        display: grid;
+        grid-template-columns: 260px 1fr 240px;
+        height: calc(100vh - 48px); /* Subtract navbar height */
+        width: 100vw;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    /* ============================================
+       LEFT SIDEBAR - GLASSMORPHISM PANEL
        ============================================ */
     
     .sidebar-panel {
-        width: 260px;
         background: rgba(10, 14, 39, 0.7);
         backdrop-filter: blur(10px);
         border-right: 1px solid rgba(0, 255, 255, 0.2);
         display: flex;
         flex-direction: column;
-        height: 100vh;
-        flex-shrink: 0;
+        height: 100%;
+        overflow: hidden;
         box-shadow: 2px 0 20px rgba(0, 0, 0, 0.5);
         position: relative;
         z-index: 100;
@@ -473,13 +611,18 @@
        MAIN CHAT AREA - GLASSMORPHISM PANEL
        ============================================ */
     
+    /* ============================================
+       CHAT PANEL - MIDDLE COLUMN (The Stage)
+       ============================================ */
+    
     .chat-panel {
-        flex: 1;
         display: flex;
         flex-direction: column;
         background: rgba(10, 14, 39, 0.6);
         backdrop-filter: blur(10px);
         min-width: 0;
+        height: 100%;
+        overflow: hidden; /* CRITICAL: Prevent overflow breaking layout */
         position: relative;
     }
     
@@ -571,14 +714,15 @@
        ============================================ */
     .video-grid-container {
         display: none; /* Hidden by default, shown when videos exist */
-        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
         gap: 16px;
-        padding: 20px;
+        padding: 16px;
         background: rgba(0, 0, 0, 0.5);
         border-bottom: 2px solid #00FFFF;
-        min-height: 220px;
-        max-height: 50vh;
+        min-height: 200px;
+        max-height: 40vh; /* CRITICAL: Limit height to prevent overflow */
         overflow-y: auto;
+        flex-shrink: 0; /* Don't shrink below min-height */
         box-shadow: 
             0 4px 20px rgba(0, 0, 0, 0.5),
             inset 0 0 60px rgba(0, 255, 255, 0.05);
@@ -774,14 +918,14 @@
         opacity: 0.7;
     }
     
-    /* Messages Area */
+    /* Messages Area - CRITICAL: flex-grow to fill space, min-height: 0 to shrink */
     .messages-container {
-        flex: 1;
+        flex: 1 1 0; /* Grow, shrink, basis 0 */
         overflow-y: auto;
         overflow-x: hidden;
         padding: 20px;
         background: transparent;
-        min-height: 0;
+        min-height: 0; /* CRITICAL: Allow shrinking in flex container */
     }
     
     .message-item {
@@ -995,20 +1139,224 @@
     }
     
     /* ============================================
+       RIGHT SIDEBAR - MEMBER LIST
+       ============================================ */
+    
+    .member-sidebar {
+        background: rgba(10, 14, 39, 0.7);
+        backdrop-filter: blur(10px);
+        border-left: 1px solid rgba(0, 255, 255, 0.2);
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        overflow: hidden;
+        box-shadow: -2px 0 20px rgba(0, 0, 0, 0.5);
+    }
+    
+    .member-sidebar-header {
+        padding: 16px;
+        border-bottom: 1px solid rgba(0, 255, 255, 0.15);
+        background: rgba(0, 255, 255, 0.05);
+        flex-shrink: 0;
+    }
+    
+    .member-sidebar-header h3 {
+        font-size: 11px;
+        font-weight: 700;
+        color: #00FF80;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .member-sidebar-header h3 i {
+        filter: drop-shadow(0 0 5px rgba(0, 255, 128, 0.5));
+    }
+    
+    .member-count {
+        color: #6B7280;
+        font-size: 10px;
+        margin-left: auto;
+    }
+    
+    .member-list-container {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 12px;
+    }
+    
+    .member-group {
+        margin-bottom: 20px;
+    }
+    
+    .member-group-header {
+        font-size: 10px;
+        font-weight: 700;
+        color: #6B7280;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        padding: 8px 8px 6px;
+        margin-bottom: 4px;
+    }
+    
+    .member-group-header.online {
+        color: #00FF80;
+    }
+    
+    .member-group-header.offline {
+        color: #6B7280;
+    }
+    
+    .member-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 10px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .member-item:hover {
+        background: rgba(0, 255, 255, 0.08);
+    }
+    
+    .member-item.offline {
+        opacity: 0.5;
+    }
+    
+    .member-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #00FFFF 0%, #00FF80 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #0A0E27;
+        font-weight: 700;
+        font-size: 13px;
+        flex-shrink: 0;
+        position: relative;
+        border: 2px solid transparent;
+        transition: all 0.3s ease;
+    }
+    
+    .member-item:hover .member-avatar {
+        border-color: rgba(0, 255, 255, 0.4);
+        box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+    }
+    
+    .member-avatar.offline {
+        background: linear-gradient(135deg, #4B5563 0%, #374151 100%);
+    }
+    
+    .member-status-dot {
+        position: absolute;
+        bottom: -2px;
+        right: -2px;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        border: 2px solid #0A0E27;
+    }
+    
+    .member-status-dot.online {
+        background: #00FF80;
+        box-shadow: 0 0 8px rgba(0, 255, 128, 0.6);
+    }
+    
+    .member-status-dot.idle {
+        background: #FFA500;
+        box-shadow: 0 0 8px rgba(255, 165, 0, 0.6);
+    }
+    
+    .member-status-dot.dnd {
+        background: #FF0064;
+        box-shadow: 0 0 8px rgba(255, 0, 100, 0.6);
+    }
+    
+    .member-status-dot.offline {
+        background: #6B7280;
+    }
+    
+    .member-info {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .member-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: #E0E0E0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .member-item.offline .member-name {
+        color: #6B7280;
+    }
+    
+    .member-role {
+        font-size: 10px;
+        color: #00FFFF;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .member-role.owner {
+        color: #FFD700;
+    }
+    
+    .member-role.admin {
+        color: #FF0064;
+    }
+    
+    /* ============================================
+       TABLET RESPONSIVE (768px - 1024px)
+       ============================================ */
+    
+    @media (max-width: 1024px) {
+        .gaming-hud-container {
+            grid-template-columns: 260px 1fr; /* Hide member sidebar */
+        }
+        
+        .member-sidebar {
+            display: none;
+        }
+    }
+    
+    /* ============================================
        MOBILE RESPONSIVE - CRITICAL
        ============================================ */
     
     @media (max-width: 768px) {
+        .server-navbar {
+            height: 44px;
+            padding: 0 12px;
+        }
+        
+        .server-navbar-brand span {
+            display: none;
+        }
+        
         .gaming-hud-container {
+            display: flex;
             flex-direction: column;
+            height: calc(100vh - 44px);
         }
         
         /* Sidebar - Hidden by default, slide in from left */
         .sidebar-panel {
             position: fixed;
             left: -260px;
-            top: 0;
-            height: 100vh;
+            top: 44px; /* Below navbar */
+            height: calc(100vh - 44px);
             width: 260px;
             z-index: 1000;
             transition: left 0.3s ease;
@@ -1019,11 +1367,16 @@
             left: 0;
         }
         
+        /* Member sidebar hidden on mobile */
+        .member-sidebar {
+            display: none;
+        }
+        
         /* Overlay when sidebar is open */
         .sidebar-overlay {
             display: none;
             position: fixed;
-            top: 0;
+            top: 44px;
             left: 0;
             right: 0;
             bottom: 0;
@@ -1265,6 +1618,50 @@
                 <button class="input-btn" onclick="sendMessage()" title="{% trans 'Send message' %}">
                     <i class="fas fa-paper-plane"></i>
                 </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- RIGHT SIDEBAR - Member List -->
+    <div class="member-sidebar" id="member-sidebar">
+        <div class="member-sidebar-header">
+            <h3>
+                <i class="fas fa-users"></i>
+                {% trans "MEMBERS" %}
+                <span class="member-count">{{ members|length }}</span>
+            </h3>
+        </div>
+        <div class="member-list-container">
+            <!-- Online Members -->
+            <div class="member-group">
+                <div class="member-group-header online">
+                    {% trans "ONLINE" %} — <span id="online-count">{{ members|length }}</span>
+                </div>
+                {% for member in members %}
+                <div class="member-item {% if not member.user.is_active %}offline{% endif %}" 
+                     data-user-id="{{ member.user.id }}"
+                     data-username="{{ member.user.username }}">
+                    <div class="member-avatar {% if not member.user.is_active %}offline{% endif %}">
+                        {{ member.user.username|first|upper }}
+                        <span class="member-status-dot {% if member.user.is_active %}online{% else %}offline{% endif %}"></span>
+                    </div>
+                    <div class="member-info">
+                        <div class="member-name">{{ member.user.username }}</div>
+                        {% if member.user == server.owner %}
+                        <div class="member-role owner">{% trans "OWNER" %}</div>
+                        {% elif member.roles.exists %}
+                        <div class="member-role">{{ member.roles.first.name|upper }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="member-item" style="opacity: 0.5; cursor: default;">
+                    <div class="member-avatar">?</div>
+                    <div class="member-info">
+                        <div class="member-name">{% trans "No members" %}</div>
+                    </div>
+                </div>
+                {% endfor %}
             </div>
         </div>
     </div>
