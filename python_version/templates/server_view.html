@@ -48,6 +48,7 @@
         flex-direction: column;
         height: 100vh;
         overflow: hidden;
+        position: relative;
     }
     
     .server-header-sidebar {
@@ -85,6 +86,138 @@
         padding: 16px 12px;
         flex: 1;
         overflow-y: auto;
+        min-height: 0; /* Allow flex shrinking */
+    }
+    
+    /* Bottom Voice Control Bar (Discord style) */
+    .voice-control-bar {
+        background: #292B2F;
+        border-top: 1px solid #1E1F22;
+        padding: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 52px;
+        flex-shrink: 0;
+    }
+    
+    .voice-control-bar-user {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .voice-control-bar-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 14px;
+        flex-shrink: 0;
+    }
+    
+    .voice-control-bar-info {
+        flex: 1;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+    
+    .voice-control-bar-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: #E5E5E5;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .voice-control-bar-status {
+        font-size: 11px;
+        color: #B9BBBE;
+    }
+    
+    .voice-control-bar-buttons {
+        display: flex;
+        gap: 4px;
+        align-items: center;
+    }
+    
+    .voice-control-bar-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 4px;
+        border: none;
+        background: transparent;
+        color: #B9BBBE;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s ease;
+        font-size: 16px;
+    }
+    
+    .voice-control-bar-btn:hover {
+        background: #3A3D44;
+        color: #E5E5E5;
+    }
+    
+    .voice-control-bar-btn.active {
+        background: #3A3D44;
+        color: #E5E5E5;
+    }
+    
+    .voice-control-bar-btn.muted {
+        background: #ED4245;
+        color: #FFFFFF;
+    }
+    
+    .voice-control-bar-btn.muted:hover {
+        background: #C03537;
+    }
+    
+    .voice-control-bar-btn.deafened {
+        background: #FAA61A;
+        color: #FFFFFF;
+    }
+    
+    .voice-control-bar-btn.deafened:hover {
+        background: #D68910;
+    }
+    
+    .voice-control-bar-btn.leave {
+        background: #ED4245;
+        color: #FFFFFF;
+    }
+    
+    .voice-control-bar-btn.leave:hover {
+        background: #C03537;
+    }
+    
+    /* Voice indicator in chat header */
+    .voice-indicator {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        background: rgba(99, 102, 241, 0.1);
+        border-radius: 4px;
+        font-size: 13px;
+        color: #6366F1;
+    }
+    
+    .voice-indicator i {
+        font-size: 12px;
     }
     
     .channel-section-header {
@@ -157,6 +290,101 @@
         font-weight: 500;
     }
     
+    /* Voice channel with nested participants list */
+    .voice-channel-item {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 0;
+    }
+    
+    .voice-channel-item > .channel-link {
+        padding: 8px 12px;
+    }
+    
+    /* Nested voice participants list (Discord style) */
+    .voice-participants-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        padding-left: 24px;
+        padding-top: 4px;
+        padding-bottom: 8px;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+    
+    .voice-participant-mini {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 13px;
+        color: #9CA3AF;
+        transition: all 0.15s ease;
+    }
+    
+    .voice-participant-mini:hover {
+        background: rgba(255, 255, 255, 0.05);
+        color: #E5E5E5;
+    }
+    
+    .voice-participant-mini.speaking {
+        color: #6366F1;
+    }
+    
+    .voice-participant-mini-avatar {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 10px;
+        flex-shrink: 0;
+        position: relative;
+    }
+    
+    .voice-participant-mini-avatar.muted::after {
+        content: '🔇';
+        position: absolute;
+        bottom: -2px;
+        right: -2px;
+        background: #1A1A1A;
+        border-radius: 50%;
+        width: 12px;
+        height: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 8px;
+        border: 1px solid #141414;
+    }
+    
+    .voice-participant-mini-name {
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .voice-participant-mini-status {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #10B981;
+        flex-shrink: 0;
+    }
+    
+    .voice-participant-mini-status.speaking {
+        background: #6366F1;
+        animation: pulse 1.5s infinite;
+    }
+    
     .channel-item a {
         color: inherit;
         text-decoration: none;
@@ -174,13 +402,25 @@
         pointer-events: auto !important;
     }
     
-    /* Main Content Area */
+    /* Main Content Area - Always shows text chat */
     .main-content {
         display: flex;
         flex-direction: column;
         height: 100vh;
         background: #141414;
         overflow: hidden;
+    }
+    
+    /* Chat area is always visible (not hidden) */
+    #chat-area {
+        display: flex !important;
+        flex-direction: column;
+        height: 100%;
+        flex: 1;
+    }
+    
+    #chat-area.hidden {
+        display: none !important;
     }
     
     .server-header {
@@ -564,251 +804,7 @@
         margin-right: 6px;
     }
     
-    /* Voice Stage */
-    #voice-stage {
-        display: none;
-        flex-direction: column;
-        height: 100%;
-        flex: 1;
-        background: #141414;
-    }
-    
-    #voice-stage.active {
-        display: flex;
-    }
-    
-    .voice-header {
-        padding: 16px 24px;
-        border-bottom: 1px solid #2A2A2A;
-        background: #1A1A1A;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-    
-    .voice-header-left {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-    
-    .voice-header-left i {
-        color: #6366F1;
-        font-size: 18px;
-    }
-    
-    .voice-header-left h4 {
-        font-size: 16px;
-        font-weight: 600;
-        color: #E5E5E5;
-        margin: 0;
-    }
-    
-    .voice-controls {
-        display: flex;
-        gap: 8px;
-    }
-    
-    .voice-control-btn {
-        padding: 8px 16px;
-        border-radius: 8px;
-        border: 1px solid #2A2A2A;
-        background: #1F1F1F;
-        color: #E5E5E5;
-        font-size: 13px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.15s ease;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-    
-    .voice-control-btn:hover {
-        background: #2A2A2A;
-        border-color: #3A3A3A;
-    }
-    
-    .voice-control-btn.active {
-        background: #6366F1;
-        color: #FFFFFF;
-        border-color: #6366F1;
-    }
-    
-    .voice-control-btn.muted {
-        background: #EF4444;
-        color: #FFFFFF;
-        border-color: #EF4444;
-    }
-    
-    .voice-control-btn.deafened {
-        background: #F59E0B;
-        color: #FFFFFF;
-        border-color: #F59E0B;
-    }
-    
-    /* Voice Participants - Discord-Style Vertical List */
-    .voice-participants {
-        flex: 1;
-        overflow-y: auto;
-        padding: 16px;
-        background: #141414;
-        display: flex;
-        flex-direction: column;
-    }
-    
-    #screen-shares-container {
-        margin-bottom: 16px;
-    }
-    
-    /* Discord-style vertical participant list */
-    .participants-list {
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-        list-style: none;
-        padding: 0;
-        margin: 0;
-    }
-    
-    .participant-item {
-        display: flex;
-        align-items: center;
-        gap: 12px;
-        padding: 8px 12px;
-        border-radius: 4px;
-        transition: all 0.15s ease;
-        cursor: pointer;
-        background: transparent;
-    }
-    
-    .participant-item:hover {
-        background: rgba(255, 255, 255, 0.05);
-    }
-    
-    .participant-item.speaking {
-        background: rgba(99, 102, 241, 0.1);
-    }
-    
-    .participant-item.speaking .participant-avatar {
-        border: 2px solid #6366F1;
-    }
-    
-    /* Avatar - Discord style */
-    .participant-avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: 600;
-        font-size: 16px;
-        flex-shrink: 0;
-        position: relative;
-        border: 2px solid transparent;
-        transition: all 0.15s ease;
-    }
-    
-    /* Video overlay on avatar */
-    .participant-avatar.has-video {
-        border: 2px solid #6366F1;
-    }
-    
-    .participant-avatar video {
-        width: 100%;
-        height: 100%;
-        border-radius: 50%;
-        object-fit: cover;
-        position: absolute;
-        top: 0;
-        left: 0;
-        display: none;
-    }
-    
-    .participant-avatar video.active {
-        display: block;
-    }
-    
-    /* Muted indicator */
-    .participant-avatar.muted::after {
-        content: '🔇';
-        position: absolute;
-        bottom: -2px;
-        right: -2px;
-        background: #1A1A1A;
-        border-radius: 50%;
-        width: 18px;
-        height: 18px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 10px;
-        border: 2px solid #141414;
-        z-index: 10;
-    }
-    
-    /* Participant info */
-    .participant-info {
-        flex: 1;
-        min-width: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 2px;
-    }
-    
-    .participant-name {
-        font-size: 15px;
-        font-weight: 500;
-        color: #E5E5E5;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-    
-    .participant-status {
-        font-size: 12px;
-        color: #9CA3AF;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-    
-    .status-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        background: #10B981;
-        flex-shrink: 0;
-    }
-    
-    .status-dot.speaking {
-        background: #6366F1;
-        animation: pulse 1.5s infinite;
-    }
-    
-    @keyframes pulse {
-        0%, 100% { opacity: 1; transform: scale(1); }
-        50% { opacity: 0.7; transform: scale(1.2); }
-    }
-    
-    /* Remove old grid styles */
-    .participants-grid {
-        display: none;
-    }
-    
-    .participant-card {
-        display: none;
-    }
-    
-    .participant-video-container {
-        display: none;
-    }
+    /* Voice Stage removed - main content always shows text chat */
     
     /* Screen Share Card */
     .screen-share-card {
@@ -1017,7 +1013,7 @@
                 </div>
                 <ul class="channel-list">
                     {% for channel in voice_channels %}
-                    <li class="channel-item">
+                    <li class="channel-item voice-channel-item" data-voice-channel-slug="{{ channel.slug }}">
                         <a href="javascript:void(0)" class="channel-link" 
                            data-channel-type="voice" 
                            data-channel-slug="{{ channel.slug }}" 
@@ -1026,6 +1022,10 @@
                             <i class="fas fa-volume-up"></i>
                             <span>{{ channel.name }}</span>
                         </a>
+                        <!-- Voice participants nested list (Discord style) -->
+                        <ul class="voice-participants-list" id="voice-participants-{{ channel.slug }}" style="display: none;">
+                            <!-- Participants will be added here dynamically -->
+                        </ul>
                     </li>
             {% empty %}
             <li class="channel-item" style="color: #6B7280; font-size: 13px;">
@@ -1033,6 +1033,30 @@
             </li>
                     {% endfor %}
                 </ul>
+            </div>
+        </div>
+        
+        <!-- Bottom Voice Control Bar (Discord style) -->
+        <div class="voice-control-bar" id="voice-control-bar" style="display: none;">
+            <div class="voice-control-bar-user">
+                <div class="voice-control-bar-avatar" id="voice-control-bar-avatar">
+                    {{ user.username|first|upper }}
+                </div>
+                <div class="voice-control-bar-info">
+                    <div class="voice-control-bar-name">{{ user.username }}</div>
+                    <div class="voice-control-bar-status" id="voice-control-bar-status">{% trans "Connected" %}</div>
+                </div>
+            </div>
+            <div class="voice-control-bar-buttons">
+                <button class="voice-control-bar-btn" id="voice-control-mute-btn" onclick="toggleMute()" title="{% trans 'Mute' %}">
+                    <i class="fas fa-microphone"></i>
+                </button>
+                <button class="voice-control-bar-btn" id="voice-control-deafen-btn" onclick="toggleDeafen()" title="{% trans 'Deafen' %}">
+                    <i class="fas fa-volume-mute"></i>
+                </button>
+                <button class="voice-control-bar-btn leave" id="voice-control-leave-btn" onclick="leaveVoiceChannel()" title="{% trans 'Disconnect' %}">
+                    <i class="fas fa-phone-slash"></i>
+                </button>
             </div>
         </div>
     </div>
@@ -1067,11 +1091,16 @@
             </p>
         </div>
         
-        <!-- Chat Area -->
-        <div id="chat-area" class="hidden">
+        <!-- Chat Area - Always visible when channel is selected -->
+        <div id="chat-area">
             <div class="chat-header">
                 <i class="fas fa-hashtag"></i>
                 <h4 id="chat-channel-name">{% trans "Channel" %}</h4>
+                <!-- Voice channel indicator (if connected) -->
+                <div class="voice-indicator" id="voice-indicator" style="display: none;">
+                    <i class="fas fa-volume-up"></i>
+                    <span id="voice-indicator-name"></span>
+                </div>
             </div>
             
             <div id="discord-messages"></div>
@@ -1086,48 +1115,6 @@
                         <i class="fas fa-paper-plane"></i>
                     </button>
                 </div>
-            </div>
-        </div>
-        
-        <!-- Voice Area -->
-        <div id="voice-stage" class="hidden">
-            <div class="voice-header">
-                <div class="voice-header-left">
-                    <i class="fas fa-volume-up"></i>
-                    <h4 id="voice-channel-name">{% trans "Voice Channel" %}</h4>
-                </div>
-                <div class="voice-controls">
-                    <button id="voice-mute-btn" class="voice-control-btn" onclick="toggleMute()">
-                        <i class="fas fa-microphone"></i>
-                        <span>{% trans "Mute" %}</span>
-                    </button>
-                    <button id="voice-deafen-btn" class="voice-control-btn" onclick="toggleDeafen()" title="{% trans 'Deafen: Mute all incoming audio from other participants' %}">
-                        <i class="fas fa-volume-mute"></i>
-                        <span>{% trans "Deafen" %}</span>
-                    </button>
-                    <button id="voice-video-btn" class="voice-control-btn" onclick="toggleVideo()">
-                        <i class="fas fa-video"></i>
-                        <span>{% trans "Video" %}</span>
-                    </button>
-                    <button id="voice-screenshare-btn" class="voice-control-btn" onclick="toggleScreenShare()">
-                        <i class="fas fa-desktop"></i>
-                        <span>{% trans "Share Screen" %}</span>
-                    </button>
-                </div>
-            </div>
-            
-            <div class="voice-participants" id="voice-participants">
-                <!-- Screen shares will appear here first -->
-                <div id="screen-shares-container"></div>
-                <!-- Participants list (Discord-style vertical list) -->
-                <!-- Will be created dynamically by ensureParticipantsList() -->
-            </div>
-            
-            <div class="voice-footer">
-                <button class="voice-footer-btn leave" onclick="leaveVoiceChannel()">
-                    <i class="fas fa-phone-slash"></i>
-                    <span>{% trans "Leave Channel" %}</span>
-                </button>
             </div>
         </div>
     </div>
@@ -1297,19 +1284,27 @@
         iceServers = [{ urls: 'stun:stun.l.google.com:19302' }];
     }
     
+    // Text Channel State
     let currentChannelSlug = null;
     let currentChannelType = null;
     let chatSocket = null;
+    
+    // Voice Channel State (Global - persists across text channel changes)
+    let currentVoiceChannelSlug = null;
+    let currentVoiceChannelName = null;
+    let voiceSocket = null;
     let localStream = null;
     let peerConnections = {};
     let isMuted = false;
     let isVideoEnabled = true;
+    let isDeafened = false;
+    let isVideoOn = false;
+    let isScreenSharing = false;
     
     const messageList = document.getElementById('discord-messages');
     const chatInput = document.getElementById('discord-chat-input');
     const welcomeMessage = document.getElementById('welcome-message');
     const chatArea = document.getElementById('chat-area');
-    const voiceStage = document.getElementById('voice-stage');
     
     // Channel click handler - Simple and direct
     function handleChannelClick(e) {
@@ -1403,32 +1398,43 @@
     })();
     
     // Make functions globally accessible
+    // Discord-style: Text channel always visible, voice connection persists
     window.openTextChannel = function(slug, name) {
-        if (currentChannelType === 'voice') {
-            cleanupVoiceChannel();
-        }
-        
+        // Don't disconnect voice when switching text channels
         currentChannelSlug = slug;
         currentChannelType = 'text';
         
-        // Update active state
-        document.querySelectorAll('.channel-item').forEach(item => item.classList.remove('active'));
-        const activeLink = document.querySelector(`.channel-link[data-channel-slug="${slug}"]`);
+        // Update active state (only text channels)
+        document.querySelectorAll('.channel-item').forEach(item => {
+            if (item.querySelector('.channel-link[data-channel-type="text"]')) {
+                item.classList.remove('active');
+            }
+        });
+        const activeLink = document.querySelector(`.channel-link[data-channel-slug="${slug}"][data-channel-type="text"]`);
         if (activeLink) {
             activeLink.closest('.channel-item').classList.add('active');
         }
         
+        // Close old text channel socket
         if (chatSocket) {
             chatSocket.close();
             chatSocket = null;
         }
         
-        welcomeMessage.style.display = 'none';
-        voiceStage.classList.remove('active');
-        voiceStage.style.display = 'none';
-        chatArea.classList.add('active');
-        chatArea.style.display = 'flex';
-        document.getElementById('chat-channel-name').textContent = name;
+        // Always show chat area (Discord style)
+        if (welcomeMessage) {
+            welcomeMessage.style.display = 'none';
+        }
+        const chatArea = document.getElementById('chat-area');
+        if (chatArea) {
+            chatArea.style.display = 'flex';
+            chatArea.classList.remove('hidden');
+        }
+        
+        const chatChannelName = document.getElementById('chat-channel-name');
+        if (chatChannelName) {
+            chatChannelName.textContent = name;
+        }
         
         if (messageList) {
             messageList.innerHTML = '';
@@ -1438,30 +1444,43 @@
         loadChatHistory();
     }
     
+    // Discord-style: Join voice channel (doesn't change main view)
     window.openVoiceChannel = function(slug, name) {
-        cleanupVoiceChannel();
-        currentChannelSlug = slug;
-        currentChannelType = 'voice';
+        // If already in a different voice channel, leave it first
+        if (currentVoiceChannelSlug && currentVoiceChannelSlug !== slug) {
+            leaveVoiceChannel();
+        }
         
-        // Update active state
-        document.querySelectorAll('.channel-item').forEach(item => item.classList.remove('active'));
-        const activeLink = document.querySelector(`.channel-link[data-channel-slug="${slug}"]`);
+        // Don't change currentChannelSlug/Type - text chat stays visible
+        currentVoiceChannelSlug = slug;
+        currentVoiceChannelName = name;
+        
+        // Update active state for voice channel
+        document.querySelectorAll('.channel-item').forEach(item => {
+            if (item.querySelector('.channel-link[data-channel-type="voice"]')) {
+                item.classList.remove('active');
+            }
+        });
+        const activeLink = document.querySelector(`.channel-link[data-channel-slug="${slug}"][data-channel-type="voice"]`);
         if (activeLink) {
             activeLink.closest('.channel-item').classList.add('active');
         }
         
-        welcomeMessage.style.display = 'none';
-        chatArea.classList.remove('active');
-        chatArea.style.display = 'none';
-        voiceStage.classList.add('active');
-        voiceStage.style.display = 'flex';
-        
-        // Update voice channel name
-        const voiceChannelName = document.getElementById('voice-channel-name');
-        if (voiceChannelName) {
-            voiceChannelName.textContent = name;
+        // Show voice indicator in chat header
+        const voiceIndicator = document.getElementById('voice-indicator');
+        const voiceIndicatorName = document.getElementById('voice-indicator-name');
+        if (voiceIndicator && voiceIndicatorName) {
+            voiceIndicator.style.display = 'flex';
+            voiceIndicatorName.textContent = name;
         }
         
+        // Show bottom voice control bar
+        const voiceControlBar = document.getElementById('voice-control-bar');
+        if (voiceControlBar) {
+            voiceControlBar.style.display = 'flex';
+        }
+        
+        // Initialize voice connection
         initializeVoice();
     }
     
@@ -1489,25 +1508,20 @@
         });
         peerConnections = {};
         
-        // Clear participants and screen shares
+        // Clear participants from sidebar
+        clearVoiceParticipantsFromSidebar();
         voiceParticipants.clear();
         screenShares.clear();
         
-        const container = document.getElementById('voice-participants');
-        if (container) {
-            container.innerHTML = `
-                <div id="screen-shares-container"></div>
-            `;
-        }
-        
-        // Close WebSocket
-        if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
-            chatSocket.send(JSON.stringify({
+        // Close Voice WebSocket (separate from text chat socket)
+        if (voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
+            voiceSocket.send(JSON.stringify({
                 signal_type: 'leave_voice',
                 data: {}
             }));
-            chatSocket.close();
+            voiceSocket.close();
         }
+        voiceSocket = null;
         
         // Reset states
         isMuted = false;
@@ -1515,28 +1529,35 @@
         isVideoOn = false;
         isScreenSharing = false;
         
-        // Reset UI
-        const muteBtn = document.getElementById('voice-mute-btn');
-        const deafenBtn = document.getElementById('voice-deafen-btn');
-        const videoBtn = document.getElementById('voice-video-btn');
-        const screenshareBtn = document.getElementById('voice-screenshare-btn');
+        // Update bottom voice control bar
+        updateVoiceControlBar();
+    }
+    
+    function leaveVoiceChannel() {
+        cleanupVoiceChannel();
         
-        if (muteBtn) {
-            muteBtn.classList.remove('muted');
-            muteBtn.innerHTML = '<i class="fas fa-microphone"></i> <span>{% trans "Mute" %}</span>';
+        // Clear voice channel state
+        currentVoiceChannelSlug = null;
+        currentVoiceChannelName = null;
+        
+        // Hide voice indicator in chat header
+        const voiceIndicator = document.getElementById('voice-indicator');
+        if (voiceIndicator) {
+            voiceIndicator.style.display = 'none';
         }
-        if (deafenBtn) {
-            deafenBtn.classList.remove('deafened');
-            deafenBtn.innerHTML = '<i class="fas fa-volume-mute"></i> <span>{% trans "Deafen" %}</span>';
+        
+        // Hide bottom voice control bar
+        const voiceControlBar = document.getElementById('voice-control-bar');
+        if (voiceControlBar) {
+            voiceControlBar.style.display = 'none';
         }
-        if (videoBtn) {
-            videoBtn.classList.remove('active');
-            videoBtn.innerHTML = '<i class="fas fa-video-slash"></i> <span>{% trans "Start Video" %}</span>';
-        }
-        if (screenshareBtn) {
-            screenshareBtn.classList.remove('active');
-            screenshareBtn.innerHTML = '<i class="fas fa-desktop"></i> <span>{% trans "Share Screen" %}</span>';
-        }
+        
+        // Remove active state from voice channel
+        document.querySelectorAll('.channel-item').forEach(item => {
+            if (item.querySelector('.channel-link[data-channel-type="voice"]')) {
+                item.classList.remove('active');
+            }
+        });
     }
     
     function connectWebSocket() {
@@ -1842,12 +1863,11 @@
     let localAudioTrack = null;
     let localVideoTrack = null;
     let localScreenShareTrack = null;
-    let isDeafened = false;
-    let isVideoOn = false;
-    let isScreenSharing = false;
     let screenShares = new Map(); // Track screen shares by username
     
     async function initializeVoice() {
+        if (!currentVoiceChannelSlug) return;
+        
         try {
             // Request audio and video permissions
             const stream = await navigator.mediaDevices.getUserMedia({ 
@@ -1861,8 +1881,11 @@
                 isVideoOn = true;
             }
             
-            // Add local participant
-            addVoiceParticipant('{{ user.username }}', true, false, false);
+            // Add local participant to sidebar
+            addVoiceParticipant(currentUsername, true, false, false);
+            
+            // Update bottom voice control bar
+            updateVoiceControlBar();
             
             connectVoiceWebSocket();
         } catch (error) {
@@ -1871,30 +1894,33 @@
         }
     }
     
+    // Global voice WebSocket (separate from text chat socket)
     function connectVoiceWebSocket() {
-        if (!currentChannelSlug || currentChannelType !== 'voice') return;
+        if (!currentVoiceChannelSlug) return;
         
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${wsProtocol}//${window.location.host}/ws/voice/?channel_slug=${currentChannelSlug}&channel_type=voice`;
-        
-        if (chatSocket) {
-            chatSocket.close();
+        // Close existing voice socket if any
+        if (voiceSocket) {
+            voiceSocket.close();
+            voiceSocket = null;
         }
         
-        chatSocket = new WebSocket(wsUrl);
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws/voice/?channel_slug=${currentVoiceChannelSlug}&channel_type=voice`;
         
-        chatSocket.onopen = function() {
-            console.log("Voice WebSocket Connected");
-            // Send join signal (matches consumer format)
-            chatSocket.send(JSON.stringify({
+        voiceSocket = new WebSocket(wsUrl);
+        
+        voiceSocket.onopen = function() {
+            console.log("[Voice WS] Connected to voice channel:", currentVoiceChannelSlug);
+            // Send join signal
+            voiceSocket.send(JSON.stringify({
                 signal_type: 'join_voice',
                 data: {
-                    channel_slug: currentChannelSlug
+                    channel_slug: currentVoiceChannelSlug
                 }
             }));
         };
         
-        chatSocket.onmessage = function(e) {
+        voiceSocket.onmessage = function(e) {
             const data = JSON.parse(e.data);
             console.log('[Voice WS] Received:', data.type, data);
             
@@ -1982,64 +2008,62 @@
             }
         };
         
-        chatSocket.onclose = function() {
-            console.log("Voice WebSocket Disconnected");
-            if (currentChannelType === 'voice') {
+        voiceSocket.onclose = function() {
+            console.log("[Voice WS] Disconnected");
+            if (currentVoiceChannelSlug) {
+                // Reconnect if still in voice channel
                 setTimeout(connectVoiceWebSocket, 3000);
             }
         };
         
-        chatSocket.onerror = function(error) {
-            console.error("Voice WebSocket Error:", error);
+        voiceSocket.onerror = function(error) {
+            console.error("[Voice WS] Error:", error);
         };
     }
     
-    // Discord-style vertical participant list
-    function ensureParticipantsList() {
-        const container = document.getElementById('voice-participants');
-        if (!container) return null;
+    // Discord-style: Get or create participants list in sidebar (nested under voice channel)
+    function ensureParticipantsListInSidebar(voiceChannelSlug) {
+        if (!voiceChannelSlug) return null;
         
-        let list = container.querySelector('.participants-list');
+        const voiceChannelItem = document.querySelector(`.voice-channel-item[data-voice-channel-slug="${voiceChannelSlug}"]`);
+        if (!voiceChannelItem) return null;
+        
+        let list = voiceChannelItem.querySelector('.voice-participants-list');
         if (!list) {
             list = document.createElement('ul');
-            list.className = 'participants-list';
-            container.appendChild(list);
+            list.className = 'voice-participants-list';
+            list.id = `voice-participants-${voiceChannelSlug}`;
+            voiceChannelItem.appendChild(list);
         }
+        
+        // Show the list
+        list.style.display = 'flex';
         return list;
     }
     
+    // Add participant to sidebar (Discord style - nested under voice channel)
     function addVoiceParticipant(username, isLocal, isMuted, isDeafened) {
         if (voiceParticipants.has(username)) return;
         
-        const list = ensureParticipantsList();
+        if (!currentVoiceChannelSlug) return;
+        
+        const list = ensureParticipantsListInSidebar(currentVoiceChannelSlug);
         if (!list) return;
         
         const item = document.createElement('li');
-        item.className = 'participant-item';
+        item.className = 'voice-participant-mini';
         item.id = `participant-${username}`;
         item.dataset.username = username;
         
         const avatarLetter = username.charAt(0).toUpperCase();
         const avatarColor = `hsl(${username.charCodeAt(0) * 137.508 % 360}, 70%, 50%)`;
         
-        const youText = "{% trans 'You' %}";
-        const connectedText = "{% trans 'Connected' %}";
-        
         item.innerHTML = `
-            <div class="participant-avatar ${isMuted ? 'muted' : ''}" style="background: ${avatarColor};">
+            <div class="voice-participant-mini-avatar ${isMuted ? 'muted' : ''}" style="background: ${avatarColor};">
                 ${avatarLetter}
-                <video autoplay playsInline style="display: none;"></video>
             </div>
-            <div class="participant-info">
-                <div class="participant-name">
-                    ${escapeHtml(username)}
-                    ${isLocal ? '<span style="color: #9CA3AF; font-size: 12px;">(' + youText + ')</span>' : ''}
-                </div>
-                <div class="participant-status">
-                    <span class="status-dot"></span>
-                    <span>${connectedText}</span>
-                </div>
-            </div>
+            <div class="voice-participant-mini-name">${escapeHtml(username)}</div>
+            <div class="voice-participant-mini-status"></div>
         `;
         
         list.appendChild(item);
@@ -2048,8 +2072,16 @@
             isMuted, 
             isDeafened, 
             isLocal,
-            videoElement: item.querySelector('video'),
-            avatarElement: item.querySelector('.participant-avatar')
+            avatarElement: item.querySelector('.voice-participant-mini-avatar'),
+            statusElement: item.querySelector('.voice-participant-mini-status')
+        });
+    }
+    
+    // Clear all participants from sidebar
+    function clearVoiceParticipantsFromSidebar() {
+        document.querySelectorAll('.voice-participants-list').forEach(list => {
+            list.innerHTML = '';
+            list.style.display = 'none';
         });
     }
     
@@ -2065,7 +2097,8 @@
         const participant = voiceParticipants.get(username);
         if (!participant) return;
         
-        const avatar = participant.avatarElement || participant.element.querySelector('.participant-avatar');
+        const avatar = participant.avatarElement || participant.element.querySelector('.voice-participant-mini-avatar');
+        const statusDot = participant.statusElement || participant.element.querySelector('.voice-participant-mini-status');
         
         if (statusType === 'muted') {
             participant.isMuted = value;
@@ -2074,33 +2107,68 @@
             } else {
                 avatar.classList.remove('muted');
             }
+        } else if (statusType === 'speaking') {
+            if (value) {
+                participant.element.classList.add('speaking');
+                if (statusDot) {
+                    statusDot.classList.add('speaking');
+                }
+            } else {
+                participant.element.classList.remove('speaking');
+                if (statusDot) {
+                    statusDot.classList.remove('speaking');
+                }
+            }
         } else if (statusType === 'video') {
             participant.isVideo = value;
         }
     }
     
+    // Update bottom voice control bar UI
+    function updateVoiceControlBar() {
+        const muteBtn = document.getElementById('voice-control-mute-btn');
+        const deafenBtn = document.getElementById('voice-control-deafen-btn');
+        const statusText = document.getElementById('voice-control-bar-status');
+        
+        if (muteBtn) {
+            muteBtn.classList.toggle('muted', isMuted);
+            muteBtn.innerHTML = isMuted ? '<i class="fas fa-microphone-slash"></i>' : '<i class="fas fa-microphone"></i>';
+        }
+        
+        if (deafenBtn) {
+            deafenBtn.classList.toggle('deafened', isDeafened);
+            deafenBtn.innerHTML = isDeafened ? '<i class="fas fa-volume-up"></i>' : '<i class="fas fa-volume-mute"></i>';
+        }
+        
+        if (statusText) {
+            if (isMuted && isDeafened) {
+                statusText.textContent = '{% trans "Muted & Deafened" %}';
+            } else if (isMuted) {
+                statusText.textContent = '{% trans "Muted" %}';
+            } else if (isDeafened) {
+                statusText.textContent = '{% trans "Deafened" %}';
+            } else {
+                statusText.textContent = '{% trans "Connected" %}';
+            }
+        }
+    }
+    
     function toggleMute() {
         isMuted = !isMuted;
-        const btn = document.getElementById('voice-mute-btn');
         
         if (localAudioTrack) {
             localAudioTrack.enabled = !isMuted;
         }
         
-        if (isMuted) {
-            btn.classList.add('muted');
-            btn.innerHTML = '<i class="fas fa-microphone-slash"></i> <span>{% trans "Unmute" %}</span>';
-        } else {
-            btn.classList.remove('muted');
-            btn.innerHTML = '<i class="fas fa-microphone"></i> <span>{% trans "Mute" %}</span>';
-        }
+        // Update local participant in sidebar
+        updateParticipantStatus(currentUsername, 'muted', isMuted);
         
-        // Update local participant
-        updateParticipantStatus('{{ user.username }}', 'muted', isMuted);
+        // Update bottom voice control bar
+        updateVoiceControlBar();
         
-        // Send status update
-        if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
-            chatSocket.send(JSON.stringify({
+        // Send status update via voice socket
+        if (voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
+            voiceSocket.send(JSON.stringify({
                 signal_type: 'mic_state_change',
                 data: { muted: isMuted }
             }));
@@ -2109,7 +2177,6 @@
     
     function toggleDeafen() {
         isDeafened = !isDeafened;
-        const btn = document.getElementById('voice-deafen-btn');
         
         // Mute all remote audio tracks
         Object.values(peerConnections).forEach(pc => {
@@ -2120,23 +2187,26 @@
             }
         });
         
-        if (isDeafened) {
-            btn.classList.add('deafened');
-            btn.innerHTML = '<i class="fas fa-volume-up"></i> <span>{% trans "Undeafen" %}</span>';
-        } else {
-            btn.classList.remove('deafened');
-            btn.innerHTML = '<i class="fas fa-volume-mute"></i> <span>{% trans "Deafen" %}</span>';
-        }
-        
-        // Update local participant
-        const participant = voiceParticipants.get('{{ user.username }}');
+        // Update local participant in sidebar
+        const participant = voiceParticipants.get(currentUsername);
         if (participant) {
-            const avatar = participant.element.querySelector('.participant-avatar');
+            const avatar = participant.avatarElement;
             if (isDeafened) {
                 avatar.classList.add('deafened');
             } else {
                 avatar.classList.remove('deafened');
             }
+        }
+        
+        // Update bottom voice control bar
+        updateVoiceControlBar();
+        
+        // Send status update via voice socket
+        if (voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
+            voiceSocket.send(JSON.stringify({
+                signal_type: 'deafen_state_change',
+                data: { deafened: isDeafened }
+            }));
         }
     }
     
@@ -2219,9 +2289,9 @@
             });
         }
         
-        // Send status update
-        if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
-            chatSocket.send(JSON.stringify({
+        // Send status update via voice socket
+        if (voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
+            voiceSocket.send(JSON.stringify({
                 signal_type: 'camera_state_change',
                 data: { enabled: isVideoOn }
             }));
@@ -2372,9 +2442,9 @@
         
         // Handle ICE candidates
         pc.onicecandidate = (event) => {
-            if (event.candidate && chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+            if (event.candidate && voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
                 console.log(`[WebRTC] Sending ICE candidate to ${username}`);
-                chatSocket.send(JSON.stringify({
+                voiceSocket.send(JSON.stringify({
                     signal_type: 'ice_candidate',
                     target_user_id: userId,
                     data: event.candidate.toJSON()
@@ -2403,8 +2473,8 @@
             await pc.setLocalDescription(offer);
             console.log(`[WebRTC] Local description set, sending offer to ${username}`);
             
-            if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
-                chatSocket.send(JSON.stringify({
+            if (voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
+                voiceSocket.send(JSON.stringify({
                     signal_type: 'offer',
                     target_user_id: userId,
                     data: pc.localDescription
@@ -2442,8 +2512,8 @@
             await pc.setLocalDescription(answer);
             console.log(`[WebRTC] Sending answer to ${username || userId}`);
             
-            if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
-                chatSocket.send(JSON.stringify({
+            if (voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
+                voiceSocket.send(JSON.stringify({
                     signal_type: 'answer',
                     target_user_id: userId,
                     data: pc.localDescription
@@ -2538,9 +2608,9 @@
                     }
                 });
                 
-                // Send status update
-                if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
-                    chatSocket.send(JSON.stringify({
+                // Send status update via voice socket
+                if (voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
+                    voiceSocket.send(JSON.stringify({
                         signal_type: 'screen_share_state_change',
                         data: { enabled: true }
                     }));
@@ -2581,9 +2651,9 @@
             }
         });
         
-        // Send status update
-        if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
-            chatSocket.send(JSON.stringify({
+        // Send status update via voice socket
+        if (voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
+            voiceSocket.send(JSON.stringify({
                 signal_type: 'screen_share_state_change',
                 data: { enabled: false }
             }));
