@@ -48,11 +48,13 @@
         }
         
         /* Navbar - Cyberpunk Style */
-        .navbar {
-            background: rgba(10, 14, 39, 0.8) !important;
+        .navbar, .cyber-navbar {
+            background: rgba(10, 14, 39, 0.95) !important;
             backdrop-filter: blur(10px);
             border-bottom: 1px solid var(--cyber-border) !important;
             box-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+            padding: 0.75rem 1rem;
+            z-index: 1000;
         }
         
         .navbar-brand {
@@ -60,17 +62,45 @@
             text-transform: uppercase;
             letter-spacing: 2px;
             font-weight: 700;
+            font-size: 1.1rem;
             text-shadow: 0 0 10px var(--cyber-glow-cyan);
+            display: flex;
+            align-items: center;
+        }
+        
+        .navbar-brand i {
+            color: var(--cyber-accent-green);
+            filter: drop-shadow(0 0 5px var(--cyber-glow-green));
         }
         
         .navbar-dark .navbar-nav .nav-link {
             color: var(--cyber-text-secondary);
             transition: all 0.3s ease;
+            font-size: 0.9rem;
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
         }
         
         .navbar-dark .navbar-nav .nav-link:hover {
             color: var(--cyber-accent-cyan);
             text-shadow: 0 0 8px var(--cyber-glow-cyan);
+            background: rgba(0, 255, 255, 0.1);
+        }
+        
+        .navbar-dark .navbar-nav .nav-link i {
+            opacity: 0.7;
+            transition: all 0.3s ease;
+        }
+        
+        .navbar-dark .navbar-nav .nav-link:hover i {
+            opacity: 1;
+            color: var(--cyber-accent-cyan);
+        }
+        
+        .cyber-username {
+            color: var(--cyber-accent-green) !important;
+            font-weight: 600;
+            text-shadow: 0 0 8px var(--cyber-glow-green);
         }
         
         .navbar-toggler {
@@ -79,6 +109,12 @@
         
         .navbar-toggler-icon {
             background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%280, 255, 255, 0.8%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+        }
+        
+        /* Hide navbar for full-screen pages */
+        .no-navbar .navbar,
+        .no-navbar .cyber-navbar {
+            display: none !important;
         }
         
         /* Cards - Glassmorphism */
@@ -258,9 +294,13 @@
 
 <body>
 
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom border-secondary">
+    {% block navbar %}
+    <nav class="navbar navbar-expand-lg navbar-dark cyber-navbar">
         <div class="container-fluid">
-            <a class="navbar-brand" href="/">App</a>
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-bolt me-2"></i>
+                {{ page_title|default:server.name|default:"RASHIGO" }}
+            </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
@@ -268,13 +308,24 @@
                 <ul class="navbar-nav ms-auto">
                     {% if request.user.is_authenticated %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'all_games_lobby' %}">{% trans "Minigames" %}</a>
+                            <a class="nav-link" href="/">
+                                <i class="fas fa-home me-1"></i>{% trans "Home" %}
+                            </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'leaderboard' %}">🏆 {% trans "Leaderboard" %}</a>
+                            <a class="nav-link" href="{% url 'all_games_lobby' %}">
+                                <i class="fas fa-gamepad me-1"></i>{% trans "Minigames" %}
+                            </a>
                         </li>
                         <li class="nav-item">
-                            <span class="nav-link text-warning">{{ request.user.username }}</span>
+                            <a class="nav-link" href="{% url 'leaderboard' %}">
+                                <i class="fas fa-trophy me-1"></i>{% trans "Leaderboard" %}
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <span class="nav-link cyber-username">
+                                <i class="fas fa-user me-1"></i>{{ request.user.username }}
+                            </span>
                         </li>
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'settings' %}">
@@ -283,17 +334,21 @@
                         </li>
                     {% else %}
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'login' %}">{% trans "Login" %}</a>
+                            <a class="nav-link" href="{% url 'login' %}">
+                                <i class="fas fa-sign-in-alt me-1"></i>{% trans "Login" %}
+                            </a>
                         </li>
                         <li class="nav-item">
-                            <a class="nav-link" href="{% url 'register' %}">{% trans "Register" %}</a>
+                            <a class="nav-link" href="{% url 'register' %}">
+                                <i class="fas fa-user-plus me-1"></i>{% trans "Register" %}
+                            </a>
                         </li>
                     {% endif %}
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="languageDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="fas fa-globe"></i> {% trans "Language" %}
+                            <i class="fas fa-globe"></i>
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="languageDropdown">
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageDropdown">
                             {% get_current_language as CURRENT_LANGUAGE %}
                             {% get_available_languages as LANGUAGES %}
                             {% for lang_code, lang_name in LANGUAGES %}
@@ -313,37 +368,46 @@
             </div>
         </div>
     </nav>
+    {% endblock %}
 
-    <main class="{% if 'server_view' in request.resolver_match.url_name %}no-container{% else %}container{% endif %} mt-4">
+    <main class="{% block main_class %}container mt-4{% endblock %}">
+        {% block messages %}
         {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show cyber-alert" role="alert">
             {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
         {% endfor %}
+        {% endblock %}
 
         {% block content %}
         {% endblock %}
     </main>
     
     <style>
-        /* Allow full-width for server view */
-        main.no-container {
+        /* Full-width layout for special pages (server view, etc.) */
+        main.full-width {
             max-width: 100% !important;
             padding: 0 !important;
             margin: 0 !important;
             width: 100% !important;
         }
         
-        body:has(.server-container) main {
-            max-width: 100% !important;
-            padding: 0 !important;
-            margin: 0 !important;
-            width: 100% !important;
-        }
-        
-        body:has(.server-container) {
+        /* When gaming HUD container is present, make body full-screen */
+        body:has(.gaming-hud-container) {
             overflow: hidden;
+        }
+        
+        body:has(.gaming-hud-container) main {
+            max-width: 100% !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100% !important;
+        }
+        
+        /* Cyber alert styling */
+        .cyber-alert {
+            border-radius: 6px;
         }
     </style>
 
