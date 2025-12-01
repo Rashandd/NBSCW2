@@ -1037,6 +1037,20 @@
                     <!-- Voice Participants List (nested) - Populated dynamically -->
                     <ul class="voice-participants-list" id="voice-participants-{{ channel.slug }}" style="display: none;">
                         <!-- Participants added dynamically via JavaScript -->
+                        <!-- Backend can populate initial state here if available -->
+                        {% comment %}
+                        {% if channel.active_users %}
+                            {% for participant in channel.active_users %}
+                            <li class="voice-participant-mini" id="participant-{{ participant.username }}" data-username="{{ participant.username }}">
+                                <div class="voice-participant-mini-avatar">
+                                    {{ participant.username|first|upper }}
+                                </div>
+                                <div class="voice-participant-mini-name">{{ participant.username|upper }}</div>
+                                <div class="voice-participant-mini-status"></div>
+                            </li>
+                            {% endfor %}
+                        {% endif %}
+                        {% endcomment %}
                     </ul>
                 </div>
                 {% empty %}
@@ -1062,6 +1076,9 @@
                 </button>
                 <button class="control-btn" id="deafen-btn" onclick="toggleDeafen()" title="{% trans 'Deafen' %}">
                     <i class="fas fa-headphones"></i>
+                </button>
+                <button class="control-btn" id="screen-share-btn" onclick="toggleScreenShare()" title="{% trans 'Share Screen' %}" style="display: none;">
+                    <i class="fas fa-desktop"></i>
                 </button>
                 <button class="control-btn" onclick="openSettings()" title="{% trans 'Settings' %}">
                     <i class="fas fa-cog"></i>
@@ -1287,12 +1304,19 @@
             channelElement.classList.add('active');
         }
         
+        // Show voice participants list
+        const participantsList = document.getElementById(`voice-participants-${slug}`);
+        if (participantsList) {
+            participantsList.style.display = 'flex';
+        }
+        
         // Show voice indicator
         document.getElementById('voice-indicator').style.display = 'flex';
         document.getElementById('voice-indicator-name').textContent = name.toUpperCase();
         
-        // Show disconnect button
+        // Show disconnect and screen share buttons
         document.getElementById('disconnect-btn').style.display = 'flex';
+        document.getElementById('screen-share-btn').style.display = 'flex';
         
         // Close mobile sidebar if open
         if (sidebarOpen) {
@@ -1327,7 +1351,82 @@
         currentVoiceChannelSlug = null;
         document.getElementById('voice-indicator').style.display = 'none';
         document.getElementById('disconnect-btn').style.display = 'none';
+        document.getElementById('screen-share-btn').style.display = 'none';
+        
+        // Stop screen share if active
+        if (isScreenSharing && screenStream) {
+            screenStream.getTracks().forEach(track => track.stop());
+            screenStream = null;
+            isScreenSharing = false;
+            const btn = document.getElementById('screen-share-btn');
+            btn.classList.remove('muted');
+            btn.innerHTML = '<i class="fas fa-desktop"></i>';
+            btn.title = '{% trans "Share Screen" %}';
+        }
+        
+        // Hide all voice participants lists
+        document.querySelectorAll('.voice-participants-list').forEach(list => {
+            list.style.display = 'none';
+        });
+        
+        // Clear participants
+        voiceParticipants.clear();
+        clearVoiceParticipantsFromSidebar();
+        
+        // Remove all videos from grid
+        videoGridItems.forEach((item, username) => {
+            removeVideoFromGrid(username);
+        });
+        
         // TODO: Cleanup voice connections
+    }
+    
+    let isScreenSharing = false;
+    let screenStream = null;
+    
+    async function toggleScreenShare() {
+        if (!isScreenSharing) {
+            try {
+                screenStream = await navigator.mediaDevices.getDisplayMedia({ 
+                    video: true, 
+                    audio: true 
+                });
+                isScreenSharing = true;
+                const btn = document.getElementById('screen-share-btn');
+                btn.classList.add('muted');
+                btn.innerHTML = '<i class="fas fa-stop"></i>';
+                btn.title = '{% trans "Stop Sharing" %}';
+                
+                // Add screen share to video grid
+                addVideoToGrid(currentUsername, screenStream, true);
+                
+                // Handle screen share end
+                screenStream.getVideoTracks()[0].onended = () => {
+                    toggleScreenShare();
+                };
+                
+                // TODO: Send screen share stream via WebRTC
+            } catch (error) {
+                console.error('Error starting screen share:', error);
+                alert('{% trans "Could not start screen share. Please check permissions." %}');
+            }
+        } else {
+            // Stop screen sharing
+            if (screenStream) {
+                screenStream.getTracks().forEach(track => track.stop());
+                screenStream = null;
+            }
+            isScreenSharing = false;
+            const btn = document.getElementById('screen-share-btn');
+            btn.classList.remove('muted');
+            btn.innerHTML = '<i class="fas fa-desktop"></i>';
+            btn.title = '{% trans "Share Screen" %}';
+            
+            // Remove screen share from video grid
+            removeVideoFromGrid(currentUsername);
+            
+            // TODO: Stop screen share via WebRTC
+        }
     }
     
     function openSettings() {
@@ -1337,6 +1436,8 @@
     async function initializeVoice() {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            // Show screen share button when connected to voice
+            document.getElementById('screen-share-btn').style.display = 'flex';
             // TODO: Setup WebRTC connections
             console.log('Voice initialized');
         } catch (error) {
@@ -1615,6 +1716,7 @@
     // Expose functions globally
     window.toggleMute = toggleMute;
     window.toggleDeafen = toggleDeafen;
+    window.toggleScreenShare = toggleScreenShare;
     window.disconnectVoice = disconnectVoice;
     window.openSettings = openSettings;
     window.sendMessage = sendMessage;
