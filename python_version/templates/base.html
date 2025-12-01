@@ -299,7 +299,11 @@
         <div class="container-fluid">
             <a class="navbar-brand" href="/">
                 <i class="fas fa-bolt me-2"></i>
-                {{ page_title|default:server.name|default:"RASHIGO" }}
+                {% if server %}
+                {{server.name}}
+                {% else %}
+                    {{ page_title|default:"RASHIGO" }}
+                {% endif %}
             </a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
