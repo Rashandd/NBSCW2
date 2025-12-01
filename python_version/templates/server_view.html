@@ -216,12 +216,16 @@
         padding: 10px 12px;
     }
     
+    /* ============================================
+       VOICE PARTICIPANTS LIST (Sidebar)
+       ============================================ */
     .voice-participants-list {
         list-style: none;
         padding: 0;
         margin: 0;
         padding-left: 32px;
-        padding-top: 6px;
+        padding-top: 8px;
+        padding-bottom: 8px;
         padding-bottom: 8px;
         display: flex;
         flex-direction: column;
@@ -547,35 +551,85 @@
     }
     
     /* Video Grid Container */
+    /* ============================================
+       VIDEO GRID - THE STAGE (Cyberpunk Style)
+       ============================================ */
     .video-grid-container {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        display: none; /* Hidden by default, shown when videos exist */
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
         gap: 16px;
-        padding: 16px;
-        background: rgba(0, 0, 0, 0.3);
-        border-bottom: 1px solid rgba(0, 255, 255, 0.2);
-        min-height: 200px;
-        max-height: 400px;
+        padding: 20px;
+        background: rgba(0, 0, 0, 0.5);
+        border-bottom: 2px solid #00FFFF;
+        min-height: 220px;
+        max-height: 50vh;
         overflow-y: auto;
+        box-shadow: 
+            0 4px 20px rgba(0, 0, 0, 0.5),
+            inset 0 0 60px rgba(0, 255, 255, 0.05);
+    }
+    
+    .video-grid-container.has-videos {
+        display: grid;
     }
     
     .video-grid-container:empty {
         display: none;
     }
     
+    /* Video Grid Header */
+    .video-grid-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 20px;
+        background: linear-gradient(90deg, rgba(0, 255, 255, 0.1), transparent);
+        border-bottom: 1px solid rgba(0, 255, 255, 0.3);
+    }
+    
+    .video-grid-header h4 {
+        color: #00FFFF;
+        font-size: 12px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        margin: 0;
+        text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+    }
+    
     .video-grid-item {
         position: relative;
-        background: rgba(0, 0, 0, 0.5);
-        border-radius: 8px;
+        background: linear-gradient(135deg, rgba(10, 14, 39, 0.9), rgba(0, 0, 0, 0.8));
+        border-radius: 12px;
         overflow: hidden;
         border: 2px solid rgba(0, 255, 255, 0.3);
         aspect-ratio: 16 / 9;
-        min-height: 150px;
+        min-height: 180px;
+        transition: all 0.3s ease;
+    }
+    
+    .video-grid-item:hover {
+        border-color: rgba(0, 255, 255, 0.6);
+        box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+        transform: scale(1.02);
     }
     
     .video-grid-item.speaking {
-        border-color: #00FFFF;
-        box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        border-color: #00FF80;
+        box-shadow: 
+            0 0 30px rgba(0, 255, 128, 0.5),
+            inset 0 0 40px rgba(0, 255, 128, 0.1);
+        animation: voice-pulse 1.5s infinite;
+    }
+    
+    @keyframes voice-pulse {
+        0%, 100% { box-shadow: 0 0 20px rgba(0, 255, 128, 0.4); }
+        50% { box-shadow: 0 0 40px rgba(0, 255, 128, 0.8); }
+    }
+    
+    .video-grid-item.screen-share {
+        border-color: #FF0064;
+        box-shadow: 0 0 30px rgba(255, 0, 100, 0.4);
     }
     
     .video-grid-item video {
@@ -583,6 +637,26 @@
         height: 100%;
         object-fit: cover;
         display: block;
+        border-radius: 10px;
+    }
+    
+    /* Video placeholder when no stream */
+    .video-grid-item .video-placeholder {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        color: #6B7280;
+    }
+    
+    .video-grid-item .video-placeholder i {
+        font-size: 48px;
+        color: rgba(0, 255, 255, 0.3);
+        filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.2));
     }
     
     .video-grid-item-info {
@@ -642,6 +716,47 @@
         font-size: 14px;
         animation: pulse-dot 1.5s infinite;
         filter: drop-shadow(0 0 6px rgba(0, 255, 255, 0.8));
+    }
+    
+    /* Screen Share Badge */
+    .screen-share-badge {
+        display: inline-block;
+        background: linear-gradient(90deg, #FF0064, #FF6B00);
+        color: #FFFFFF;
+        font-size: 9px;
+        font-weight: 700;
+        padding: 2px 6px;
+        border-radius: 4px;
+        margin-left: 8px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        box-shadow: 0 0 10px rgba(255, 0, 100, 0.5);
+        animation: screen-share-glow 2s infinite;
+    }
+    
+    @keyframes screen-share-glow {
+        0%, 100% { box-shadow: 0 0 10px rgba(255, 0, 100, 0.5); }
+        50% { box-shadow: 0 0 20px rgba(255, 0, 100, 0.8); }
+    }
+    
+    /* Voice Participant Muted State */
+    .voice-participant-mini-avatar.muted {
+        opacity: 0.6;
+        filter: grayscale(50%);
+    }
+    
+    .voice-participant-mini-avatar.muted::after {
+        content: '🔇';
+        position: absolute;
+        bottom: -4px;
+        right: -4px;
+        font-size: 10px;
+    }
+    
+    .muted-icon {
+        font-size: 12px;
+        margin-left: auto;
+        opacity: 0.7;
     }
     
     /* Messages Area */
@@ -1338,7 +1453,24 @@
         const btn = document.getElementById('mute-btn');
         btn.classList.toggle('muted', isMuted);
         btn.innerHTML = isMuted ? '<i class="fas fa-microphone-slash"></i>' : '<i class="fas fa-microphone"></i>';
-        // TODO: Implement WebRTC mute logic
+        
+        // Mute/unmute local audio tracks
+        if (localStream) {
+            localStream.getAudioTracks().forEach(track => {
+                track.enabled = !isMuted;
+            });
+        }
+        
+        // Update own participant state in sidebar
+        updateParticipantMuteState(currentUsername, isMuted);
+        
+        // Notify others via WebSocket
+        if (voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
+            voiceSocket.send(JSON.stringify({
+                signal_type: 'mic_state_change',
+                data: { muted: isMuted }
+            }));
+        }
     }
     
     function toggleDeafen() {
@@ -1346,10 +1478,36 @@
         const btn = document.getElementById('deafen-btn');
         btn.classList.toggle('deafened', isDeafened);
         btn.innerHTML = isDeafened ? '<i class="fas fa-headphones-alt"></i>' : '<i class="fas fa-headphones"></i>';
-        // TODO: Implement WebRTC deafen logic
+        
+        // Deafen: mute all remote audio elements
+        document.querySelectorAll('audio[id^="audio-"]').forEach(audio => {
+            audio.muted = isDeafened;
+        });
+        
+        // Also mute self when deafened
+        if (isDeafened && !isMuted) {
+            toggleMute();
+        }
     }
     
     function disconnectVoice() {
+        // Close voice WebSocket
+        if (voiceSocket) {
+            voiceSocket.close();
+            voiceSocket = null;
+        }
+        
+        // Close all peer connections
+        Object.keys(peerConnections).forEach(peerId => {
+            closePeerConnection(peerId);
+        });
+        
+        // Stop local stream
+        if (localStream) {
+            localStream.getTracks().forEach(track => track.stop());
+            localStream = null;
+        }
+        
         currentVoiceChannelSlug = null;
         document.getElementById('voice-indicator').style.display = 'none';
         document.getElementById('disconnect-btn').style.display = 'none';
@@ -1371,8 +1529,9 @@
             list.style.display = 'none';
         });
         
-        // Clear participants
+        // Clear participants and video grid
         voiceParticipants.clear();
+        clearVideoGrid();
         clearVoiceParticipantsFromSidebar();
         
         // Remove all videos from grid
@@ -1435,16 +1594,299 @@
         console.log('Settings clicked');
     }
     
+    let localStream = null;
+    
     async function initializeVoice() {
         try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            // Get local audio stream
+            localStream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            
             // Show screen share button when connected to voice
             document.getElementById('screen-share-btn').style.display = 'flex';
-            // TODO: Setup WebRTC connections
-            console.log('Voice initialized');
+            
+            // Add self to participants list
+            addVoiceParticipant(currentUsername, true, isMuted, isDeafened);
+            
+            // Connect to voice WebSocket for signaling
+            connectVoiceChannel();
+            
+            console.log('Voice initialized successfully');
         } catch (error) {
             console.error('Error accessing microphone:', error);
             alert('{% trans "Could not access microphone. Please check permissions." %}');
+        }
+    }
+    
+    // ============================================
+    // VOICE CHANNEL WEBSOCKET & WEBRTC
+    // ============================================
+    
+    function connectVoiceChannel() {
+        if (!currentVoiceChannelSlug) return;
+        
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws/voice/?channel_slug=${currentVoiceChannelSlug}&channel_type=voice`;
+        
+        if (voiceSocket) {
+            voiceSocket.close();
+        }
+        
+        voiceSocket = new WebSocket(wsUrl);
+        
+        voiceSocket.onopen = () => {
+            console.log('Voice WebSocket connected');
+            // Notify others that we joined
+            voiceSocket.send(JSON.stringify({
+                signal_type: 'join',
+                data: { channel_slug: currentVoiceChannelSlug }
+            }));
+        };
+        
+        voiceSocket.onmessage = (e) => {
+            try {
+                const data = JSON.parse(e.data);
+                handleVoiceMessage(data);
+            } catch (err) {
+                console.error('Error parsing voice WebSocket message:', err);
+            }
+        };
+        
+        voiceSocket.onclose = () => {
+            console.log('Voice WebSocket disconnected');
+            // Cleanup peer connections
+            Object.keys(peerConnections).forEach(peerId => {
+                closePeerConnection(peerId);
+            });
+        };
+        
+        voiceSocket.onerror = (error) => {
+            console.error('Voice WebSocket error:', error);
+        };
+    }
+    
+    function handleVoiceMessage(data) {
+        console.log('Voice message received:', data.type || data.event);
+        
+        switch (data.type) {
+            case 'system_notification':
+                if (data.event === 'member_joined') {
+                    // Another user joined the voice channel
+                    if (data.username !== currentUsername) {
+                        addVoiceParticipant(data.username, false, false, false);
+                        // Initiate WebRTC connection as the existing user
+                        createPeerConnection(data.sender_id, data.username, true);
+                    }
+                } else if (data.event === 'member_left') {
+                    // User left the voice channel
+                    removeVoiceParticipant(data.username);
+                    closePeerConnection(data.sender_id);
+                    removeVideoFromGrid(data.username);
+                }
+                break;
+                
+            case 'webrtc_signal':
+                handleWebRTCSignal(data);
+                break;
+                
+            case 'mic_state_change':
+                updateParticipantMuteState(data.username, data.muted);
+                break;
+                
+            case 'camera_state_change':
+                // Handle camera enable/disable
+                if (!data.enabled) {
+                    removeVideoFromGrid(data.username);
+                }
+                break;
+        }
+    }
+    
+    // ============================================
+    // WEBRTC PEER CONNECTION MANAGEMENT
+    // ============================================
+    
+    function createPeerConnection(peerId, peerUsername, isInitiator) {
+        if (peerConnections[peerId]) {
+            closePeerConnection(peerId);
+        }
+        
+        const config = {
+            iceServers: iceServers.length > 0 ? iceServers : [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' }
+            ]
+        };
+        
+        const pc = new RTCPeerConnection(config);
+        peerConnections[peerId] = { pc, username: peerUsername };
+        
+        // Add local tracks
+        if (localStream) {
+            localStream.getTracks().forEach(track => {
+                pc.addTrack(track, localStream);
+            });
+        }
+        
+        // Handle ICE candidates
+        pc.onicecandidate = (event) => {
+            if (event.candidate && voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
+                voiceSocket.send(JSON.stringify({
+                    signal_type: 'ice_candidate',
+                    data: {
+                        candidate: event.candidate,
+                        recipient_id: peerId
+                    }
+                }));
+            }
+        };
+        
+        // Handle incoming tracks (remote audio/video)
+        pc.ontrack = (event) => {
+            console.log('Received remote track from', peerUsername);
+            const stream = event.streams[0];
+            
+            if (event.track.kind === 'video') {
+                // Add video to the grid
+                addVideoToGrid(peerUsername, stream, false);
+            } else if (event.track.kind === 'audio') {
+                // Create audio element for remote audio
+                let audioEl = document.getElementById(`audio-${peerId}`);
+                if (!audioEl) {
+                    audioEl = document.createElement('audio');
+                    audioEl.id = `audio-${peerId}`;
+                    audioEl.autoplay = true;
+                    audioEl.style.display = 'none';
+                    document.body.appendChild(audioEl);
+                }
+                audioEl.srcObject = stream;
+            }
+        };
+        
+        // Handle connection state changes
+        pc.onconnectionstatechange = () => {
+            console.log(`Peer ${peerUsername} connection state:`, pc.connectionState);
+            if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+                closePeerConnection(peerId);
+                removeVideoFromGrid(peerUsername);
+            }
+        };
+        
+        // If we're the initiator, create and send offer
+        if (isInitiator) {
+            createAndSendOffer(peerId);
+        }
+        
+        return pc;
+    }
+    
+    async function createAndSendOffer(peerId) {
+        const peerData = peerConnections[peerId];
+        if (!peerData) return;
+        
+        try {
+            const offer = await peerData.pc.createOffer();
+            await peerData.pc.setLocalDescription(offer);
+            
+            if (voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
+                voiceSocket.send(JSON.stringify({
+                    signal_type: 'offer',
+                    data: {
+                        sdp: offer,
+                        recipient_id: peerId
+                    }
+                }));
+            }
+        } catch (error) {
+            console.error('Error creating offer:', error);
+        }
+    }
+    
+    async function handleWebRTCSignal(data) {
+        const senderId = data.sender_id;
+        const senderUsername = data.username || 'Unknown';
+        
+        switch (data.signal_type) {
+            case 'offer':
+                // Received offer, need to create peer connection and send answer
+                let pc = peerConnections[senderId]?.pc;
+                if (!pc) {
+                    createPeerConnection(senderId, senderUsername, false);
+                    pc = peerConnections[senderId]?.pc;
+                }
+                
+                if (pc) {
+                    try {
+                        await pc.setRemoteDescription(new RTCSessionDescription(data.data.sdp));
+                        const answer = await pc.createAnswer();
+                        await pc.setLocalDescription(answer);
+                        
+                        if (voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
+                            voiceSocket.send(JSON.stringify({
+                                signal_type: 'answer',
+                                data: {
+                                    sdp: answer,
+                                    recipient_id: senderId
+                                }
+                            }));
+                        }
+                    } catch (error) {
+                        console.error('Error handling offer:', error);
+                    }
+                }
+                break;
+                
+            case 'answer':
+                // Received answer to our offer
+                const peerData = peerConnections[senderId];
+                if (peerData?.pc) {
+                    try {
+                        await peerData.pc.setRemoteDescription(new RTCSessionDescription(data.data.sdp));
+                    } catch (error) {
+                        console.error('Error handling answer:', error);
+                    }
+                }
+                break;
+                
+            case 'ice_candidate':
+                // Received ICE candidate
+                const peer = peerConnections[senderId];
+                if (peer?.pc && data.data.candidate) {
+                    try {
+                        await peer.pc.addIceCandidate(new RTCIceCandidate(data.data.candidate));
+                    } catch (error) {
+                        console.error('Error adding ICE candidate:', error);
+                    }
+                }
+                break;
+        }
+    }
+    
+    function closePeerConnection(peerId) {
+        const peerData = peerConnections[peerId];
+        if (peerData) {
+            if (peerData.pc) {
+                peerData.pc.close();
+            }
+            delete peerConnections[peerId];
+        }
+        
+        // Remove audio element
+        const audioEl = document.getElementById(`audio-${peerId}`);
+        if (audioEl) {
+            audioEl.remove();
+        }
+    }
+    
+    function updateParticipantMuteState(username, isMuted) {
+        const participant = voiceParticipants.get(username);
+        if (participant) {
+            participant.isMuted = isMuted;
+            if (participant.avatarElement) {
+                participant.avatarElement.classList.toggle('muted', isMuted);
+            }
+            if (participant.statusElement) {
+                participant.statusElement.innerHTML = isMuted ? '<span class="muted-icon">🔇</span>' : '';
+            }
         }
     }
     
@@ -1636,39 +2078,84 @@
         const grid = document.getElementById('video-grid');
         if (!grid) return;
         
+        // Remove existing video from this user first
         removeVideoFromGrid(username);
         
         const item = document.createElement('div');
         item.className = 'video-grid-item';
+        if (isScreenShare) {
+            item.classList.add('screen-share');
+        }
         item.id = `video-${username}`;
+        item.dataset.username = username;
         
         const avatarLetter = username.charAt(0).toUpperCase();
+        const avatarColor = `hsl(${username.charCodeAt(0) * 137.508 % 360}, 70%, 50%)`;
+        
         item.innerHTML = `
-            <video autoplay playsInline></video>
+            <video autoplay playsInline ${isScreenShare ? '' : 'muted'}></video>
             <div class="video-grid-item-info">
-                <div class="video-grid-item-avatar">${avatarLetter}</div>
-                <div class="video-grid-item-name">${escapeHtml(username).toUpperCase()}${isScreenShare ? ' [SCREEN]' : ''}</div>
-                <div class="video-grid-item-status"></div>
+                <div class="video-grid-item-avatar" style="background: linear-gradient(135deg, ${avatarColor} 0%, #00FF80 100%);">
+                    ${avatarLetter}
+                </div>
+                <div class="video-grid-item-name">
+                    ${escapeHtml(username).toUpperCase()}
+                    ${isScreenShare ? '<span class="screen-share-badge">[SCREEN]</span>' : ''}
+                </div>
+                <div class="video-grid-item-status" id="video-status-${username}"></div>
             </div>
         `;
         
         const video = item.querySelector('video');
         video.srcObject = stream;
-        grid.appendChild(item);
-        grid.style.display = 'grid';
         
-        videoGridItems.set(username, { element: item, video, stream });
+        // Handle video load error
+        video.onerror = (e) => {
+            console.error('Video error for', username, e);
+        };
+        
+        grid.appendChild(item);
+        
+        // Show grid using CSS class
+        grid.classList.add('has-videos');
+        
+        videoGridItems.set(username, { element: item, video, stream, isScreenShare });
+        
+        console.log('Added video to grid for', username, isScreenShare ? '(screen share)' : '');
     }
     
     function removeVideoFromGrid(username) {
         const item = videoGridItems.get(username);
         if (item) {
+            // Stop any streams
+            if (item.video && item.video.srcObject) {
+                // Don't stop the stream if it's not ours (remote stream)
+            }
             item.element.remove();
             videoGridItems.delete(username);
         }
+        
         const grid = document.getElementById('video-grid');
         if (grid && videoGridItems.size === 0) {
-            grid.style.display = 'none';
+            grid.classList.remove('has-videos');
+        }
+    }
+    
+    function clearVideoGrid() {
+        const grid = document.getElementById('video-grid');
+        if (!grid) return;
+        
+        videoGridItems.forEach((item, username) => {
+            item.element.remove();
+        });
+        videoGridItems.clear();
+        grid.classList.remove('has-videos');
+    }
+    
+    function setVideoSpeaking(username, isSpeaking) {
+        const item = videoGridItems.get(username);
+        if (item && item.element) {
+            item.element.classList.toggle('speaking', isSpeaking);
         }
     }
     
@@ -1766,5 +2253,9 @@
     window.addVoiceParticipant = addVoiceParticipant;
     window.removeVoiceParticipant = removeVoiceParticipant;
     window.toggleSidebar = toggleSidebar;
+    window.addVideoToGrid = addVideoToGrid;
+    window.removeVideoFromGrid = removeVideoFromGrid;
+    window.clearVideoGrid = clearVideoGrid;
+    window.setVideoSpeaking = setVideoSpeaking;
 </script>
 {% endblock %}
