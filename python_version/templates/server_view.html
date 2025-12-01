@@ -1221,7 +1221,7 @@
     let sidebarOpen = false;
     
     const currentUsername = '{{ user.username }}';
-    const currentUserId = {{ user.id }};
+    const currentUserId = '{{ user.id }}';
     const iceServers = JSON.parse('{{ coturn_config_json|escapejs }}') || [{ urls: 'stun:stun.l.google.com:19302' }];
     
     // ============================================
