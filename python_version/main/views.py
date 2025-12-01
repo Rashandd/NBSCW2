@@ -62,6 +62,8 @@ def register(request):
         return handle_phone_verification(request)
     
     if request.method == 'POST':
+        first_name = request.POST.get('first_name', '').strip()
+        last_name = request.POST.get('last_name', '').strip()
         username = request.POST.get('username', '').strip()
         email = request.POST.get('email', '').strip()
         password1 = request.POST.get('password1', '')
@@ -104,7 +106,42 @@ def register(request):
                     is_bot_detected=True
                 )
         
-        # ========== 2. PROFANITY FILTER ==========
+        # ========== 2. PROFANITY FILTER - First Name & Last Name ==========
+        if first_name:
+            has_profanity_first, matched_first = ProfanityFilter.contains_profanity(first_name)
+            if has_profanity_first:
+                errors.append(_("First name contains inappropriate content. Please use a valid name."))
+                profanity_detected = True
+                RegistrationAttempt.objects.create(
+                    ip_address=ip_address,
+                    fingerprint=fingerprint,
+                    user_agent=user_agent,
+                    success=False,
+                    username_attempted=username,
+                    blocked_reason=f"Profanity in first name: {matched_first}",
+                    risk_score=risk_score,
+                    timezone=timezone_str,
+                    profanity_detected=True
+                )
+        
+        if last_name:
+            has_profanity_last, matched_last = ProfanityFilter.contains_profanity(last_name)
+            if has_profanity_last:
+                errors.append(_("Last name contains inappropriate content. Please use a valid name."))
+                profanity_detected = True
+                RegistrationAttempt.objects.create(
+                    ip_address=ip_address,
+                    fingerprint=fingerprint,
+                    user_agent=user_agent,
+                    success=False,
+                    username_attempted=username,
+                    blocked_reason=f"Profanity in last name: {matched_last}",
+                    risk_score=risk_score,
+                    timezone=timezone_str,
+                    profanity_detected=True
+                )
+        
+        # Username profanity check
         has_profanity, matched = ProfanityFilter.contains_profanity(username)
         if has_profanity:
             errors.append(_("Username contains inappropriate content. Please choose a different username."))
@@ -172,6 +209,8 @@ def register(request):
             for error in errors:
                 messages.error(request, error)
             return render(request, 'register.html', {
+                'first_name': first_name,
+                'last_name': last_name,
                 'username': username,
                 'email': email,
                 'phone_number': phone_number,
@@ -184,6 +223,8 @@ def register(request):
                     username=username,
                     email=email,
                     password=password1,
+                    first_name=first_name,
+                    last_name=last_name,
                     registration_ip=ip_address,
                     registration_fingerprint=fingerprint,
                     is_active=False,  # Inactive until email verified
