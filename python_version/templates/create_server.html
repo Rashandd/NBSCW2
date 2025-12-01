@@ -7,7 +7,10 @@
 {{ block.super }}
 <style>
     body {
-        background: linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #1e293b 75%, #0f172a 100%) !important;
+        background: #0A0E27;
+        background-image: 
+            radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.03) 0%, transparent 50%),
+            radial-gradient(circle at 80% 80%, rgba(0, 255, 128, 0.03) 0%, transparent 50%) !important;
         background-size: 400% 400%;
         background-attachment: fixed;
         animation: gradientShift 20s ease infinite;
@@ -27,11 +30,11 @@
     }
     
     .create-server-card {
-        background: rgba(30, 41, 59, 0.9);
+        background: rgba(10, 14, 39, 0.8);
         backdrop-filter: blur(20px);
         border-radius: 20px;
         padding: 2.5rem;
-        border: 1px solid rgba(148, 163, 184, 0.2);
+        border: 1px solid rgba(0, 255, 255, 0.2);
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     }
     
@@ -51,29 +54,29 @@
     }
     
     .create-server-subtitle {
-        color: #94a3b8;
+        color: #90E0B0;
         font-size: 1.1rem;
     }
     
     .form-label {
-        color: #f1f5f9;
+        color: #00FFFF;
         font-weight: 600;
         margin-bottom: 0.5rem;
     }
     
     .form-control, .form-select {
         background: rgba(15, 23, 42, 0.6);
-        border: 1px solid rgba(148, 163, 184, 0.3);
-        color: #f1f5f9;
+        border: 1px solid rgba(0, 255, 255, 0.3);
+        color: #00FFFF;
         padding: 0.75rem 1rem;
         border-radius: 10px;
     }
     
     .form-control:focus, .form-select:focus {
         background: rgba(15, 23, 42, 0.8);
-        border-color: #667eea;
-        color: #f1f5f9;
-        box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        border-color: #00FFFF;
+        color: #00FFFF;
+        box-shadow: 0 0 0 0.2rem rgba(0, 255, 255, 0.25);
     }
     
     .form-control::placeholder {
@@ -82,21 +85,21 @@
     
     .form-check-input {
         background-color: rgba(15, 23, 42, 0.6);
-        border-color: rgba(148, 163, 184, 0.3);
+        border-color: rgba(0, 255, 255, 0.3);
     }
     
     .form-check-input:checked {
-        background-color: #667eea;
-        border-color: #667eea;
+        background-color: #00FFFF;
+        border-color: #00FFFF;
     }
     
     .form-check-label {
-        color: #cbd5e1;
+        color: #E0E0E0;
     }
     
     .info-box {
-        background: rgba(102, 126, 234, 0.1);
-        border-left: 4px solid #667eea;
+        background: rgba(0, 255, 255, 0.1);
+        border-left: 4px solid #00FFFF;
         padding: 1rem;
         border-radius: 8px;
         margin-bottom: 1.5rem;
@@ -104,12 +107,12 @@
     
     .info-box p {
         margin: 0;
-        color: #cbd5e1;
+        color: #E0E0E0;
         font-size: 0.9rem;
     }
     
     .btn-create {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #00FFFF 0%, #00FF80 100%);
         border: none;
         color: white;
         padding: 0.75rem 2rem;
@@ -121,14 +124,14 @@
     
     .btn-create:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.5);
+        box-shadow: 0 8px 20px rgba(0, 255, 255, 0.5);
         color: white;
     }
     
     .btn-cancel {
-        background: rgba(102, 126, 234, 0.2);
-        border: 2px solid #667eea;
-        color: #cbd5e1;
+        background: rgba(0, 255, 255, 0.2);
+        border: 2px solid #00FFFF;
+        color: #E0E0E0;
         padding: 0.75rem 2rem;
         border-radius: 12px;
         font-weight: 600;
@@ -140,7 +143,7 @@
     }
     
     .btn-cancel:hover {
-        background: #667eea;
+        background: #00FFFF;
         color: white;
         transform: translateY(-2px);
     }

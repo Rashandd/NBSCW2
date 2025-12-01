@@ -8,9 +8,10 @@
     
     body {
         font-family: 'Inter', sans-serif !important;
-        background: linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #1e293b 75%, #0f172a 100%) !important;
-        background-size: 400% 400%;
-        animation: gradientShift 20s ease infinite;
+        background: #0A0E27 !important;
+        background-image: 
+            radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.03) 0%, transparent 50%),
+            radial-gradient(circle at 80% 80%, rgba(0, 255, 128, 0.03) 0%, transparent 50%) !important;
         min-height: 100vh;
     }
     
@@ -35,30 +36,28 @@
     .hero-title {
         font-size: 3.5rem;
         font-weight: 900;
-        background: linear-gradient(135deg, #fff 0%, #e2e8f0 50%, #cbd5e1 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-        text-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        color: #00FFFF;
+        text-shadow: 0 0 20px rgba(0, 255, 255, 0.6), 0 4px 20px rgba(0,0,0,0.5);
         margin-bottom: 1rem;
         letter-spacing: -0.02em;
+        text-transform: uppercase;
     }
     
     .hero-subtitle {
         font-size: 1.25rem;
-        color: rgba(226, 232, 240, 0.8);
+        color: #90E0B0;
         font-weight: 400;
         margin-bottom: 2rem;
     }
     
     .server-card {
-        background: rgba(30, 41, 59, 0.8);
-        backdrop-filter: blur(20px);
+        background: rgba(10, 14, 39, 0.7);
+        backdrop-filter: blur(10px);
         border-radius: 20px;
         padding: 2rem;
         height: 100%;
         transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        border: 1px solid rgba(148, 163, 184, 0.2);
+        border: 1px solid rgba(0, 255, 255, 0.2);
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         position: relative;
         overflow: hidden;
@@ -71,7 +70,7 @@
         left: 0;
         right: 0;
         height: 4px;
-        background: linear-gradient(90deg, #667eea, #764ba2, #f093fb, #4facfe);
+        background: linear-gradient(90deg, #00FFFF, #00FF80, #00FFFF, #00FF80);
         background-size: 200% 100%;
         animation: shimmer 3s ease infinite;
     }
@@ -83,22 +82,22 @@
     
     .server-card:hover {
         transform: translateY(-10px) scale(1.02);
-        box-shadow: 0 20px 60px rgba(102, 126, 234, 0.4);
-        border-color: rgba(102, 126, 234, 0.5);
-        background: rgba(30, 41, 59, 0.95);
+        box-shadow: 0 20px 60px rgba(0, 255, 255, 0.4);
+        border-color: rgba(0, 255, 255, 0.5);
+        background: rgba(10, 14, 39, 0.9);
     }
     
     .server-icon {
         width: 70px;
         height: 70px;
         border-radius: 18px;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #00FFFF 0%, #00FF80 100%);
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 2rem;
         margin-bottom: 1.5rem;
-        box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        box-shadow: 0 4px 15px rgba(0, 255, 255, 0.4);
         transition: transform 0.3s ease;
     }
     
@@ -109,12 +108,13 @@
     .server-name {
         font-size: 1.5rem;
         font-weight: 700;
-        color: #f1f5f9;
+        color: #00FFFF;
         margin-bottom: 0.75rem;
+        text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
     }
     
     .server-description {
-        color: #94a3b8;
+        color: #90E0B0;
         font-size: 0.95rem;
         line-height: 1.6;
         margin-bottom: 1.5rem;
@@ -141,15 +141,15 @@
     }
     
     .stat-badge.members {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #00FFFF 0%, #00FF80 100%);
     }
     
     .stat-badge.channels {
-        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        background: linear-gradient(135deg, #8B00FF 0%, #FF0064 100%);
     }
     
     .stat-badge.voice {
-        background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        background: linear-gradient(135deg, #00FF80 0%, #00FFFF 100%);
     }
     
     .stat-badge:hover {
@@ -164,9 +164,9 @@
     }
     
     .btn-primary-custom {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border: none;
-        color: white;
+        background: linear-gradient(135deg, #00FFFF 0%, #00FF80 100%);
+        border: 1px solid rgba(0, 255, 255, 0.3);
+        color: #0A0E27;
         padding: 0.75rem 1.5rem;
         border-radius: 12px;
         font-weight: 600;
@@ -177,18 +177,19 @@
         align-items: center;
         justify-content: center;
         gap: 0.5rem;
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
     }
     
     .btn-primary-custom:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.5);
-        color: white;
+        box-shadow: 0 8px 20px rgba(0, 255, 255, 0.5);
+        color: #0A0E27;
     }
     
     .btn-secondary-custom {
-        background: rgba(102, 126, 234, 0.2);
-        border: 2px solid #667eea;
-        color: #cbd5e1;
+        background: rgba(0, 255, 255, 0.1);
+        border: 1px solid rgba(0, 255, 255, 0.3);
+        color: #00FFFF;
         padding: 0.75rem 1.5rem;
         border-radius: 12px;
         font-weight: 600;
@@ -201,38 +202,39 @@
     }
     
     .btn-secondary-custom:hover {
-        background: #667eea;
-        color: white;
+        background: rgba(0, 255, 255, 0.2);
+        color: #00FFFF;
         transform: translateY(-2px);
+        box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
     }
     
     .empty-state {
-        background: rgba(30, 41, 59, 0.8);
-        backdrop-filter: blur(20px);
+        background: rgba(10, 14, 39, 0.7);
+        backdrop-filter: blur(10px);
         border-radius: 20px;
         padding: 4rem 2rem;
         text-align: center;
-        border: 2px dashed rgba(102, 126, 234, 0.3);
+        border: 2px dashed rgba(0, 255, 255, 0.3);
     }
     
     .empty-state-icon {
         font-size: 5rem;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+        color: #00FFFF;
+        filter: drop-shadow(0 0 20px rgba(0, 255, 255, 0.5));
         margin-bottom: 1.5rem;
     }
     
     .empty-state-title {
         font-size: 2rem;
         font-weight: 700;
-        color: #f1f5f9;
+        color: #00FFFF;
+        text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
         margin-bottom: 1rem;
+        text-transform: uppercase;
     }
     
     .empty-state-text {
-        color: #94a3b8;
+        color: #90E0B0;
         font-size: 1.1rem;
         margin-bottom: 2rem;
     }
@@ -254,8 +256,8 @@
     }
     
     .owner-badge {
-        background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
-        color: #1e293b;
+        background: linear-gradient(135deg, #FFA500 0%, #FF8C00 100%);
+        color: #0A0E27;
         padding: 0.35rem 0.75rem;
         border-radius: 20px;
         font-size: 0.75rem;
@@ -265,6 +267,7 @@
         gap: 0.35rem;
         text-transform: uppercase;
         letter-spacing: 0.5px;
+        box-shadow: 0 0 10px rgba(255, 165, 0, 0.4);
     }
     
     .modal-content {
@@ -324,7 +327,7 @@
 
         <!-- My Servers Section -->
         {% if my_servers %}
-            <h2 style="color: #f1f5f9; font-size: 1.75rem; font-weight: 700; margin-bottom: 1.5rem;">
+            <h2 style="color: #00FFFF; font-size: 1.75rem; font-weight: 700; margin-bottom: 1.5rem; text-shadow: 0 0 10px rgba(0, 255, 255, 0.5); text-transform: uppercase;">
                 <i class="fas fa-home me-2"></i>{% trans "My Servers" %}
             </h2>
             <div class="row g-4 mb-5">
@@ -376,7 +379,7 @@
         
         <!-- Public Servers Section -->
         {% if public_servers %}
-            <h2 style="color: #f1f5f9; font-size: 1.75rem; font-weight: 700; margin-bottom: 1.5rem;">
+            <h2 style="color: #00FFFF; font-size: 1.75rem; font-weight: 700; margin-bottom: 1.5rem; text-shadow: 0 0 10px rgba(0, 255, 255, 0.5); text-transform: uppercase;">
                 <i class="fas fa-globe me-2"></i>{% trans "Discover Public Servers" %}
             </h2>
             <div class="row g-4">

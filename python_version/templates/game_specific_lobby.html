@@ -8,7 +8,10 @@
 {{ block.super }}
 <style>
     body {
-        background: linear-gradient(135deg, #0f172a 0%, #1e293b 25%, #334155 50%, #1e293b 75%, #0f172a 100%);
+        background: #0A0E27;
+        background-image: 
+            radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.03) 0%, transparent 50%),
+            radial-gradient(circle at 80% 80%, rgba(0, 255, 128, 0.03) 0%, transparent 50%);
         background-size: 400% 400%;
         animation: gradientShift 20s ease infinite;
     }
@@ -29,16 +32,16 @@
         text-align: center;
         margin-bottom: 3rem;
         padding: 2rem;
-        background: rgba(30, 41, 59, 0.6);
+        background: rgba(10, 14, 39, 0.6);
         backdrop-filter: blur(20px);
         border-radius: 20px;
-        border: 1px solid rgba(148, 163, 184, 0.2);
+        border: 1px solid rgba(0, 255, 255, 0.2);
     }
     
     .game-icon {
         font-size: 4rem;
         margin-bottom: 1rem;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #00FFFF 0%, #00FF80 100%);
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         background-clip: text;
@@ -75,17 +78,17 @@
         border-radius: 25px;
         font-size: 0.95rem;
         font-weight: 600;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #00FFFF 0%, #00FF80 100%);
         color: white;
     }
     
     .section-card {
-        background: rgba(30, 41, 59, 0.8);
+        background: rgba(10, 14, 39, 0.7);
         backdrop-filter: blur(20px);
         border-radius: 20px;
         padding: 2rem;
         height: 100%;
-        border: 1px solid rgba(148, 163, 184, 0.2);
+        border: 1px solid rgba(0, 255, 255, 0.2);
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     }
     
@@ -95,29 +98,29 @@
         align-items: center;
         margin-bottom: 1.5rem;
         padding-bottom: 1rem;
-        border-bottom: 2px solid rgba(102, 126, 234, 0.3);
+        border-bottom: 2px solid rgba(0, 255, 255, 0.3);
     }
     
     .section-title {
         font-size: 1.5rem;
         font-weight: 700;
-        color: #f1f5f9;
+        color: #00FFFF;
         margin: 0;
     }
     
     .game-item {
-        background: rgba(51, 65, 85, 0.6);
+        background: rgba(0, 0, 0, 0.4);
         border-radius: 15px;
         padding: 1.25rem;
         margin-bottom: 1rem;
-        border: 1px solid rgba(148, 163, 184, 0.2);
+        border: 1px solid rgba(0, 255, 255, 0.2);
         transition: all 0.3s ease;
     }
     
     .game-item:hover {
         transform: translateY(-3px);
-        border-color: rgba(102, 126, 234, 0.5);
-        box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+        border-color: rgba(0, 255, 255, 0.5);
+        box-shadow: 0 8px 20px rgba(0, 255, 255, 0.3);
     }
     
     .game-info {
@@ -127,7 +130,7 @@
     .game-title {
         font-size: 1.1rem;
         font-weight: 600;
-        color: #f1f5f9;
+        color: #00FFFF;
         margin-bottom: 0.5rem;
     }
     
@@ -146,7 +149,7 @@
         border-radius: 20px;
         font-size: 0.85rem;
         font-weight: 600;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #00FFFF 0%, #00FF80 100%);
         color: white;
     }
     
@@ -158,11 +161,11 @@
     }
     
     .player-chip {
-        background: rgba(102, 126, 234, 0.3);
+        background: rgba(0, 255, 255, 0.3);
         padding: 0.25rem 0.75rem;
         border-radius: 15px;
         font-size: 0.85rem;
-        color: #cbd5e1;
+        color: #E0E0E0;
     }
     
     .game-actions {
@@ -172,7 +175,7 @@
     }
     
     .btn-game {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #00FFFF 0%, #00FF80 100%);
         border: none;
         color: white;
         padding: 0.65rem 1.25rem;
@@ -187,7 +190,7 @@
     
     .btn-game:hover {
         transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(102, 126, 234, 0.5);
+        box-shadow: 0 6px 16px rgba(0, 255, 255, 0.5);
         color: white;
     }
     
@@ -222,7 +225,7 @@
     .empty-state {
         text-align: center;
         padding: 3rem 1rem;
-        color: #94a3b8;
+        color: #90E0B0;
     }
     
     .empty-icon {
