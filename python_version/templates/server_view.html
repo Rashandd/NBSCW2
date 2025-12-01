@@ -1,313 +1,214 @@
 {% extends 'base.html' %}
 {% load i18n %}
+{% load static %}
+
 {% block title %}{{ server.name }} - Rashigo{% endblock %}
+
 {% block extra_css %}
-{{ block.super }}
-<script src="https://cdn.tailwindcss.com"></script>
-<script>
-    tailwind.config = {
-        theme: {
-            extend: {
-                colors: {
-                    'surface': '#FAFAFA',
-                    'surface-elevated': '#FFFFFF',
-                    'surface-hover': '#F5F5F5',
-                    'border': '#E5E5E5',
-                    'text-primary': '#0A0A0A',
-                    'text-secondary': '#6B7280',
-                    'text-tertiary': '#9CA3AF',
-                    'accent': '#6366F1',
-                    'accent-hover': '#4F46E5',
-                }
-            }
-        }
-    }
-</script>
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    /* ============================================
+       DISCORD CLONE - PIXEL PERFECT LAYOUT
+       ============================================ */
+    
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
     
     body {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif !important;
-        background: #0F0F0F;
-        color: #E5E5E5;
-    }
-    
-    /* Modern Clean Design - Dark Theme Professional SaaS Style */
-    .server-container {
-        display: grid;
-        grid-template-columns: 260px 1fr 280px;
-        height: 100vh;
-        background: #0F0F0F;
-    }
-    
-    /* Left Sidebar - Server & Channels */
-    .server-sidebar {
-        background: #1A1A1A;
-        border-right: 1px solid #2A2A2A;
-        display: flex;
-        flex-direction: column;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: #36393F;
+        color: #DCDDDE;
         height: 100vh;
         overflow: hidden;
-        position: relative;
-        width: 240px;
-        flex-shrink: 0;
     }
     
-    .server-header-sidebar {
-        padding: 20px 16px;
-        border-bottom: 1px solid #2A2A2A;
-        flex-shrink: 0;
-    }
+    /* ============================================
+       GLOBAL LAYOUT - 3 COLUMNS
+       ============================================ */
     
-    .server-icon-sidebar {
-        width: 48px;
-        height: 48px;
-        border-radius: 12px;
-        background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+    .discord-container {
         display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 24px;
-        margin-bottom: 12px;
-        box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+        height: 100vh;
+        width: 100vw;
     }
     
-    .server-name-sidebar {
-        font-size: 15px;
-        font-weight: 600;
-        color: #E5E5E5;
-        margin-bottom: 4px;
-    }
+    /* ============================================
+       LEFT RAIL - Server Icons
+       ============================================ */
     
-    .server-desc-sidebar {
-        font-size: 13px;
-        color: #9CA3AF;
-        line-height: 1.5;
-    }
-    
-    .channel-section {
-        padding: 16px 12px;
-        flex: 1;
-        overflow-y: auto;
-        min-height: 0; /* Allow flex shrinking */
-    }
-    
-    /* Bottom Voice Control Bar (Discord style) - Sticky Footer */
-    .voice-control-bar {
-        background: #292B2F;
-        border-top: 1px solid #1E1F22;
-        padding: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        min-height: 52px;
-        flex-shrink: 0;
-        position: sticky;
-        bottom: 0;
-        z-index: 10;
-    }
-    
-    .voice-control-bar-user {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        flex: 1;
-        min-width: 0;
-    }
-    
-    .voice-control-bar-avatar {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: 600;
-        font-size: 14px;
-        flex-shrink: 0;
-    }
-    
-    .voice-control-bar-info {
-        flex: 1;
-        min-width: 0;
+    .server-rail {
+        width: 72px;
+        background: #202225;
         display: flex;
         flex-direction: column;
-        gap: 2px;
+        align-items: center;
+        padding: 12px 0;
+        gap: 8px;
+        overflow-y: auto;
+        flex-shrink: 0;
     }
     
-    .voice-control-bar-name {
-        font-size: 13px;
+    .server-icon-rail {
+        width: 48px;
+        height: 48px;
+        border-radius: 24px;
+        background: #36393F;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 20px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        margin-bottom: 8px;
+    }
+    
+    .server-icon-rail:hover {
+        background: #5865F2;
+        border-radius: 16px;
+    }
+    
+    .server-icon-rail.active {
+        background: #5865F2;
+        border-radius: 16px;
+    }
+    
+    /* ============================================
+       SIDEBAR - Channels & User Panel
+       ============================================ */
+    
+    .sidebar {
+        width: 240px;
+        background: #2F3136;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        flex-shrink: 0;
+    }
+    
+    /* Sidebar Header */
+    .sidebar-header {
+        height: 48px;
+        padding: 0 16px;
+        display: flex;
+        align-items: center;
+        border-bottom: 1px solid #202225;
+        box-shadow: 0 1px 0 rgba(4, 4, 5, 0.2), 0 1.5px 0 rgba(6, 6, 7, 0.05);
+        z-index: 2;
+    }
+    
+    .sidebar-header h2 {
+        font-size: 16px;
         font-weight: 600;
-        color: #E5E5E5;
+        color: #FFFFFF;
+        margin: 0;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
     
-    .voice-control-bar-status {
-        font-size: 11px;
-        color: #B9BBBE;
+    /* Channel List - Scrollable Middle Section */
+    .channel-list-container {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 16px 8px;
+        min-height: 0;
     }
     
-    .voice-control-bar-buttons {
-        display: flex;
-        gap: 4px;
-        align-items: center;
-    }
-    
-    .voice-control-bar-btn {
-        width: 32px;
-        height: 32px;
-        border-radius: 4px;
-        border: none;
-        background: transparent;
-        color: #B9BBBE;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: all 0.15s ease;
-        font-size: 16px;
-    }
-    
-    .voice-control-bar-btn:hover {
-        background: #3A3D44;
-        color: #E5E5E5;
-    }
-    
-    .voice-control-bar-btn.active {
-        background: #3A3D44;
-        color: #E5E5E5;
-    }
-    
-    .voice-control-bar-btn.muted {
-        background: #ED4245;
-        color: #FFFFFF;
-    }
-    
-    .voice-control-bar-btn.muted:hover {
-        background: #C03537;
-    }
-    
-    .voice-control-bar-btn.deafened {
-        background: #FAA61A;
-        color: #FFFFFF;
-    }
-    
-    .voice-control-bar-btn.deafened:hover {
-        background: #D68910;
-    }
-    
-    .voice-control-bar-btn.leave {
-        background: #ED4245;
-        color: #FFFFFF;
-    }
-    
-    .voice-control-bar-btn.leave:hover {
-        background: #C03537;
-    }
-    
-    /* Voice indicator in chat header */
-    .voice-indicator {
-        margin-left: auto;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 4px 12px;
-        background: rgba(99, 102, 241, 0.1);
-        border-radius: 4px;
-        font-size: 13px;
-        color: #6366F1;
-    }
-    
-    .voice-indicator i {
-        font-size: 12px;
+    .channel-section {
+        margin-bottom: 24px;
     }
     
     .channel-section-header {
         display: flex;
-        justify-content: space-between;
         align-items: center;
-        margin-bottom: 12px;
-        padding: 0 4px;
+        justify-content: space-between;
+        padding: 0 8px;
+        margin-bottom: 8px;
+        height: 16px;
     }
     
     .channel-section-title {
-        font-size: 11px;
+        font-size: 12px;
         font-weight: 600;
-        color: #9CA3AF;
+        color: #8E9297;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.02em;
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 4px;
     }
     
     .add-channel-btn {
-        width: 20px;
-        height: 20px;
+        width: 16px;
+        height: 16px;
         border: none;
         background: transparent;
-        color: #6B7280;
+        color: #8E9297;
         cursor: pointer;
-        border-radius: 4px;
         display: flex;
         align-items: center;
         justify-content: center;
-        transition: all 0.15s ease;
-        font-size: 14px;
+        font-size: 18px;
+        line-height: 1;
+        padding: 0;
+        transition: color 0.15s ease;
     }
     
     .add-channel-btn:hover {
-        background: #2A2A2A;
-        color: #6366F1;
-    }
-    
-    .channel-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
+        color: #DCDDDE;
     }
     
     .channel-item {
-        padding: 8px 12px;
-        border-radius: 8px;
-        margin: 2px 0;
-        cursor: pointer;
-        transition: all 0.15s ease;
         display: flex;
         align-items: center;
-        gap: 8px;
-        color: #9CA3AF;
-        font-size: 14px;
-        position: relative;
+        padding: 6px 8px;
+        margin: 1px 0;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: background-color 0.15s ease;
+        color: #96989D;
+        font-size: 16px;
+        text-decoration: none;
     }
     
     .channel-item:hover {
-        background: #2A2A2A;
-        color: #E5E5E5;
+        background: #393C43;
+        color: #DCDDDE;
     }
     
     .channel-item.active {
-        background: rgba(99, 102, 241, 0.15);
-        color: #6366F1;
-        font-weight: 500;
+        background: #393C43;
+        color: #FFFFFF;
     }
     
-    /* Voice channel with nested participants list */
+    .channel-item i {
+        margin-right: 6px;
+        font-size: 20px;
+        width: 20px;
+        text-align: center;
+    }
+    
+    .channel-item span {
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    /* Voice Channel with Nested Participants */
     .voice-channel-item {
         flex-direction: column;
         align-items: stretch;
         padding: 0;
     }
     
-    .voice-channel-item > .channel-link {
-        padding: 8px 12px;
+    .voice-channel-item > .channel-item {
+        padding: 6px 8px;
     }
     
-    /* Nested voice participants list (Discord style) */
     .voice-participants-list {
         list-style: none;
         padding: 0;
@@ -327,24 +228,24 @@
         padding: 4px 8px;
         border-radius: 4px;
         font-size: 13px;
-        color: #9CA3AF;
+        color: #96989D;
         transition: all 0.15s ease;
     }
     
     .voice-participant-mini:hover {
         background: rgba(255, 255, 255, 0.05);
-        color: #E5E5E5;
+        color: #DCDDDE;
     }
     
     .voice-participant-mini.speaking {
-        color: #6366F1;
+        color: #FFFFFF;
     }
     
     .voice-participant-mini-avatar {
         width: 20px;
         height: 20px;
         border-radius: 50%;
-        background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+        background: #5865F2;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -360,7 +261,7 @@
         position: absolute;
         bottom: -2px;
         right: -2px;
-        background: #1A1A1A;
+        background: #2F3136;
         border-radius: 50%;
         width: 12px;
         height: 12px;
@@ -368,7 +269,7 @@
         align-items: center;
         justify-content: center;
         font-size: 8px;
-        border: 1px solid #141414;
+        border: 1px solid #202225;
     }
     
     .voice-participant-mini-name {
@@ -382,159 +283,184 @@
         width: 6px;
         height: 6px;
         border-radius: 50%;
-        background: #10B981;
+        background: #43B581;
         flex-shrink: 0;
     }
     
     .voice-participant-mini-status.speaking {
-        background: #6366F1;
+        background: #5865F2;
         animation: pulse 1.5s infinite;
     }
     
-    .channel-item a {
-        color: inherit;
-        text-decoration: none;
+    @keyframes pulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.7; transform: scale(1.2); }
+    }
+    
+    /* User Control Panel - Sticky Bottom */
+    .user-panel {
+        height: 52px;
+        background: #292B2F;
+        padding: 0 8px;
         display: flex;
         align-items: center;
         gap: 8px;
-        width: 100%;
-        pointer-events: auto !important;
+        border-top: 1px solid #202225;
+        flex-shrink: 0;
         z-index: 10;
-        position: relative;
+    }
+    
+    .user-avatar {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #5865F2;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: 600;
+        font-size: 14px;
+        flex-shrink: 0;
         cursor: pointer;
     }
     
-    .channel-item {
-        pointer-events: auto !important;
-    }
-    
-    /* Main Content Area - Always shows text chat */
-    .main-content {
+    .user-info {
+        flex: 1;
+        min-width: 0;
         display: flex;
         flex-direction: column;
-        height: 100vh;
-        background: #141414;
+        gap: 2px;
+    }
+    
+    .user-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: #FFFFFF;
+        white-space: nowrap;
         overflow: hidden;
+        text-overflow: ellipsis;
     }
     
-    /* Chat area is always visible (not hidden) */
-    #chat-area {
-        display: flex !important;
-        flex-direction: column;
-        height: 100%;
-        flex: 1;
+    .user-status {
+        font-size: 11px;
+        color: #B9BBBE;
     }
     
-    #chat-area.hidden {
-        display: none !important;
-    }
-    
-    .server-header {
-        padding: 16px 24px;
-        border-bottom: 1px solid #2A2A2A;
-        background: #1A1A1A;
+    .user-controls {
         display: flex;
+        gap: 4px;
         align-items: center;
-        gap: 12px;
     }
     
-    .server-icon-large {
-        width: 40px;
-        height: 40px;
-        border-radius: 10px;
-        background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+    .control-btn {
+        width: 32px;
+        height: 32px;
+        border: none;
+        background: transparent;
+        color: #B9BBBE;
+        cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 20px;
-        box-shadow: 0 2px 6px rgba(99, 102, 241, 0.2);
+        border-radius: 4px;
+        transition: all 0.15s ease;
+        font-size: 16px;
     }
     
-    .server-info h2 {
-        font-size: 18px;
-        font-weight: 600;
-        color: #E5E5E5;
-        margin: 0 0 4px 0;
+    .control-btn:hover {
+        background: #393C43;
+        color: #DCDDDE;
     }
     
-    .server-info p {
-        font-size: 14px;
-        color: #9CA3AF;
-        margin: 0;
+    .control-btn.muted {
+        background: #ED4245;
+        color: #FFFFFF;
     }
     
-    .welcome-message {
+    .control-btn.muted:hover {
+        background: #C03537;
+    }
+    
+    .control-btn.deafened {
+        background: #FAA61A;
+        color: #FFFFFF;
+    }
+    
+    .control-btn.deafened:hover {
+        background: #D68910;
+    }
+    
+    .control-btn.disconnect {
+        background: #ED4245;
+        color: #FFFFFF;
+    }
+    
+    .control-btn.disconnect:hover {
+        background: #C03537;
+    }
+    
+    /* ============================================
+       MAIN STAGE - Chat & Video
+       ============================================ */
+    
+    .main-stage {
         flex: 1;
         display: flex;
         flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        padding: 48px 24px;
-        text-align: center;
+        background: #36393F;
+        min-width: 0;
     }
     
-    .welcome-icon {
-        font-size: 64px;
-        margin-bottom: 16px;
-        opacity: 0.6;
-        color: #6366F1;
-    }
-    
-    .welcome-title {
-        font-size: 24px;
-        font-weight: 600;
-        color: #E5E5E5;
-        margin-bottom: 8px;
-    }
-    
-    .welcome-text {
-        font-size: 15px;
-        color: #9CA3AF;
-        max-width: 480px;
-        line-height: 1.6;
-    }
-    
-    /* Chat Area */
-    #chat-area {
-        display: none;
-        flex-direction: column;
-        height: 100%;
-        flex: 1;
-    }
-    
-    #chat-area.active {
-        display: flex;
-    }
-    
+    /* Chat Header */
     .chat-header {
-        padding: 16px 24px;
-        border-bottom: 1px solid #2A2A2A;
-        background: #1A1A1A;
+        height: 48px;
+        padding: 0 16px;
         display: flex;
         align-items: center;
-        gap: 10px;
+        border-bottom: 1px solid #202225;
+        box-shadow: 0 1px 0 rgba(4, 4, 5, 0.2), 0 1.5px 0 rgba(6, 6, 7, 0.05);
+        z-index: 2;
     }
     
     .chat-header i {
-        color: #6366F1;
-        font-size: 18px;
+        color: #8E9297;
+        font-size: 24px;
+        margin-right: 8px;
     }
     
-    .chat-header h4 {
+    .chat-header h3 {
         font-size: 16px;
         font-weight: 600;
-        color: #E5E5E5;
+        color: #FFFFFF;
         margin: 0;
     }
     
-    /* Video Grid Container - For Video Streams and Screen Shares */
+    .voice-indicator {
+        margin-left: auto;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 12px;
+        background: rgba(88, 101, 242, 0.1);
+        border-radius: 4px;
+        font-size: 13px;
+        color: #5865F2;
+    }
+    
+    .voice-indicator i {
+        font-size: 12px;
+        margin: 0;
+    }
+    
+    /* Video Grid Container */
     .video-grid-container {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 16px;
-        padding: 16px 24px;
-        background: #0F0F0F;
-        border-bottom: 1px solid #2A2A2A;
+        padding: 16px;
+        background: #2F3136;
+        border-bottom: 1px solid #202225;
         min-height: 200px;
         max-height: 400px;
         overflow-y: auto;
@@ -546,17 +472,17 @@
     
     .video-grid-item {
         position: relative;
-        background: #1A1A1A;
+        background: #202225;
         border-radius: 8px;
         overflow: hidden;
-        border: 2px solid #2A2A2A;
+        border: 2px solid #2F3136;
         aspect-ratio: 16 / 9;
         min-height: 150px;
     }
     
     .video-grid-item.speaking {
-        border-color: #6366F1;
-        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        border-color: #5865F2;
+        box-shadow: 0 0 0 3px rgba(88, 101, 242, 0.2);
     }
     
     .video-grid-item video {
@@ -582,7 +508,7 @@
         width: 24px;
         height: 24px;
         border-radius: 50%;
-        background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+        background: #5865F2;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -595,7 +521,7 @@
     .video-grid-item-name {
         font-size: 13px;
         font-weight: 500;
-        color: #E5E5E5;
+        color: #FFFFFF;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -615,82 +541,45 @@
     
     .video-grid-item-status.speaking::before {
         content: '●';
-        color: #6366F1;
+        color: #5865F2;
         font-size: 12px;
         animation: pulse 1.5s infinite;
     }
     
-    /* Chat Messages - Discord-style Layout */
-    #discord-messages {
+    /* Messages Area */
+    .messages-container {
         flex: 1;
         overflow-y: auto;
-        padding: 16px 24px;
-        background: #141414;
-        display: flex;
-        flex-direction: column;
-        min-height: 100%;
-    }
-    
-    .messages-container {
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-        padding-bottom: 8px;
-        flex: 1;
+        overflow-x: hidden;
+        padding: 16px;
+        background: #36393F;
+        min-height: 0;
     }
     
     .message-item {
-        display: flex !important;
-        gap: 12px;
-        padding: 8px 16px;
-        margin: 2px 0;
-        transition: background 0.15s ease;
-        border-radius: 8px;
-        max-width: 85%;
-        visibility: visible !important;
-        opacity: 1 !important;
-        color: #E5E5E5 !important;
+        display: flex;
+        gap: 16px;
+        padding: 4px 16px;
+        margin: 1px 0;
+        transition: background-color 0.15s ease;
     }
     
     .message-item:hover {
-        background: rgba(255, 255, 255, 0.03);
-    }
-    
-    /* Own messages - right aligned */
-    .message-item.own-message {
-        margin-left: auto;
-        flex-direction: row-reverse;
-        background: rgba(99, 102, 241, 0.1);
-        border: 1px solid rgba(99, 102, 241, 0.2);
-    }
-    
-    .message-item.own-message .message-content {
-        text-align: right;
-    }
-    
-    .message-item.own-message .message-header {
-        justify-content: flex-end;
-    }
-    
-    /* Other messages - left aligned */
-    .message-item.other-message {
-        margin-right: auto;
-        background: #1A1A1A;
-        border: 1px solid #2A2A2A;
+        background: rgba(4, 4, 5, 0.07);
     }
     
     .message-avatar {
-        width: 36px;
-        height: 36px;
+        width: 40px;
+        height: 40px;
         border-radius: 50%;
-        flex-shrink: 0;
-        background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+        background: #5865F2;
         display: flex;
         align-items: center;
         justify-content: center;
         color: white;
         font-weight: 600;
-        font-size: 14px;
+        font-size: 16px;
+        flex-shrink: 0;
     }
     
     .message-content {
@@ -706,9 +595,9 @@
     }
     
     .message-author {
-        font-size: 14px;
-        font-weight: 600;
-        color: #E5E5E5;
+        font-size: 16px;
+        font-weight: 500;
+        color: #FFFFFF;
         cursor: pointer;
     }
     
@@ -717,573 +606,249 @@
     }
     
     .message-time {
-        font-size: 11px;
-        color: #6B7280;
+        font-size: 12px;
+        color: #72767D;
     }
     
     .message-text {
-        font-size: 14px;
-        color: #D1D5DB;
-        line-height: 1.5;
+        font-size: 16px;
+        color: #DCDDDE;
+        line-height: 1.375;
         word-wrap: break-word;
     }
     
-    /* System messages */
-    .message-item.system-message {
-        max-width: 100%;
-        justify-content: center;
-        background: transparent;
-        border: none;
-        padding: 4px 16px;
+    /* Input Area */
+    .input-area {
+        padding: 0 16px 24px;
+        background: #36393F;
     }
     
-    .message-item.system-message .message-text {
-        color: #6B7280;
-        font-size: 12px;
-        font-style: italic;
-        text-align: center;
-    }
-    
-    /* Typing indicator */
-    .typing-indicator {
-        display: none;
-        padding: 8px 16px;
-        color: #6B7280;
-        font-size: 13px;
-        font-style: italic;
-    }
-    
-    .typing-indicator.active {
-        display: block;
-    }
-    
-    .chat-input-container {
-        padding: 16px 24px;
-        background: #1A1A1A;
-        border-top: 1px solid #2A2A2A;
-    }
-    
-    .chat-input-wrapper {
+    .input-wrapper {
+        background: #40444B;
+        border-radius: 8px;
+        padding: 0 16px;
         display: flex;
         align-items: center;
-        gap: 12px;
-        background: #1F1F1F;
-        padding: 12px 16px;
-        border-radius: 12px;
-        border: 1px solid #2A2A2A;
-        transition: all 0.15s ease;
+        gap: 8px;
     }
     
-    .chat-input-wrapper:focus-within {
-        border-color: #6366F1;
-        background: #1F1F1F;
-        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    .input-wrapper:focus-within {
+        background: #484C52;
     }
     
-    #discord-chat-input {
+    #chat-input {
         flex: 1;
         background: transparent;
         border: none;
         outline: none;
-        color: #E5E5E5;
-        font-size: 15px;
-        padding: 0;
-        font-family: 'Inter', sans-serif;
+        color: #DCDDDE;
+        font-size: 16px;
+        padding: 11px 0;
+        font-family: inherit;
     }
     
-    #discord-chat-input::placeholder {
-        color: #6B7280;
+    #chat-input::placeholder {
+        color: #72767D;
     }
     
-    .chat-input-btn {
+    .input-btn {
         background: transparent;
         border: none;
-        color: #9CA3AF;
+        color: #B9BBBE;
         cursor: pointer;
-        padding: 4px;
-        border-radius: 6px;
+        padding: 8px;
+        border-radius: 4px;
         transition: all 0.15s ease;
         font-size: 18px;
-    }
-    
-    .chat-input-btn:hover {
-        background: #2A2A2A;
-        color: #6366F1;
-    }
-    
-    /* Members Sidebar */
-    .members-sidebar {
-        background: #1A1A1A;
-        border-left: 1px solid #2A2A2A;
-        display: flex;
-        flex-direction: column;
-        height: 100vh;
-        overflow: hidden;
-    }
-    
-    .members-section-title {
-        font-size: 11px;
-        font-weight: 600;
-        color: #9CA3AF;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        padding: 16px 16px 12px;
-        border-bottom: 1px solid #2A2A2A;
-    }
-    
-    .members-list {
-        flex: 1;
-        overflow-y: auto;
-        padding: 8px;
-    }
-    
-    .member-item {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 8px 12px;
-        border-radius: 8px;
-        margin: 2px 0;
-        cursor: pointer;
-        transition: all 0.15s ease;
-    }
-    
-    .member-item:hover {
-        background: #2A2A2A;
-    }
-    
-    .member-avatar {
-        width: 36px;
-        height: 36px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        font-weight: 600;
-        font-size: 14px;
-        flex-shrink: 0;
-    }
-    
-    .member-info {
-        flex: 1;
-        min-width: 0;
-    }
-    
-    .member-name {
-        font-size: 14px;
-        font-weight: 500;
-        color: #E5E5E5;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-    
-    .owner-crown {
-        color: #F59E0B;
-        font-size: 12px;
-    }
-    
-    .member-status {
-        font-size: 12px;
-        color: #9CA3AF;
-        margin-top: 2px;
-    }
-    
-    .online-indicator {
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: #10B981;
-        display: inline-block;
-        margin-right: 6px;
-    }
-    
-    /* Voice Stage removed - main content always shows text chat */
-    
-    /* Screen Share Card */
-    .screen-share-card {
-        background: #1A1A1A;
-        border: 2px solid #6366F1;
-        border-radius: 12px;
-        padding: 0;
-        display: flex;
-        flex-direction: column;
-        transition: all 0.15s ease;
-        position: relative;
-        overflow: hidden;
-        min-height: 300px;
-        grid-column: 1 / -1; /* Full width */
-    }
-    
-    .screen-share-header {
-        padding: 12px 16px;
-        background: rgba(99, 102, 241, 0.1);
-        border-bottom: 1px solid #2A2A2A;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-    
-    .screen-share-title {
-        font-size: 13px;
-        font-weight: 600;
-        color: #6366F1;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    
-    .screen-share-video-container {
-        width: 100%;
-        flex: 1;
-        min-height: 300px;
-        background: #0F0F0F;
-        position: relative;
         display: flex;
         align-items: center;
         justify-content: center;
     }
     
-    .screen-share-video {
-        width: 100%;
-        height: 100%;
-        object-fit: contain;
-        display: none;
-    }
-    
-    .screen-share-video.active {
-        display: block;
-    }
-    
-    .status-dot {
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: #10B981;
-    }
-    
-    .status-dot.speaking {
-        background: #6366F1;
-        animation: pulse 1.5s infinite;
-    }
-    
-    @keyframes pulse {
-        0%, 100% { opacity: 1; transform: scale(1); }
-        50% { opacity: 0.7; transform: scale(1.2); }
-    }
-    
-    .voice-footer {
-        padding: 16px 24px;
-        border-top: 1px solid #2A2A2A;
-        background: #1A1A1A;
-        display: flex;
-        justify-content: center;
-    }
-    
-    .voice-footer-btn {
-        padding: 10px 20px;
-        border-radius: 8px;
-        border: none;
-        font-size: 14px;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.15s ease;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    
-    .voice-footer-btn.leave {
-        background: #EF4444;
+    .input-btn:hover {
         color: #FFFFFF;
-    }
-    
-    .voice-footer-btn.leave:hover {
-        background: #DC2626;
-    }
-    
-    .role-badge {
-        display: inline-block;
-        padding: 2px 8px;
-        border-radius: 4px;
-        font-size: 11px;
-        font-weight: 500;
-        margin-left: 6px;
-        background: #EEF2FF;
-        color: #6366F1;
+        background: rgba(255, 255, 255, 0.1);
     }
     
     /* Scrollbars */
-    .server-sidebar::-webkit-scrollbar,
-    .members-sidebar::-webkit-scrollbar,
-    #discord-messages::-webkit-scrollbar,
-    .voice-participants::-webkit-scrollbar {
-        width: 6px;
+    .channel-list-container::-webkit-scrollbar,
+    .messages-container::-webkit-scrollbar,
+    .video-grid-container::-webkit-scrollbar {
+        width: 8px;
     }
     
-    .server-sidebar::-webkit-scrollbar-thumb,
-    .members-sidebar::-webkit-scrollbar-thumb,
-    #discord-messages::-webkit-scrollbar-thumb,
-    .voice-participants::-webkit-scrollbar-thumb {
-        background: #D1D5DB;
-        border-radius: 3px;
+    .channel-list-container::-webkit-scrollbar-thumb,
+    .messages-container::-webkit-scrollbar-thumb,
+    .video-grid-container::-webkit-scrollbar-thumb {
+        background: #202225;
+        border-radius: 4px;
     }
     
-    .server-sidebar::-webkit-scrollbar-thumb:hover,
-    .members-sidebar::-webkit-scrollbar-thumb:hover,
-    #discord-messages::-webkit-scrollbar-thumb:hover,
-    .voice-participants::-webkit-scrollbar-thumb:hover {
-        background: #9CA3AF;
+    .channel-list-container::-webkit-scrollbar-thumb:hover,
+    .messages-container::-webkit-scrollbar-thumb:hover,
+    .video-grid-container::-webkit-scrollbar-thumb:hover {
+        background: #1A1C1F;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="server-container">
-    <!-- Left Sidebar - Server & Channels -->
-    <div class="server-sidebar">
-        <div class="server-header-sidebar">
-            <div class="server-icon-sidebar">
-                {{ server.icon|default:"🎮" }}
-            </div>
-            <div class="server-name-sidebar">{{ server.name }}</div>
-            <div class="server-desc-sidebar">{{ server.description|default:"Welcome to our server!"|truncatewords:10 }}</div>
+<div class="discord-container">
+    <!-- LEFT RAIL - Server Icons -->
+    <div class="server-rail">
+        <div class="server-icon-rail active" title="{{ server.name }}">
+            {{ server.icon|default:"🎮" }}
+        </div>
+        <!-- Additional server icons can be added here -->
+    </div>
+    
+    <!-- SIDEBAR - Channels & User Panel -->
+    <div class="sidebar">
+        <!-- Sidebar Header -->
+        <div class="sidebar-header">
+            <h2>{{ server.name }}</h2>
         </div>
         
-        <div class="channel-section">
+        <!-- Channel List - Scrollable -->
+        <div class="channel-list-container">
             <!-- Text Channels -->
-            <div style="margin-bottom: 24px;">
+            <div class="channel-section">
                 <div class="channel-section-header">
                     <div class="channel-section-title">
-                        <i class="fas fa-hashtag"></i> {% trans "TEXT CHANNELS" %}
+                        <i class="fas fa-hashtag"></i>
+                        <span>{% trans "TEXT CHANNELS" %}</span>
                     </div>
                     {% if can_manage_channels %}
-                    {% with total_channels=text_channels.count|add:voice_channels.count %}
                     <button class="add-channel-btn" 
                             data-bs-toggle="modal" 
                             data-bs-target="#createTextChannelModal"
-                            {% if total_channels >= 100 %}disabled title="{% trans 'Maximum 100 channels reached' %}"{% endif %}>
+                            title="{% trans 'Create Text Channel' %}">
                         <i class="fas fa-plus"></i>
                     </button>
-                    {% endwith %}
                     {% endif %}
                 </div>
-                <ul class="channel-list">
-                    {% for channel in text_channels %}
-                    <li class="channel-item">
-                        <a href="javascript:void(0)" class="channel-link" 
-                           data-channel-type="text" 
-                           data-channel-slug="{{ channel.slug }}" 
-                           data-channel-name="{{ channel.name }}"
-                           onclick="openTextChannel('{{ channel.slug }}', '{{ channel.name }}'); return false;">
-                            <i class="fas fa-hashtag"></i>
-                            <span>{{ channel.name }}</span>
-                        </a>
-                    </li>
-            {% empty %}
-            <li class="channel-item" style="color: #6B7280; font-size: 13px;">
-                {% trans "No text channels" %}
-            </li>
-                    {% endfor %}
-                </ul>
+                {% for channel in text_channels %}
+                <a href="javascript:void(0)" 
+                   class="channel-item" 
+                   data-channel-type="text"
+                   data-channel-slug="{{ channel.slug }}"
+                   data-channel-name="{{ channel.name }}"
+                   onclick="openTextChannel('{{ channel.slug }}', '{{ channel.name }}'); return false;">
+                    <i class="fas fa-hashtag"></i>
+                    <span>{{ channel.name }}</span>
+                </a>
+                {% empty %}
+                <div class="channel-item" style="color: #72767D; font-size: 14px; cursor: default;">
+                    {% trans "No text channels" %}
+                </div>
+                {% endfor %}
             </div>
             
             <!-- Voice Channels -->
-            <div>
+            <div class="channel-section">
                 <div class="channel-section-header">
                     <div class="channel-section-title">
-                        <i class="fas fa-volume-up"></i> {% trans "VOICE CHANNELS" %}
+                        <i class="fas fa-volume-up"></i>
+                        <span>{% trans "VOICE CHANNELS" %}</span>
                     </div>
                     {% if can_manage_channels %}
-                    {% with total_channels=text_channels.count|add:voice_channels.count %}
                     <button class="add-channel-btn" 
                             data-bs-toggle="modal" 
                             data-bs-target="#createVoiceChannelModal"
-                            {% if total_channels >= 100 %}disabled title="{% trans 'Maximum 100 channels reached' %}"{% endif %}>
+                            title="{% trans 'Create Voice Channel' %}">
                         <i class="fas fa-plus"></i>
                     </button>
-                    {% endwith %}
                     {% endif %}
                 </div>
-                <ul class="channel-list">
-                    {% for channel in voice_channels %}
-                    <li class="channel-item voice-channel-item" data-voice-channel-slug="{{ channel.slug }}">
-                        <a href="javascript:void(0)" class="channel-link" 
-                           data-channel-type="voice" 
-                           data-channel-slug="{{ channel.slug }}" 
-                           data-channel-name="{{ channel.name }}"
-                           onclick="openVoiceChannel('{{ channel.slug }}', '{{ channel.name }}'); return false;">
-                            <i class="fas fa-volume-up"></i>
-                            <span>{{ channel.name }}</span>
-                        </a>
-                        <!-- Voice participants nested list (Discord style) -->
-                        <ul class="voice-participants-list" id="voice-participants-{{ channel.slug }}" style="display: none;">
-                            <!-- Participants will be added here dynamically -->
-                        </ul>
-                    </li>
-            {% empty %}
-            <li class="channel-item" style="color: #6B7280; font-size: 13px;">
-                {% trans "No voice channels" %}
-            </li>
-                    {% endfor %}
-                </ul>
+                {% for channel in voice_channels %}
+                <div class="channel-item voice-channel-item" data-voice-channel-slug="{{ channel.slug }}">
+                    <a href="javascript:void(0)" 
+                       class="channel-item" 
+                       data-channel-type="voice"
+                       data-channel-slug="{{ channel.slug }}"
+                       data-channel-name="{{ channel.name }}"
+                       onclick="openVoiceChannel('{{ channel.slug }}', '{{ channel.name }}'); return false;">
+                        <i class="fas fa-volume-up"></i>
+                        <span>{{ channel.name }}</span>
+                    </a>
+                    <!-- Voice Participants List (nested) -->
+                    <ul class="voice-participants-list" id="voice-participants-{{ channel.slug }}" style="display: none;">
+                        <!-- Participants added dynamically -->
+                    </ul>
+                </div>
+                {% empty %}
+                <div class="channel-item" style="color: #72767D; font-size: 14px; cursor: default;">
+                    {% trans "No voice channels" %}
+                </div>
+                {% endfor %}
             </div>
         </div>
         
-        <!-- Bottom Voice Control Bar (Discord style) -->
-        <div class="voice-control-bar" id="voice-control-bar" style="display: none;">
-            <div class="voice-control-bar-user">
-                <div class="voice-control-bar-avatar" id="voice-control-bar-avatar">
-                    {{ user.username|first|upper }}
-                </div>
-                <div class="voice-control-bar-info">
-                    <div class="voice-control-bar-name">{{ user.username }}</div>
-                    <div class="voice-control-bar-status" id="voice-control-bar-status">{% trans "Connected" %}</div>
-                </div>
+        <!-- User Control Panel - Sticky Bottom -->
+        <div class="user-panel" id="user-panel">
+            <div class="user-avatar" id="user-avatar">
+                {{ user.username|first|upper }}
             </div>
-            <div class="voice-control-bar-buttons">
-                <button class="voice-control-bar-btn" id="voice-control-mute-btn" onclick="toggleMute()" title="{% trans 'Mute' %}">
+            <div class="user-info">
+                <div class="user-name">{{ user.username }}</div>
+                <div class="user-status" id="user-status">{% trans "Online" %}</div>
+            </div>
+            <div class="user-controls">
+                <button class="control-btn" id="mute-btn" onclick="toggleMute()" title="{% trans 'Mute' %}">
                     <i class="fas fa-microphone"></i>
                 </button>
-                <button class="voice-control-bar-btn" id="voice-control-deafen-btn" onclick="toggleDeafen()" title="{% trans 'Deafen' %}">
-                    <i class="fas fa-volume-mute"></i>
+                <button class="control-btn" id="deafen-btn" onclick="toggleDeafen()" title="{% trans 'Deafen' %}">
+                    <i class="fas fa-headphones"></i>
                 </button>
-                <button class="voice-control-bar-btn leave" id="voice-control-leave-btn" onclick="leaveVoiceChannel()" title="{% trans 'Disconnect' %}">
+                <button class="control-btn" onclick="openSettings()" title="{% trans 'Settings' %}">
+                    <i class="fas fa-cog"></i>
+                </button>
+                <button class="control-btn disconnect" id="disconnect-btn" onclick="disconnectVoice()" title="{% trans 'Disconnect' %}" style="display: none;">
                     <i class="fas fa-phone-slash"></i>
                 </button>
             </div>
         </div>
     </div>
     
-    <!-- Main Content -->
-    <div class="main-content">
-        <div class="server-header">
-            <div class="server-icon-large">
-                {{ server.icon|default:"🎮" }}
-            </div>
-            <div class="server-info">
-                <h2>
-                    {{ server.name }}
-                    {% if is_owner %}
-                    <span class="role-badge">
-                        <i class="fas fa-crown"></i> {% trans "Owner" %}
-                    </span>
-                    {% endif %}
-                </h2>
-                <p>{{ server.description|default:"No description" }}</p>
+    <!-- MAIN STAGE - Chat & Video -->
+    <div class="main-stage">
+        <!-- Chat Header -->
+        <div class="chat-header">
+            <i class="fas fa-hashtag"></i>
+            <h3 id="chat-channel-name">{% trans "Select a channel" %}</h3>
+            <div class="voice-indicator" id="voice-indicator" style="display: none;">
+                <i class="fas fa-volume-up"></i>
+                <span id="voice-indicator-name"></span>
             </div>
         </div>
         
-        <!-- Welcome Message -->
-        <div class="welcome-message" id="welcome-message">
-            <div class="welcome-icon">
-                <i class="fas fa-comments"></i>
-            </div>
-            <h3 class="welcome-title">{% trans "Welcome to" %} {{ server.name }}!</h3>
-            <p class="welcome-text">
-                {% trans "Select a channel from the sidebar to start chatting or join a voice channel." %}
-            </p>
+        <!-- Video Grid Container -->
+        <div id="video-grid" class="video-grid-container">
+            <!-- Video streams added dynamically -->
         </div>
         
-        <!-- Chat Area - Always visible when channel is selected -->
-        <div id="chat-area">
-            <div class="chat-header">
-                <i class="fas fa-hashtag"></i>
-                <h4 id="chat-channel-name">{% trans "Channel" %}</h4>
-                <!-- Voice channel indicator (if connected) -->
-                <div class="voice-indicator" id="voice-indicator" style="display: none;">
-                    <i class="fas fa-volume-up"></i>
-                    <span id="voice-indicator-name"></span>
-                </div>
-            </div>
-            
-            <!-- Video Grid Container for Video Streams and Screen Shares -->
-            <div id="video-grid" class="video-grid-container">
-                <!-- Video streams and screen shares will be added here dynamically -->
-            </div>
-            
-            <div id="discord-messages"></div>
-            
-            <div class="chat-input-container">
-                <div class="chat-input-wrapper">
-                    <button class="chat-input-btn">
-                        <i class="fas fa-plus-circle"></i>
-                    </button>
-                    <input type="text" id="discord-chat-input" placeholder="{% trans 'Type a message...' %}" autocomplete="off">
-                    <button onclick="sendChatMessage()" class="chat-input-btn">
-                        <i class="fas fa-paper-plane"></i>
-                    </button>
-                </div>
+        <!-- Messages Area -->
+        <div class="messages-container" id="messages-container">
+            <div style="text-align: center; padding: 48px; color: #72767D;">
+                <i class="fas fa-comments" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
+                <p>{% trans "Select a channel to start chatting" %}</p>
             </div>
         </div>
-    </div>
-    
-    <!-- Members Sidebar -->
-    <div class="members-sidebar">
-        <div class="members-section-title">
-            <span>{% trans "MEMBERS" %} — {{ members.count }}</span>
-        </div>
-        <div class="members-list">
-            {% for member in members %}
-            <div class="member-item" onclick="openUserProfile('{{ member.user.username }}')">
-                <div class="member-avatar">
-                    {{ member.get_display_name|first|upper }}
-                </div>
-                <div class="member-info">
-                    <div class="member-name">
-                        {{ member.get_display_name }}
-                        {% if member.user == server.owner %}
-                        <i class="fas fa-crown owner-crown"></i>
-                        {% endif %}
-                    </div>
-                    <div class="member-status">
-                        {% if member.is_online %}
-                        <span class="online-indicator"></span><span style="color: #10B981;">{% trans "Online" %}</span>
-                        {% else %}
-                        <span style="color: #9CA3AF;">{% trans "Offline" %}</span>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-            {% empty %}
-            <p style="color: #6B7280; font-size: 13px; text-align: center; padding: 16px;">{% trans "No members" %}</p>
-            {% endfor %}
-        </div>
-    </div>
-</div>
-
-<!-- User Profile Modal -->
-<div class="modal fade" id="userProfileModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="background: #1A1A1A; border: 1px solid #2A2A2A;">
-            <div class="modal-header" style="border-bottom: 1px solid #2A2A2A;">
-                <h5 class="modal-title" style="color: #E5E5E5;">{% trans "User Profile" %}</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="user-profile-content" style="background: #1A1A1A;">
-                <!-- Profile content loaded via AJAX -->
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Private Message Modal -->
-<div class="modal fade" id="privateMessageModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content" style="background: #1A1A1A; border: 1px solid #2A2A2A;">
-            <div class="modal-header" style="border-bottom: 1px solid #2A2A2A;">
-                <h5 class="modal-title" style="color: #E5E5E5;">
-                    <i class="fas fa-envelope me-2"></i>{% trans "Private Message" %}
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="private-message-content" style="background: #1A1A1A;">
-                <!-- Private message content -->
+        
+        <!-- Input Area -->
+        <div class="input-area">
+            <div class="input-wrapper">
+                <button class="input-btn" title="{% trans 'Add attachment' %}">
+                    <i class="fas fa-plus"></i>
+                </button>
+                <input type="text" 
+                       id="chat-input" 
+                       placeholder="{% trans 'Message #channel' %}" 
+                       autocomplete="off"
+                       disabled>
+                <button class="input-btn" onclick="sendMessage()" title="{% trans 'Send message' %}">
+                    <i class="fas fa-paper-plane"></i>
+                </button>
             </div>
         </div>
     </div>
@@ -1294,38 +859,26 @@
 <!-- Text Channel Modal -->
 <div class="modal fade" id="createTextChannelModal" tabindex="-1">
     <div class="modal-dialog">
-        <div class="modal-content" style="background: #1A1A1A; border: 1px solid #2A2A2A;">
-            <div class="modal-header" style="border-bottom: 1px solid #2A2A2A;">
-                <h5 class="modal-title" style="color: #E5E5E5;">
-                    <i class="fas fa-hashtag me-2"></i>{% trans "Create Text Channel" %}
-                </h5>
+        <div class="modal-content" style="background: #2F3136; border: 1px solid #202225;">
+            <div class="modal-header" style="border-bottom: 1px solid #202225;">
+                <h5 class="modal-title" style="color: #FFFFFF;">{% trans "Create Text Channel" %}</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form method="post" action="{% url 'create_text_channel' server_slug=server.slug %}">
                 {% csrf_token %}
-                <div class="modal-body" style="color: #E5E5E5; background: #1A1A1A;">
+                <div class="modal-body" style="color: #DCDDDE;">
                     <div class="mb-3">
-                        <label class="form-label" style="color: #E5E5E5;">{% trans "Channel Name" %}</label>
-                        <input type="text" class="form-control" name="name" placeholder="general" required maxlength="100" style="background: #1F1F1F; border: 1px solid #2A2A2A; color: #E5E5E5;">
+                        <label class="form-label">{% trans "Channel Name" %}</label>
+                        <input type="text" class="form-control" name="name" required maxlength="100" style="background: #40444B; border: 1px solid #202225; color: #DCDDDE;">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label" style="color: #E5E5E5;">{% trans "Description" %}</label>
-                        <textarea class="form-control" name="description" rows="2" style="background: #1F1F1F; border: 1px solid #2A2A2A; color: #E5E5E5;"></textarea>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label" style="color: #E5E5E5;">{% trans "Position" %}</label>
-                        <input type="number" class="form-control" name="position" value="0" min="0" style="background: #1F1F1F; border: 1px solid #2A2A2A; color: #E5E5E5;">
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="textChannelPrivate" name="is_private">
-                        <label class="form-check-label" for="textChannelPrivate" style="color: #E5E5E5;">
-                            {% trans "Private Channel" %}
-                        </label>
+                        <label class="form-label">{% trans "Description" %}</label>
+                        <textarea class="form-control" name="description" rows="2" style="background: #40444B; border: 1px solid #202225; color: #DCDDDE;"></textarea>
                     </div>
                 </div>
-                <div class="modal-footer" style="border-top: 1px solid #2A2A2A; background: #1A1A1A;">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="background: #2A2A2A; border: 1px solid #3A3A3A; color: #E5E5E5;">{% trans "Cancel" %}</button>
-                    <button type="submit" class="btn btn-primary" style="background: #6366F1; border: none;">{% trans "Create" %}</button>
+                <div class="modal-footer" style="border-top: 1px solid #202225;">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="background: #40444B; border: 1px solid #202225; color: #DCDDDE;">{% trans "Cancel" %}</button>
+                    <button type="submit" class="btn btn-primary" style="background: #5865F2; border: none;">{% trans "Create" %}</button>
                 </div>
             </form>
         </div>
@@ -1335,34 +888,26 @@
 <!-- Voice Channel Modal -->
 <div class="modal fade" id="createVoiceChannelModal" tabindex="-1">
     <div class="modal-dialog">
-        <div class="modal-content" style="background: #1A1A1A; border: 1px solid #2A2A2A;">
-            <div class="modal-header" style="border-bottom: 1px solid #2A2A2A;">
-                <h5 class="modal-title" style="color: #E5E5E5;">
-                    <i class="fas fa-volume-up me-2"></i>{% trans "Create Voice Channel" %}
-                </h5>
+        <div class="modal-content" style="background: #2F3136; border: 1px solid #202225;">
+            <div class="modal-header" style="border-bottom: 1px solid #202225;">
+                <h5 class="modal-title" style="color: #FFFFFF;">{% trans "Create Voice Channel" %}</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form method="post" action="{% url 'create_voice_channel' server_slug=server.slug %}">
                 {% csrf_token %}
-                <div class="modal-body" style="color: #E5E5E5; background: #1A1A1A;">
+                <div class="modal-body" style="color: #DCDDDE;">
                     <div class="mb-3">
-                        <label class="form-label" style="color: #E5E5E5;">{% trans "Channel Name" %}</label>
-                        <input type="text" class="form-control" name="name" placeholder="General" required maxlength="100" style="background: #1F1F1F; border: 1px solid #2A2A2A; color: #E5E5E5;">
+                        <label class="form-label">{% trans "Channel Name" %}</label>
+                        <input type="text" class="form-control" name="name" required maxlength="100" style="background: #40444B; border: 1px solid #202225; color: #DCDDDE;">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label" style="color: #E5E5E5;">{% trans "User Limit" %} (0 = {% trans "Unlimited" %})</label>
-                        <input type="number" class="form-control" name="user_limit" value="0" min="0" max="99" style="background: #1F1F1F; border: 1px solid #2A2A2A; color: #E5E5E5;">
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="checkbox" id="voiceChannelPrivate" name="is_private">
-                        <label class="form-check-label" for="voiceChannelPrivate" style="color: #E5E5E5;">
-                            {% trans "Private Channel" %}
-                        </label>
+                        <label class="form-label">{% trans "User Limit" %} (0 = {% trans "Unlimited" %})</label>
+                        <input type="number" class="form-control" name="user_limit" value="0" min="0" max="99" style="background: #40444B; border: 1px solid #202225; color: #DCDDDE;">
                     </div>
                 </div>
-                <div class="modal-footer" style="border-top: 1px solid #2A2A2A; background: #1A1A1A;">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="background: #2A2A2A; border: 1px solid #3A3A3A; color: #E5E5E5;">{% trans "Cancel" %}</button>
-                    <button type="submit" class="btn btn-primary" style="background: #6366F1; border: none;">{% trans "Create" %}</button>
+                <div class="modal-footer" style="border-top: 1px solid #202225;">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="background: #40444B; border: 1px solid #202225; color: #DCDDDE;">{% trans "Cancel" %}</button>
+                    <button type="submit" class="btn btn-primary" style="background: #5865F2; border: none;">{% trans "Create" %}</button>
                 </div>
             </form>
         </div>
@@ -1373,429 +918,192 @@
 
 {% block extra_js %}
 <script>
-    // Get ICE servers from backend (secure - credentials not exposed in frontend)
-    let iceServers = [];
-    try {
-        const coturnConfig = JSON.parse('{{ coturn_config_json|escapejs }}');
-        if (coturnConfig && Array.isArray(coturnConfig)) {
-            iceServers = coturnConfig;
-        } else {
-            console.error('Invalid ICE server configuration');
-            iceServers = [{ urls: 'stun:stun.l.google.com:19302' }];
-        }
-    } catch (e) {
-        console.error('Error parsing ICE servers:', e);
-        iceServers = [{ urls: 'stun:stun.l.google.com:19302' }];
-    }
+    // ============================================
+    // DISCORD CLONE - JAVASCRIPT
+    // ============================================
     
-    // Text Channel State
+    // Global State
     let currentChannelSlug = null;
     let currentChannelType = null;
-    let chatSocket = null;
-    
-    // Voice Channel State (Global - persists across text channel changes)
     let currentVoiceChannelSlug = null;
-    let currentVoiceChannelName = null;
+    let chatSocket = null;
     let voiceSocket = null;
-    let localStream = null;
-    let peerConnections = {};
     let isMuted = false;
-    let isVideoEnabled = true;
     let isDeafened = false;
-    let isVideoOn = false;
-    let isScreenSharing = false;
+    let videoGridItems = new Map();
+    let voiceParticipants = new Map();
+    let peerConnections = {};
     
-    const messageList = document.getElementById('discord-messages');
-    const chatInput = document.getElementById('discord-chat-input');
-    const welcomeMessage = document.getElementById('welcome-message');
-    const chatArea = document.getElementById('chat-area');
+    const currentUsername = '{{ user.username }}';
+    const iceServers = JSON.parse('{{ coturn_config_json|escapejs }}') || [{ urls: 'stun:stun.l.google.com:19302' }];
     
-    // Channel click handler - Simple and direct
-    function handleChannelClick(e) {
-        e.preventDefault();
-        e.stopPropagation();
-        
-        const link = e.currentTarget;
-        const channelType = link.getAttribute('data-channel-type');
-        const channelSlug = link.getAttribute('data-channel-slug');
-        const channelName = link.getAttribute('data-channel-name');
-        
-        console.log('Channel clicked:', channelType, channelSlug, channelName);
-        
-        if (!channelType || !channelSlug || !channelName) {
-            console.error('Missing channel data');
-            return false;
-        }
-        
-        // Remove active from all channels
-        document.querySelectorAll('.channel-item').forEach(item => item.classList.remove('active'));
-        // Add active to clicked channel
-        const channelItem = link.closest('.channel-item');
-        if (channelItem) {
-            channelItem.classList.add('active');
-        }
-        
-        if (channelType === 'text') {
-            openTextChannel(channelSlug, channelName);
-        } else if (channelType === 'voice') {
-            openVoiceChannel(channelSlug, channelName);
-        }
-        
-        return false;
-    }
+    // ============================================
+    // CHANNEL MANAGEMENT
+    // ============================================
     
-    // Setup channel handlers - Multiple methods to ensure it works
-    function setupChannelHandlers() {
-        console.log('Setting up channel handlers...');
-        
-        // Method 1: Direct onclick attributes (most reliable)
-        const channelLinks = document.querySelectorAll('.channel-link');
-        console.log('Found', channelLinks.length, 'channel links');
-        
-        channelLinks.forEach((link, index) => {
-            // Remove any existing listeners
-            const newLink = link.cloneNode(true);
-            link.parentNode.replaceChild(newLink, link);
-            
-            // Add onclick directly
-            newLink.onclick = handleChannelClick;
-            
-            // Also add event listener as backup
-            newLink.addEventListener('click', handleChannelClick, true);
-            
-            console.log(`Handler attached to channel ${index + 1}:`, newLink.getAttribute('data-channel-name'));
-        });
-        
-        // Method 2: Event delegation on server sidebar
-        const serverSidebar = document.querySelector('.server-sidebar');
-        if (serverSidebar) {
-            // Remove old listener if exists
-            const newSidebar = serverSidebar.cloneNode(false);
-            while (serverSidebar.firstChild) {
-                newSidebar.appendChild(serverSidebar.firstChild);
-            }
-            serverSidebar.parentNode.replaceChild(newSidebar, serverSidebar);
-            
-            newSidebar.addEventListener('click', function(e) {
-                const link = e.target.closest('.channel-link');
-                if (link && !link.onclick) {
-                    handleChannelClick(e);
-                }
-            }, true);
-        }
-    }
-    
-    // Initialize immediately and on DOM ready
-    (function() {
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', function() {
-                setTimeout(setupChannelHandlers, 50);
-            });
-        } else {
-            setTimeout(setupChannelHandlers, 50);
-        }
-        
-        // Also try on window load
-        window.addEventListener('load', function() {
-            setTimeout(setupChannelHandlers, 100);
-        });
-    })();
-    
-    // Make functions globally accessible
-    // Discord-style: Text channel always visible, voice connection persists
     window.openTextChannel = function(slug, name) {
-        // Don't disconnect voice when switching text channels
         currentChannelSlug = slug;
         currentChannelType = 'text';
         
-        // Update active state (only text channels)
-        document.querySelectorAll('.channel-item').forEach(item => {
-            if (item.querySelector('.channel-link[data-channel-type="text"]')) {
-                item.classList.remove('active');
-            }
-        });
-        const activeLink = document.querySelector(`.channel-link[data-channel-slug="${slug}"][data-channel-type="text"]`);
-        if (activeLink) {
-            activeLink.closest('.channel-item').classList.add('active');
-        }
+        // Update UI
+        document.querySelectorAll('.channel-item').forEach(item => item.classList.remove('active'));
+        document.querySelectorAll(`[data-channel-slug="${slug}"]`).forEach(item => item.classList.add('active'));
         
-        // Close old text channel socket
-        if (chatSocket) {
-            chatSocket.close();
-            chatSocket = null;
-        }
+        document.getElementById('chat-channel-name').textContent = `# ${name}`;
+        document.getElementById('chat-input').placeholder = `{% trans 'Message' %} #${name}`;
+        document.getElementById('chat-input').disabled = false;
         
-        // Always show chat area (Discord style)
-        if (welcomeMessage) {
-            welcomeMessage.style.display = 'none';
-        }
-        const chatArea = document.getElementById('chat-area');
-        if (chatArea) {
-            chatArea.style.display = 'flex';
-            chatArea.classList.remove('hidden');
-        }
+        // Show messages container
+        const messagesContainer = document.getElementById('messages-container');
+        messagesContainer.innerHTML = '<div style="text-align: center; padding: 48px; color: #72767D;"><i class="fas fa-spinner fa-spin" style="font-size: 24px;"></i></div>';
         
-        const chatChannelName = document.getElementById('chat-channel-name');
-        if (chatChannelName) {
-            chatChannelName.textContent = name;
-        }
-        
-        if (messageList) {
-            messageList.innerHTML = '';
-        }
-        
-        connectWebSocket();
+        // Connect WebSocket and load messages
+        connectTextChannel();
         loadChatHistory();
-    }
+    };
     
-    // Discord-style: Join voice channel (doesn't change main view)
     window.openVoiceChannel = function(slug, name) {
-        // If already in a different voice channel, leave it first
-        if (currentVoiceChannelSlug && currentVoiceChannelSlug !== slug) {
-            leaveVoiceChannel();
-        }
-        
-        // Don't change currentChannelSlug/Type - text chat stays visible
         currentVoiceChannelSlug = slug;
-        currentVoiceChannelName = name;
         
-        // Update active state for voice channel
-        document.querySelectorAll('.channel-item').forEach(item => {
-            if (item.querySelector('.channel-link[data-channel-type="voice"]')) {
-                item.classList.remove('active');
-            }
-        });
-        const activeLink = document.querySelector(`.channel-link[data-channel-slug="${slug}"][data-channel-type="voice"]`);
-        if (activeLink) {
-            activeLink.closest('.channel-item').classList.add('active');
-        }
+        // Update UI
+        document.querySelectorAll('.channel-item').forEach(item => item.classList.remove('active'));
+        document.querySelectorAll(`[data-channel-slug="${slug}"]`).forEach(item => item.classList.add('active'));
         
-        // Show voice indicator in chat header
-        const voiceIndicator = document.getElementById('voice-indicator');
-        const voiceIndicatorName = document.getElementById('voice-indicator-name');
-        if (voiceIndicator && voiceIndicatorName) {
-            voiceIndicator.style.display = 'flex';
-            voiceIndicatorName.textContent = name;
-        }
+        // Show voice indicator
+        document.getElementById('voice-indicator').style.display = 'flex';
+        document.getElementById('voice-indicator-name').textContent = name;
         
-        // Show bottom voice control bar
-        const voiceControlBar = document.getElementById('voice-control-bar');
-        if (voiceControlBar) {
-            voiceControlBar.style.display = 'flex';
-        }
+        // Show disconnect button
+        document.getElementById('disconnect-btn').style.display = 'flex';
         
-        // Initialize voice connection
+        // Initialize voice
         initializeVoice();
+    };
+    
+    // ============================================
+    // VOICE FUNCTIONS
+    // ============================================
+    
+    function toggleMute() {
+        isMuted = !isMuted;
+        const btn = document.getElementById('mute-btn');
+        btn.classList.toggle('muted', isMuted);
+        btn.innerHTML = isMuted ? '<i class="fas fa-microphone-slash"></i>' : '<i class="fas fa-microphone"></i>';
+        // TODO: Implement actual mute logic
     }
     
-    function cleanupVoiceChannel() {
-        // Stop local tracks
-        if (localAudioTrack) {
-            localAudioTrack.stop();
-            localAudioTrack = null;
-        }
-        if (localVideoTrack) {
-            localVideoTrack.stop();
-            localVideoTrack = null;
-        }
-        if (localScreenShareTrack) {
-            localScreenShareTrack.stop();
-            localScreenShareTrack = null;
-        }
-        
-        // Close peer connections and remove audio elements
-        Object.values(peerConnections).forEach(pc => {
-            if (pc.audioElement) {
-                pc.audioElement.remove();
-            }
-            pc.close();
-        });
-        peerConnections = {};
-        
-        // Clear participants from sidebar
-        clearVoiceParticipantsFromSidebar();
-        voiceParticipants.clear();
-        
-        // Clear video grid
-        if (videoGridItems) {
-            videoGridItems.forEach((item, username) => {
-                removeVideoFromGrid(username);
-            });
-            videoGridItems.clear();
-        }
-        
-        // Clear screen shares
-        if (screenShares) {
-            screenShares.clear();
-        }
-        
-        // Hide video grid
-        const videoGrid = document.getElementById('video-grid');
-        if (videoGrid) {
-            videoGrid.style.display = 'none';
-            videoGrid.innerHTML = '';
-        }
-        
-        // Close Voice WebSocket (separate from text chat socket)
-        if (voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
-            voiceSocket.send(JSON.stringify({
-                signal_type: 'leave_voice',
-                data: {}
-            }));
-            voiceSocket.close();
-        }
-        voiceSocket = null;
-        
-        // Reset states
-        isMuted = false;
-        isDeafened = false;
-        isVideoOn = false;
-        isScreenSharing = false;
-        
-        // Update bottom voice control bar
-        updateVoiceControlBar();
+    function toggleDeafen() {
+        isDeafened = !isDeafened;
+        const btn = document.getElementById('deafen-btn');
+        btn.classList.toggle('deafened', isDeafened);
+        btn.innerHTML = isDeafened ? '<i class="fas fa-headphones-alt"></i>' : '<i class="fas fa-headphones"></i>';
+        // TODO: Implement actual deafen logic
     }
     
-    function leaveVoiceChannel() {
-        cleanupVoiceChannel();
-        
-        // Clear voice channel state
+    function disconnectVoice() {
         currentVoiceChannelSlug = null;
-        currentVoiceChannelName = null;
-        
-        // Hide voice indicator in chat header
-        const voiceIndicator = document.getElementById('voice-indicator');
-        if (voiceIndicator) {
-            voiceIndicator.style.display = 'none';
-        }
-        
-        // Hide bottom voice control bar
-        const voiceControlBar = document.getElementById('voice-control-bar');
-        if (voiceControlBar) {
-            voiceControlBar.style.display = 'none';
-        }
-        
-        // Remove active state from voice channel
-        document.querySelectorAll('.channel-item').forEach(item => {
-            if (item.querySelector('.channel-link[data-channel-type="voice"]')) {
-                item.classList.remove('active');
-            }
-        });
+        document.getElementById('voice-indicator').style.display = 'none';
+        document.getElementById('disconnect-btn').style.display = 'none';
+        // TODO: Cleanup voice connections
     }
     
-    function connectWebSocket() {
+    function openSettings() {
+        // TODO: Open settings modal
+        console.log('Settings clicked');
+    }
+    
+    async function initializeVoice() {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+            // TODO: Setup WebRTC connections
+            console.log('Voice initialized');
+        } catch (error) {
+            console.error('Error accessing microphone:', error);
+            alert('{% trans "Could not access microphone. Please check permissions." %}');
+        }
+    }
+    
+    // ============================================
+    // TEXT CHAT FUNCTIONS
+    // ============================================
+    
+    function connectTextChannel() {
         if (!currentChannelSlug || currentChannelType !== 'text') return;
         
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsUrl = `${wsProtocol}//${window.location.host}/ws/voice/?channel_slug=${currentChannelSlug}&channel_type=text`;
         
-        if (chatSocket) {
-            chatSocket.close();
-        }
+        if (chatSocket) chatSocket.close();
         
         chatSocket = new WebSocket(wsUrl);
-        
-        chatSocket.onopen = function() {
-            console.log("WebSocket Connected for text channel");
-            // Join the text channel group
+        chatSocket.onopen = () => {
             chatSocket.send(JSON.stringify({
                 signal_type: 'join_text',
-                data: {
-                    channel_slug: currentChannelSlug
-                }
+                data: { channel_slug: currentChannelSlug }
             }));
         };
-        
-        chatSocket.onmessage = function(e) {
-            try {
-                const data = JSON.parse(e.data);
-                console.log("Received message:", data);
-                
-                if (data.type === 'chat_message' || data.message_type === 'chat_message') {
-                    addMessageToList(
-                        data.username || data.author || 'Unknown',
-                        data.message || data.content || '',
-                        data.timestamp || data.created_at
-                    );
-                }
-            } catch (err) {
-                console.error("Error parsing WebSocket message:", err);
+        chatSocket.onmessage = (e) => {
+            const data = JSON.parse(e.data);
+            if (data.type === 'chat_message') {
+                addMessage(data.username, data.message || data.content, data.timestamp);
             }
-        };
-        
-        chatSocket.onclose = function() {
-            console.log("WebSocket Disconnected");
-            if (currentChannelType === 'text') {
-                setTimeout(connectWebSocket, 3000);
-            }
-        };
-        
-        chatSocket.onerror = function(error) {
-            console.error("WebSocket Error:", error);
         };
     }
     
-    const currentUsername = '{{ user.username }}';
+    function loadChatHistory() {
+        if (!currentChannelSlug) return;
+        fetch(`/api/chat/${currentChannelSlug}/messages/`)
+            .then(r => r.json())
+            .then(data => {
+                const container = document.getElementById('messages-container');
+                container.innerHTML = '';
+                if (data.messages && data.messages.length > 0) {
+                    data.messages.forEach(msg => {
+                        addMessage(msg.author, msg.content, msg.timestamp);
+                    });
+                }
+                scrollToBottom();
+            });
+    }
     
-    function addMessageToList(username, content, timestamp, isSystem = false) {
+    function addMessage(username, content, timestamp) {
+        const container = document.getElementById('messages-container');
         const div = document.createElement('div');
-        const isOwnMessage = username === currentUsername;
+        div.className = 'message-item';
         
-        if (isSystem) {
-            div.className = 'message-item system-message';
-            div.innerHTML = `<div class="message-text">${escapeHtml(content)}</div>`;
-        } else {
-            div.className = `message-item ${isOwnMessage ? 'own-message' : 'other-message'}`;
-            
-            const date = timestamp ? new Date(timestamp) : new Date();
-            const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-            
-            const avatarLetter = username.charAt(0).toUpperCase();
-            const avatarColor = `hsl(${username.charCodeAt(0) * 137.508 % 360}, 70%, 50%)`;
-            
-            div.innerHTML = `
-                <div class="message-avatar" style="background: ${avatarColor};">
-                    ${avatarLetter}
-                </div>
-                <div class="message-content">
-                    <div class="message-header">
-                        <span class="message-author" onclick="openUserProfile('${escapeHtml(username)}')">${escapeHtml(username)}</span>
-                        <span class="message-time">${timeStr}</span>
-                    </div>
-                    <div class="message-text">${escapeHtml(content)}</div>
-                </div>
-            `;
-        }
+        const avatarLetter = username.charAt(0).toUpperCase();
+        const date = timestamp ? new Date(timestamp) : new Date();
+        const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
         
-        messageList.appendChild(div);
+        div.innerHTML = `
+            <div class="message-avatar">${avatarLetter}</div>
+            <div class="message-content">
+                <div class="message-header">
+                    <span class="message-author">${escapeHtml(username)}</span>
+                    <span class="message-time">${timeStr}</span>
+                </div>
+                <div class="message-text">${escapeHtml(content)}</div>
+            </div>
+        `;
+        container.appendChild(div);
         scrollToBottom();
     }
     
-    function scrollToBottom() {
-        // Smooth scroll to bottom
-        if (messageList) {
-            requestAnimationFrame(() => {
-                messageList.scrollTo({
-                    top: messageList.scrollHeight,
-                    behavior: 'smooth'
-                });
-            });
-        }
+    function sendMessage() {
+        const input = document.getElementById('chat-input');
+        const message = input.value.trim();
+        if (!message || !chatSocket || chatSocket.readyState !== WebSocket.OPEN) return;
+        
+        chatSocket.send(JSON.stringify({
+            signal_type: 'chat_message',
+            data: { content: message, channel_slug: currentChannelSlug }
+        }));
+        input.value = '';
     }
     
-    // Auto-scroll on new content
-    function observeMessages() {
-        const observer = new MutationObserver((mutations) => {
-            // Check if we should auto-scroll
-            const isAtBottom = messageList.scrollHeight - messageList.scrollTop <= messageList.clientHeight + 100;
-            if (isAtBottom) {
-                scrollToBottom();
-            }
-        });
-        
-        if (messageList) {
-            observer.observe(messageList, { childList: true, subtree: true });
-        }
+    function scrollToBottom() {
+        const container = document.getElementById('messages-container');
+        container.scrollTop = container.scrollHeight;
     }
     
     function escapeHtml(text) {
@@ -1804,1139 +1112,65 @@
         return div.innerHTML;
     }
     
-    function sendChatMessage() {
-        const message = chatInput.value.trim();
-        if (!message) return;
-        
-        if (!chatSocket || chatSocket.readyState !== WebSocket.OPEN) {
-            console.error("WebSocket not connected");
-            alert("{% trans 'Not connected to channel. Please wait...' %}");
-            return;
-        }
-        
-        try {
-            chatSocket.send(JSON.stringify({
-                signal_type: 'chat_message',
-                data: {
-                    content: message,
-                    channel_slug: currentChannelSlug
-                }
-            }));
-            chatInput.value = '';
-        } catch (err) {
-            console.error("Error sending message:", err);
-            alert("{% trans 'Failed to send message. Please try again.' %}");
-        }
-    }
-    
-    if (chatInput) {
-        chatInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendChatMessage();
-            }
-        });
-    }
-    
-    async function loadChatHistory() {
-        if (!currentChannelSlug) return;
-        
-        try {
-            const response = await fetch(`/api/chat/${currentChannelSlug}/messages/`);
-            const data = await response.json();
-            
-            if (messageList) {
-                messageList.innerHTML = '';
-                
-                if (data.messages && data.messages.length > 0) {
-                    data.messages.forEach(msg => {
-                        addMessageToList(msg.author, msg.content, msg.timestamp);
-                    });
-                } else {
-                    // Show welcome message if no messages
-                    const emptyDiv = document.createElement('div');
-                    emptyDiv.className = 'message-item system-message';
-                    emptyDiv.innerHTML = `<div class="message-text">{% trans "No messages yet. Be the first to say hello!" %}</div>`;
-                    messageList.appendChild(emptyDiv);
-                }
-                
-                // Scroll to bottom after loading
-                scrollToBottom();
-                
-                // Start observing for new messages
-                observeMessages();
-            }
-        } catch (error) {
-            console.error("Error loading chat history:", error);
-        }
-    }
-    
-    // User Profile
-    function openUserProfile(username) {
-        fetch(`/api/user/${username}/profile/`)
-            .then(response => response.json())
-            .then(data => {
-                const modal = new bootstrap.Modal(document.getElementById('userProfileModal'));
-                const content = document.getElementById('user-profile-content');
-                const messageText = "{% trans 'Message' %}";
-                content.innerHTML = `
-                    <div style="text-align: center; padding: 2rem;">
-                        <div style="width: 120px; height: 120px; border-radius: 50%; background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%); margin: 0 auto 1.5rem; display: flex; align-items: center; justify-content: center; font-size: 3rem; color: white; font-weight: 700; box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);">
-                            ${username.charAt(0).toUpperCase()}
-                        </div>
-                        <h4 style="color: #E5E5E5; margin-bottom: 0.5rem;">${escapeHtml(username)}</h4>
-                        <p style="color: #9CA3AF; margin-bottom: 1.5rem;">${data.bio || 'No bio'}</p>
-                        <div style="display: flex; gap: 1rem; justify-content: center;">
-                            <button onclick="startPrivateMessage('${escapeHtml(username)}')" class="btn" style="background: #6366F1; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px;">
-                                <i class="fas fa-envelope me-2"></i>${messageText}
-                            </button>
-                        </div>
-                    </div>
-                `;
-                modal.show();
-            })
-            .catch(error => {
-                console.error('Error loading profile:', error);
-            });
-    }
-    
-    // Private Messaging
-    function startPrivateMessage(username) {
-        const modal = new bootstrap.Modal(document.getElementById('privateMessageModal'));
-        const content = document.getElementById('private-message-content');
-        const conversationText = "{% trans 'Conversation with' %}";
-        const typeMessageText = "{% trans 'Type a message...' %}";
-        content.innerHTML = `
-            <div style="display: flex; flex-direction: column; height: 500px;">
-                <div style="padding: 1rem; border-bottom: 1px solid #2A2A2A; background: #1A1A1A;">
-                    <h6 style="color: #E5E5E5; margin: 0;">${conversationText} ${escapeHtml(username)}</h6>
-                </div>
-                <div id="pm-messages" style="flex: 1; overflow-y: auto; padding: 1rem; background: #141414;"></div>
-                <div style="padding: 1rem; border-top: 1px solid #2A2A2A; background: #1A1A1A;">
-                    <div style="display: flex; gap: 0.5rem;">
-                        <input type="text" id="pm-input" placeholder="${typeMessageText}" style="flex: 1; background: #1F1F1F; border: 1px solid #2A2A2A; color: #E5E5E5; padding: 0.75rem; border-radius: 8px;">
-                        <button onclick="sendPrivateMessage('${escapeHtml(username)}')" class="btn" style="background: #6366F1; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 8px;">
-                            <i class="fas fa-paper-plane"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `;
-        modal.show();
-        loadPrivateMessages(username);
-    }
-    
-    function loadPrivateMessages(username) {
-        fetch(`/api/private-messages/${username}/`)
-            .then(response => response.json())
-            .then(data => {
-                const container = document.getElementById('pm-messages');
-                container.innerHTML = '';
-                data.messages.forEach(msg => {
-                    const div = document.createElement('div');
-                    div.style.cssText = 'margin-bottom: 1rem; padding: 0.75rem; background: #1A1A1A; border: 1px solid #2A2A2A; border-radius: 8px;';
-                    div.innerHTML = `
-                        <div style="color: #6366F1; font-weight: 600; margin-bottom: 0.25rem;">${escapeHtml(msg.sender)}</div>
-                        <div style="color: #D1D5DB; font-size: 14px;">${escapeHtml(msg.content)}</div>
-                        <div style="color: #6B7280; font-size: 12px; margin-top: 0.25rem;">${new Date(msg.timestamp).toLocaleString()}</div>
-                    `;
-                    container.appendChild(div);
-                });
-                container.scrollTop = container.scrollHeight;
-            });
-    }
-    
-    function sendPrivateMessage(username) {
-        const input = document.getElementById('pm-input');
-        const message = input.value.trim();
-        if (!message) return;
-        
-        fetch(`/api/private-messages/${username}/send/`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
-            },
-            body: JSON.stringify({ content: message })
-        })
-        .then(response => response.json())
-        .then(data => {
-            input.value = '';
-            loadPrivateMessages(username);
-        });
-    }
-    
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
-    
-    // Voice functionality - Enhanced for multiple users
-    let voiceParticipants = new Map();
-    let localAudioTrack = null;
-    let localVideoTrack = null;
-    let localScreenShareTrack = null;
-    let screenShares = new Map(); // Track screen shares by username
-    
-    async function initializeVoice() {
-        if (!currentVoiceChannelSlug) return;
-        
-        try {
-            // Request audio and video permissions
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                audio: true, 
-                video: false // Start with audio only for better performance
-            });
-            
-            localAudioTrack = stream.getAudioTracks()[0];
-            if (stream.getVideoTracks().length > 0) {
-                localVideoTrack = stream.getVideoTracks()[0];
-                isVideoOn = true;
-            }
-            
-            // Add local participant to sidebar
-            addVoiceParticipant(currentUsername, true, false, false);
-            
-            // Update bottom voice control bar
-            updateVoiceControlBar();
-            
-            connectVoiceWebSocket();
-        } catch (error) {
-            console.error("Error accessing media:", error);
-            alert("{% trans 'Could not access microphone. Please check permissions.' %}");
-        }
-    }
-    
-    // Global voice WebSocket (separate from text chat socket)
-    function connectVoiceWebSocket() {
-        if (!currentVoiceChannelSlug) return;
-        
-        // Close existing voice socket if any
-        if (voiceSocket) {
-            voiceSocket.close();
-            voiceSocket = null;
-        }
-        
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const wsUrl = `${wsProtocol}//${window.location.host}/ws/voice/?channel_slug=${currentVoiceChannelSlug}&channel_type=voice`;
-        
-        voiceSocket = new WebSocket(wsUrl);
-        
-        voiceSocket.onopen = function() {
-            console.log("[Voice WS] Connected to voice channel:", currentVoiceChannelSlug);
-            // Send join signal
-            voiceSocket.send(JSON.stringify({
-                signal_type: 'join_voice',
-                data: {
-                    channel_slug: currentVoiceChannelSlug
-                }
-            }));
-        };
-        
-        voiceSocket.onmessage = function(e) {
-            const data = JSON.parse(e.data);
-            console.log('[Voice WS] Received:', data.type, data);
-            
-            switch(data.type) {
-                case 'member_joined':
-                case 'system_notification':
-                    if (data.event === 'member_joined' && data.username !== currentUsername) {
-                        console.log(`[Voice] ${data.username} joined the channel`);
-                        addVoiceParticipant(data.username, false, false, false);
-                        // Initiate call to new user
-                        initiateCall(data.sender_id, data.username);
-                    } else if (data.event === 'member_left' && data.username !== currentUsername) {
-                        console.log(`[Voice] ${data.username} left the channel`);
-                        removeVoiceParticipant(data.username);
-                        if (peerConnections[data.sender_id]) {
-                            if (peerConnections[data.sender_id].audioElement) {
-                                peerConnections[data.sender_id].audioElement.remove();
-                            }
-                            peerConnections[data.sender_id].close();
-                            delete peerConnections[data.sender_id];
-                        }
-                    }
-                    break;
-                    
-                case 'member_left':
-                    console.log(`[Voice] ${data.username} left the channel`);
-                    removeVoiceParticipant(data.username);
-                    if (peerConnections[data.user_id || data.sender_id]) {
-                        const pc = peerConnections[data.user_id || data.sender_id];
-                        if (pc.audioElement) pc.audioElement.remove();
-                        pc.close();
-                        delete peerConnections[data.user_id || data.sender_id];
-                    }
-                    break;
-                    
-                case 'webrtc_signal':
-                    // Handle WebRTC signals from consumer
-                    const senderId = data.sender_id;
-                    const senderUsername = data.username || 'user';
-                    
-                    // Ignore our own signals
-                    if (senderUsername === currentUsername) break;
-                    
-                    if (data.signal_type === 'offer') {
-                        handleOffer(senderId, data.data, senderUsername);
-                    } else if (data.signal_type === 'answer') {
-                        handleAnswer(senderId, data.data);
-                    } else if (data.signal_type === 'ice_candidate') {
-                        handleIceCandidate(senderId, data.data);
-                    }
-                    break;
-                    
-                case 'offer':
-                    // Direct offer
-                    if (data.username !== currentUsername) {
-                        handleOffer(data.user_id || data.sender_id, data.offer || data.data, data.username);
-                    }
-                    break;
-                    
-                case 'answer':
-                    // Direct answer
-                    handleAnswer(data.user_id || data.sender_id, data.answer || data.data);
-                    break;
-                    
-                case 'ice_candidate':
-                    // Direct ICE candidate
-                    handleIceCandidate(data.user_id || data.sender_id, data.candidate || data.data);
-                    break;
-                    
-                case 'mic_state_change':
-                    updateParticipantStatus(data.username, 'muted', data.muted);
-                    break;
-                    
-                case 'camera_state_change':
-                    updateParticipantStatus(data.username, 'video', data.enabled);
-                    break;
-                    
-                case 'screen_share_state_change':
-                    if (data.enabled && data.username !== currentUsername) {
-                        console.log(`[Voice] ${data.username} started screen sharing`);
-                    } else if (!data.enabled && data.username !== currentUsername) {
-                        removeScreenShare(data.username);
-                    }
-                    break;
-            }
-        };
-        
-        voiceSocket.onclose = function() {
-            console.log("[Voice WS] Disconnected");
-            if (currentVoiceChannelSlug) {
-                // Reconnect if still in voice channel
-                setTimeout(connectVoiceWebSocket, 3000);
-            }
-        };
-        
-        voiceSocket.onerror = function(error) {
-            console.error("[Voice WS] Error:", error);
-        };
-    }
-    
-    // Discord-style: Get or create participants list in sidebar (nested under voice channel)
-    function ensureParticipantsListInSidebar(voiceChannelSlug) {
-        if (!voiceChannelSlug) return null;
-        
-        const voiceChannelItem = document.querySelector(`.voice-channel-item[data-voice-channel-slug="${voiceChannelSlug}"]`);
-        if (!voiceChannelItem) return null;
-        
-        let list = voiceChannelItem.querySelector('.voice-participants-list');
-        if (!list) {
-            list = document.createElement('ul');
-            list.className = 'voice-participants-list';
-            list.id = `voice-participants-${voiceChannelSlug}`;
-            voiceChannelItem.appendChild(list);
-        }
-        
-        // Show the list
-        list.style.display = 'flex';
-        return list;
-    }
-    
-    // Add participant to sidebar (Discord style - nested under voice channel)
-    function addVoiceParticipant(username, isLocal, isMuted, isDeafened) {
-        if (voiceParticipants.has(username)) return;
-        
-        if (!currentVoiceChannelSlug) return;
-        
-        const list = ensureParticipantsListInSidebar(currentVoiceChannelSlug);
-        if (!list) return;
-        
-        const item = document.createElement('li');
-        item.className = 'voice-participant-mini';
-        item.id = `participant-${username}`;
-        item.dataset.username = username;
-        
-        const avatarLetter = username.charAt(0).toUpperCase();
-        const avatarColor = `hsl(${username.charCodeAt(0) * 137.508 % 360}, 70%, 50%)`;
-        
-        item.innerHTML = `
-            <div class="voice-participant-mini-avatar ${isMuted ? 'muted' : ''}" style="background: ${avatarColor};">
-                ${avatarLetter}
-            </div>
-            <div class="voice-participant-mini-name">${escapeHtml(username)}</div>
-            <div class="voice-participant-mini-status"></div>
-        `;
-        
-        list.appendChild(item);
-        voiceParticipants.set(username, { 
-            element: item, 
-            isMuted, 
-            isDeafened, 
-            isLocal,
-            avatarElement: item.querySelector('.voice-participant-mini-avatar'),
-            statusElement: item.querySelector('.voice-participant-mini-status')
-        });
-    }
-    
-    // Clear all participants from sidebar
-    function clearVoiceParticipantsFromSidebar() {
-        document.querySelectorAll('.voice-participants-list').forEach(list => {
-            list.innerHTML = '';
-            list.style.display = 'none';
-        });
-    }
-    
-    function removeVoiceParticipant(username) {
-        const participant = voiceParticipants.get(username);
-        if (participant) {
-            participant.element.remove();
-            voiceParticipants.delete(username);
-        }
-    }
-    
-    function updateParticipantStatus(username, statusType, value) {
-        const participant = voiceParticipants.get(username);
-        if (!participant) return;
-        
-        const avatar = participant.avatarElement || participant.element.querySelector('.voice-participant-mini-avatar');
-        const statusDot = participant.statusElement || participant.element.querySelector('.voice-participant-mini-status');
-        
-        if (statusType === 'muted') {
-            participant.isMuted = value;
-            if (value) {
-                avatar.classList.add('muted');
-            } else {
-                avatar.classList.remove('muted');
-            }
-            // Update video grid status
-            updateVideoGridStatus(username, value, participant.isSpeaking || false);
-        } else if (statusType === 'speaking') {
-            participant.isSpeaking = value;
-            if (value) {
-                participant.element.classList.add('speaking');
-                if (statusDot) {
-                    statusDot.classList.add('speaking');
-                }
-            } else {
-                participant.element.classList.remove('speaking');
-                if (statusDot) {
-                    statusDot.classList.remove('speaking');
-                }
-            }
-            // Update video grid status
-            updateVideoGridStatus(username, participant.isMuted || false, value);
-        } else if (statusType === 'video') {
-            participant.isVideo = value;
-        }
-    }
-    
-    // Update bottom voice control bar UI
-    function updateVoiceControlBar() {
-        const muteBtn = document.getElementById('voice-control-mute-btn');
-        const deafenBtn = document.getElementById('voice-control-deafen-btn');
-        const statusText = document.getElementById('voice-control-bar-status');
-        
-        if (muteBtn) {
-            muteBtn.classList.toggle('muted', isMuted);
-            muteBtn.innerHTML = isMuted ? '<i class="fas fa-microphone-slash"></i>' : '<i class="fas fa-microphone"></i>';
-        }
-        
-        if (deafenBtn) {
-            deafenBtn.classList.toggle('deafened', isDeafened);
-            deafenBtn.innerHTML = isDeafened ? '<i class="fas fa-volume-up"></i>' : '<i class="fas fa-volume-mute"></i>';
-        }
-        
-        if (statusText) {
-            if (isMuted && isDeafened) {
-                statusText.textContent = '{% trans "Muted & Deafened" %}';
-            } else if (isMuted) {
-                statusText.textContent = '{% trans "Muted" %}';
-            } else if (isDeafened) {
-                statusText.textContent = '{% trans "Deafened" %}';
-            } else {
-                statusText.textContent = '{% trans "Connected" %}';
-            }
-        }
-    }
-    
-    function toggleMute() {
-        isMuted = !isMuted;
-        
-        if (localAudioTrack) {
-            localAudioTrack.enabled = !isMuted;
-        }
-        
-        // Update local participant in sidebar
-        updateParticipantStatus(currentUsername, 'muted', isMuted);
-        
-        // Update bottom voice control bar
-        updateVoiceControlBar();
-        
-        // Send status update via voice socket
-        if (voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
-            voiceSocket.send(JSON.stringify({
-                signal_type: 'mic_state_change',
-                data: { muted: isMuted }
-            }));
-        }
-    }
-    
-    function toggleDeafen() {
-        isDeafened = !isDeafened;
-        
-        // Mute all remote audio tracks
-        Object.values(peerConnections).forEach(pc => {
-            if (pc.remoteStream) {
-                pc.remoteStream.getAudioTracks().forEach(track => {
-                    track.enabled = !isDeafened;
-                });
-            }
-        });
-        
-        // Update local participant in sidebar
-        const participant = voiceParticipants.get(currentUsername);
-        if (participant) {
-            const avatar = participant.avatarElement;
-            if (isDeafened) {
-                avatar.classList.add('deafened');
-            } else {
-                avatar.classList.remove('deafened');
-            }
-        }
-        
-        // Update bottom voice control bar
-        updateVoiceControlBar();
-        
-        // Send status update via voice socket
-        if (voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
-            voiceSocket.send(JSON.stringify({
-                signal_type: 'deafen_state_change',
-                data: { deafened: isDeafened }
-            }));
-        }
-    }
-    
-    function toggleVideo() {
-        isVideoOn = !isVideoOn;
-        const btn = document.getElementById('voice-video-btn');
-        
-        if (isVideoOn && !localVideoTrack) {
-            // Request video
-            navigator.mediaDevices.getUserMedia({ video: true, audio: false })
-                .then(stream => {
-                    localVideoTrack = stream.getVideoTracks()[0];
-                    btn.classList.add('active');
-                    btn.innerHTML = '<i class="fas fa-video"></i> <span>{% trans "Stop Video" %}</span>';
-                    
-                    // Display local video in participant card
-                    const participant = voiceParticipants.get('{{ user.username }}');
-                    if (participant) {
-                        const videoContainer = participant.element.querySelector('.participant-video-container');
-                        let videoElement = participant.element.querySelector('.participant-video');
-                        
-                        if (!videoElement) {
-                            videoElement = document.createElement('video');
-                            videoElement.className = 'participant-video';
-                            videoElement.autoplay = true;
-                            videoElement.playsInline = true;
-                            videoElement.muted = true; // Mute local video to avoid feedback
-                            videoContainer.appendChild(videoElement);
-                        }
-                        
-                        const localVideoStream = new MediaStream([localVideoTrack]);
-                        videoElement.srcObject = localVideoStream;
-                        videoElement.classList.add('active');
-                        
-                        // Hide avatar when video is active
-                        const avatar = participant.element.querySelector('.participant-avatar');
-                        if (avatar) avatar.style.display = 'none';
-                    }
-                    
-                    // Add video track to all existing peer connections
-                    Object.values(peerConnections).forEach(pc => {
-                        if (pc.signalingState !== 'closed') {
-                            const videoStream = new MediaStream([localVideoTrack]);
-                            pc.addTrack(localVideoTrack, videoStream);
-                        }
-                    });
-                })
-                .catch(err => {
-                    console.error("Error accessing video:", err);
-                    isVideoOn = false;
-                    alert("{% trans 'Could not access camera. Please check permissions.' %}");
-                });
-        } else if (localVideoTrack) {
-            localVideoTrack.stop();
-            localVideoTrack = null;
-            btn.classList.remove('active');
-            btn.innerHTML = '<i class="fas fa-video-slash"></i> <span>{% trans "Start Video" %}</span>';
-            
-            // Remove local video from participant card
-            const participant = voiceParticipants.get('{{ user.username }}');
-            if (participant) {
-                const videoElement = participant.element.querySelector('.participant-video');
-                if (videoElement) {
-                    videoElement.srcObject = null;
-                    videoElement.classList.remove('active');
-                }
-                // Show avatar again
-                const avatar = participant.element.querySelector('.participant-avatar');
-                if (avatar) avatar.style.display = 'flex';
-            }
-            
-            // Remove video track from all peer connections
-            Object.values(peerConnections).forEach(pc => {
-                if (pc.signalingState !== 'closed') {
-                    const sender = pc.getSenders().find(s => s.track && s.track.kind === 'video');
-                    if (sender) {
-                        pc.removeTrack(sender);
-                    }
-                }
-            });
-        }
-        
-        // Send status update via voice socket
-        if (voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
-            voiceSocket.send(JSON.stringify({
-                signal_type: 'camera_state_change',
-                data: { enabled: isVideoOn }
-            }));
-        }
-    }
-    
-    function leaveVoiceChannel() {
-        cleanupVoiceChannel();
-        welcomeMessage.style.display = 'flex';
-        voiceStage.classList.remove('active');
-        voiceStage.style.display = 'none';
-        currentChannelSlug = null;
-        currentChannelType = null;
-        
-        // Remove active state from channel
-        document.querySelectorAll('.channel-item').forEach(item => item.classList.remove('active'));
-    }
-    
-    // =============================================
-    // ENHANCED WebRTC Peer Connection Management
-    // =============================================
-    
-    // Track pending ICE candidates for each peer
-    const pendingIceCandidates = {};
-    
-    // Connection state tracking
-    const connectionStates = {};
-    
-    function createPeerConnection(userId, username) {
-        console.log(`[WebRTC] Creating peer connection for user: ${username} (${userId})`);
-        
-        // Close existing connection if any
-        if (peerConnections[userId]) {
-            console.log(`[WebRTC] Closing existing connection for ${userId}`);
-            peerConnections[userId].close();
-            if (peerConnections[userId].audioElement) {
-                peerConnections[userId].audioElement.remove();
-            }
-        }
-        
-        // Initialize pending candidates array
-        pendingIceCandidates[userId] = [];
-        
-        const pc = new RTCPeerConnection({ 
-            iceServers: iceServers,
-            iceCandidatePoolSize: 10
-        });
-        
-        pc.username = username;
-        pc.userId = userId;
-        connectionStates[userId] = 'new';
-        
-        // Add local audio track
-        if (localAudioTrack) {
-            console.log(`[WebRTC] Adding local audio track for ${username}`);
-            const audioStream = new MediaStream([localAudioTrack]);
-            pc.addTrack(localAudioTrack, audioStream);
-        }
-        
-        // Add local video track if enabled
-        if (localVideoTrack) {
-            console.log(`[WebRTC] Adding local video track for ${username}`);
-            const videoStream = new MediaStream([localVideoTrack]);
-            pc.addTrack(localVideoTrack, videoStream);
-        }
-        
-        // Connection state change handler
-        pc.onconnectionstatechange = () => {
-            console.log(`[WebRTC] Connection state for ${username}: ${pc.connectionState}`);
-            connectionStates[userId] = pc.connectionState;
-            
-            if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
-                console.log(`[WebRTC] Connection failed/disconnected, attempting reconnect...`);
-                // Attempt reconnection after a short delay
-                setTimeout(() => {
-                    if (voiceParticipants.has(username)) {
-                        createPeerConnection(userId, username);
-                    }
-                }, 2000);
-            }
-        };
-        
-        // ICE connection state handler
-        pc.oniceconnectionstatechange = () => {
-            console.log(`[WebRTC] ICE connection state for ${username}: ${pc.iceConnectionState}`);
-        };
-        
-        // ICE gathering state handler
-        pc.onicegatheringstatechange = () => {
-            console.log(`[WebRTC] ICE gathering state for ${username}: ${pc.iceGatheringState}`);
-        };
-        
-        // Handle remote stream
-        pc.ontrack = (event) => {
-            console.log(`[WebRTC] Received track from ${username}:`, event.track.kind);
-            const remoteStream = event.streams[0];
-            pc.remoteStream = remoteStream;
-            
-            if (event.track.kind === 'audio') {
-                // Create or update audio element
-                let audio = pc.audioElement;
-                if (!audio) {
-                    audio = document.createElement('audio');
-                    audio.autoplay = true;
-                    audio.id = `audio-${userId}`;
-                    document.body.appendChild(audio);
-                    pc.audioElement = audio;
-                }
-                audio.srcObject = remoteStream;
-                audio.volume = isDeafened ? 0 : 1;
-                console.log(`[WebRTC] Audio element set for ${username}`);
-            }
-            
-            if (event.track.kind === 'video') {
-                const participant = voiceParticipants.get(username);
-                if (participant) {
-                    // Check if it's a screen share
-                    const trackLabel = event.track.label.toLowerCase();
-                    const isScreenShare = trackLabel.includes('screen') || trackLabel.includes('display');
-                    
-                    if (isScreenShare) {
-                        handleRemoteScreenShare(username, remoteStream);
-                    } else {
-                        // Regular camera video - add to video grid
-                        addVideoToGrid(username, remoteStream, false);
-                        console.log(`[WebRTC] Video element added to grid for ${username}`);
-                    }
-                }
-            }
-        };
-        
-        // Handle ICE candidates
-        pc.onicecandidate = (event) => {
-            if (event.candidate && voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
-                console.log(`[WebRTC] Sending ICE candidate to ${username}`);
-                voiceSocket.send(JSON.stringify({
-                    signal_type: 'ice_candidate',
-                    target_user_id: userId,
-                    data: event.candidate.toJSON()
-                }));
-            }
-        };
-        
-        peerConnections[userId] = pc;
-        return pc;
-    }
-    
-    async function initiateCall(userId, username) {
-        console.log(`[WebRTC] Initiating call to ${username}`);
-        
-        let pc = peerConnections[userId];
-        if (!pc || pc.connectionState === 'closed') {
-            pc = createPeerConnection(userId, username);
-        }
-        
-        try {
-            const offer = await pc.createOffer({
-                offerToReceiveAudio: true,
-                offerToReceiveVideo: true
-            });
-            
-            await pc.setLocalDescription(offer);
-            console.log(`[WebRTC] Local description set, sending offer to ${username}`);
-            
-            if (voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
-                voiceSocket.send(JSON.stringify({
-                    signal_type: 'offer',
-                    target_user_id: userId,
-                    data: pc.localDescription
-                }));
-            }
-        } catch (err) {
-            console.error(`[WebRTC] Error creating offer:`, err);
-        }
-    }
-    
-    async function handleOffer(userId, offerData, username) {
-        console.log(`[WebRTC] Received offer from ${username || userId}`);
-        
-        let pc = peerConnections[userId];
-        if (!pc || pc.connectionState === 'closed') {
-            pc = createPeerConnection(userId, username || 'user');
-        }
-        
-        try {
-            // Set remote description
-            await pc.setRemoteDescription(new RTCSessionDescription(offerData));
-            console.log(`[WebRTC] Remote description set for ${username || userId}`);
-            
-            // Process pending ICE candidates
-            if (pendingIceCandidates[userId] && pendingIceCandidates[userId].length > 0) {
-                console.log(`[WebRTC] Processing ${pendingIceCandidates[userId].length} pending ICE candidates`);
-                for (const candidate of pendingIceCandidates[userId]) {
-                    await pc.addIceCandidate(new RTCIceCandidate(candidate));
-                }
-                pendingIceCandidates[userId] = [];
-            }
-            
-            // Create answer
-            const answer = await pc.createAnswer();
-            await pc.setLocalDescription(answer);
-            console.log(`[WebRTC] Sending answer to ${username || userId}`);
-            
-            if (voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
-                voiceSocket.send(JSON.stringify({
-                    signal_type: 'answer',
-                    target_user_id: userId,
-                    data: pc.localDescription
-                }));
-            }
-        } catch (err) {
-            console.error(`[WebRTC] Error handling offer:`, err);
-        }
-    }
-    
-    async function handleAnswer(userId, answerData) {
-        console.log(`[WebRTC] Received answer from ${userId}`);
-        
-        const pc = peerConnections[userId];
-        if (!pc) {
-            console.error(`[WebRTC] No peer connection found for ${userId}`);
-            return;
-        }
-        
-        try {
-            await pc.setRemoteDescription(new RTCSessionDescription(answerData));
-            console.log(`[WebRTC] Remote description set from answer`);
-            
-            // Process pending ICE candidates
-            if (pendingIceCandidates[userId] && pendingIceCandidates[userId].length > 0) {
-                console.log(`[WebRTC] Processing ${pendingIceCandidates[userId].length} pending ICE candidates`);
-                for (const candidate of pendingIceCandidates[userId]) {
-                    await pc.addIceCandidate(new RTCIceCandidate(candidate));
-                }
-                pendingIceCandidates[userId] = [];
-            }
-        } catch (err) {
-            console.error(`[WebRTC] Error handling answer:`, err);
-        }
-    }
-    
-    async function handleIceCandidate(userId, candidateData) {
-        console.log(`[WebRTC] Received ICE candidate from ${userId}`);
-        
-        const pc = peerConnections[userId];
-        
-        if (!pc || !pc.remoteDescription || !pc.remoteDescription.type) {
-            // Queue the candidate for later
-            if (!pendingIceCandidates[userId]) {
-                pendingIceCandidates[userId] = [];
-            }
-            pendingIceCandidates[userId].push(candidateData);
-            console.log(`[WebRTC] Queued ICE candidate for ${userId} (remote description not set yet)`);
-            return;
-        }
-        
-        try {
-            await pc.addIceCandidate(new RTCIceCandidate(candidateData));
-            console.log(`[WebRTC] Added ICE candidate for ${userId}`);
-        } catch (err) {
-            console.error(`[WebRTC] Error adding ICE candidate:`, err);
-        }
-    }
-    
-    // Screen Sharing Functions
-    async function toggleScreenShare() {
-        if (!isScreenSharing) {
-            try {
-                const stream = await navigator.mediaDevices.getDisplayMedia({ 
-                    video: true, 
-                    audio: true 
-                });
-                
-                localScreenShareTrack = stream.getVideoTracks()[0];
-                const audioTrack = stream.getAudioTracks()[0];
-                
-                // Handle screen share end
-                localScreenShareTrack.onended = () => {
-                    stopScreenShare();
-                };
-                
-                isScreenSharing = true;
-                const btn = document.getElementById('voice-screenshare-btn');
-                btn.classList.add('active');
-                btn.innerHTML = '<i class="fas fa-stop"></i> <span>{% trans "Stop Sharing" %}</span>';
-                
-                // Display local screen share
-                addLocalScreenShare(stream);
-                
-                // Add screen share track to all peer connections
-                Object.values(peerConnections).forEach(pc => {
-                    if (pc.signalingState !== 'closed') {
-                        pc.addTrack(localScreenShareTrack, stream);
-                        if (audioTrack) {
-                            pc.addTrack(audioTrack, stream);
-                        }
-                    }
-                });
-                
-                // Send status update via voice socket
-                if (voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
-                    voiceSocket.send(JSON.stringify({
-                        signal_type: 'screen_share_state_change',
-                        data: { enabled: true }
-                    }));
-                }
-            } catch (err) {
-                console.error("Error accessing screen share:", err);
-                alert("{% trans 'Could not access screen share. Please check permissions.' %}");
-            }
-        } else {
-            stopScreenShare();
-        }
-    }
-    
-    function stopScreenShare() {
-        if (localScreenShareTrack) {
-            localScreenShareTrack.stop();
-            localScreenShareTrack = null;
-        }
-        
-        isScreenSharing = false;
-        const btn = document.getElementById('voice-screenshare-btn');
-        btn.classList.remove('active');
-        btn.innerHTML = '<i class="fas fa-desktop"></i> <span>{% trans "Share Screen" %}</span>';
-        
-        // Remove local screen share
-        removeScreenShare('{{ user.username }}');
-        
-        // Remove screen share track from all peer connections
-        Object.values(peerConnections).forEach(pc => {
-            if (pc.signalingState !== 'closed') {
-                const senders = pc.getSenders().filter(s => 
-                    s.track && (s.track.label.toLowerCase().includes('screen') || 
-                               s.track.label.toLowerCase().includes('display'))
-                );
-                senders.forEach(sender => {
-                    pc.removeTrack(sender);
-                });
-            }
-        });
-        
-        // Send status update via voice socket
-        if (voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
-            voiceSocket.send(JSON.stringify({
-                signal_type: 'screen_share_state_change',
-                data: { enabled: false }
-            }));
-        }
-    }
-    
-    // =============================================
-    // Video Grid Management Functions
-    // =============================================
+    // ============================================
+    // VIDEO GRID FUNCTIONS
+    // ============================================
     
     function addVideoToGrid(username, stream, isScreenShare = false) {
-        const videoGrid = document.getElementById('video-grid');
-        if (!videoGrid) return;
+        const grid = document.getElementById('video-grid');
+        if (!grid) return;
         
-        // Remove existing video if any
-        removeVideoFromGrid(username);
-        
-        const gridItem = document.createElement('div');
-        gridItem.className = 'video-grid-item';
-        gridItem.id = `video-grid-item-${username}`;
-        gridItem.dataset.username = username;
-        gridItem.dataset.isScreenShare = isScreenShare;
+        const item = document.createElement('div');
+        item.className = 'video-grid-item';
+        item.id = `video-${username}`;
         
         const avatarLetter = username.charAt(0).toUpperCase();
-        const avatarColor = `hsl(${username.charCodeAt(0) * 137.508 % 360}, 70%, 50%)`;
-        
-        gridItem.innerHTML = `
+        item.innerHTML = `
             <video autoplay playsInline></video>
             <div class="video-grid-item-info">
-                <div class="video-grid-item-avatar" style="background: ${avatarColor};">
-                    ${avatarLetter}
-                </div>
+                <div class="video-grid-item-avatar">${avatarLetter}</div>
                 <div class="video-grid-item-name">${escapeHtml(username)}${isScreenShare ? ' (Screen)' : ''}</div>
                 <div class="video-grid-item-status"></div>
             </div>
         `;
         
-        const videoElement = gridItem.querySelector('video');
-        videoElement.srcObject = stream;
+        const video = item.querySelector('video');
+        video.srcObject = stream;
+        grid.appendChild(item);
+        grid.style.display = 'grid';
         
-        videoGrid.appendChild(gridItem);
-        videoGrid.style.display = 'grid';
-        
-        // Store reference
-        if (!videoGridItems) videoGridItems = new Map();
-        videoGridItems.set(username, { element: gridItem, videoElement, isScreenShare });
-        
-        console.log(`[Video Grid] Added video for ${username} (screen share: ${isScreenShare})`);
+        videoGridItems.set(username, { element: item, video, stream });
     }
     
     function removeVideoFromGrid(username) {
-        if (!videoGridItems) return;
-        
         const item = videoGridItems.get(username);
-        if (item && item.element) {
+        if (item) {
             item.element.remove();
             videoGridItems.delete(username);
-            
-            const videoGrid = document.getElementById('video-grid');
-            if (videoGrid && videoGridItems.size === 0) {
-                videoGrid.style.display = 'none';
-            }
-            
-            console.log(`[Video Grid] Removed video for ${username}`);
+        }
+        const grid = document.getElementById('video-grid');
+        if (grid && videoGridItems.size === 0) {
+            grid.style.display = 'none';
         }
     }
     
-    function updateVideoGridStatus(username, isMuted, isSpeaking) {
-        if (!videoGridItems) return;
-        
-        const item = videoGridItems.get(username);
-        if (!item) return;
-        
-        const statusElement = item.element.querySelector('.video-grid-item-status');
-        if (statusElement) {
-            statusElement.className = 'video-grid-item-status';
-            if (isMuted) {
-                statusElement.classList.add('muted');
-            }
-            if (isSpeaking) {
-                statusElement.classList.add('speaking');
-                item.element.classList.add('speaking');
-            } else {
-                item.element.classList.remove('speaking');
-            }
+    // ============================================
+    // EVENT LISTENERS
+    // ============================================
+    
+    document.getElementById('chat-input').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            sendMessage();
         }
-    }
-    
-    // Track video grid items
-    let videoGridItems = new Map();
-    
-    function addLocalScreenShare(stream) {
-        const videoGrid = document.getElementById('video-grid');
-        if (!videoGrid) return;
-        
-        // Add to video grid instead of separate container
-        addVideoToGrid(currentUsername, stream, true);
-        
-        const card = document.createElement('div');
-        card.className = 'screen-share-card';
-        card.id = `screen-share-{{ user.username }}`;
-        card.dataset.username = '{{ user.username }}';
-        
-        const stopText = "{% trans 'Stop' %}";
-        const sharingText = "{% trans 'You are sharing your screen' %}";
-        card.innerHTML = `
-            <div class="screen-share-header">
-                <div class="screen-share-title">
-                    <i class="fas fa-desktop"></i>
-                    <span>${sharingText}</span>
-                </div>
-                <button onclick="stopScreenShare()" style="background: #EF4444; color: white; border: none; padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 12px;">
-                    <i class="fas fa-stop"></i> ${stopText}
-                </button>
-            </div>
-            <div class="screen-share-video-container">
-                <video class="screen-share-video" autoplay playsInline></video>
-            </div>
-        `;
-        
-        const videoElement = card.querySelector('.screen-share-video');
-        videoElement.srcObject = stream;
-        videoElement.classList.add('active');
-        
-        container.appendChild(card);
-        screenShares.set('{{ user.username }}', { element: card, stream: stream });
-    }
-    
-    function handleRemoteScreenShare(username, stream) {
-        // Add screen share to video grid
-        addVideoToGrid(username, stream, true);
-        
-        // Track in screen shares map
-        if (!screenShares) screenShares = new Map();
-        screenShares.set(username, { stream });
-        
-        console.log(`[Screen Share] ${username} started sharing screen`);
-        
-        container.appendChild(card);
-        screenShares.set(username, { element: card, stream: stream });
-    }
-    
-    function removeScreenShare(username) {
-        // Remove from video grid
-        removeVideoFromGrid(username);
-        
-        // Remove from screen shares map
-        if (screenShares) {
-            screenShares.delete(username);
-        }
-        
-        console.log(`[Screen Share] ${username} stopped sharing screen`);
-    }
+    });
     
     // Expose functions globally
-    window.openUserProfile = openUserProfile;
-    window.startPrivateMessage = startPrivateMessage;
-    window.sendPrivateMessage = sendPrivateMessage;
-    window.toggleScreenShare = toggleScreenShare;
-    window.stopScreenShare = stopScreenShare;
-    
-    // Debug: Check if functions are defined
-    console.log('=== Script loaded ===');
-    console.log('openTextChannel:', typeof window.openTextChannel);
-    console.log('openVoiceChannel:', typeof window.openVoiceChannel);
-    
-    // If functions aren't defined, there was a syntax error above
-    if (typeof window.openTextChannel === 'undefined') {
-        console.error('ERROR: openTextChannel is not defined! Check for syntax errors above.');
-    }
-    if (typeof window.openVoiceChannel === 'undefined') {
-        console.error('ERROR: openVoiceChannel is not defined! Check for syntax errors above.');
-    }
+    window.toggleMute = toggleMute;
+    window.toggleDeafen = toggleDeafen;
+    window.disconnectVoice = disconnectVoice;
+    window.openSettings = openSettings;
+    window.sendMessage = sendMessage;
 </script>
 {% endblock %}
+
