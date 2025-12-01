@@ -288,22 +288,61 @@
         background: #141414;
     }
     
+    /* Chat Messages - Improved Layout */
+    #discord-messages {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        min-height: 100%;
+    }
+    
+    .messages-container {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding-bottom: 8px;
+    }
+    
     .message-item {
         display: flex;
         gap: 12px;
-        padding: 12px 0;
-        margin: 8px 0;
+        padding: 8px 16px;
+        margin: 2px 0;
         transition: background 0.15s ease;
         border-radius: 8px;
+        max-width: 85%;
     }
     
     .message-item:hover {
+        background: rgba(255, 255, 255, 0.03);
+    }
+    
+    /* Own messages - right aligned */
+    .message-item.own-message {
+        margin-left: auto;
+        flex-direction: row-reverse;
+        background: rgba(99, 102, 241, 0.1);
+        border: 1px solid rgba(99, 102, 241, 0.2);
+    }
+    
+    .message-item.own-message .message-content {
+        text-align: right;
+    }
+    
+    .message-item.own-message .message-header {
+        justify-content: flex-end;
+    }
+    
+    /* Other messages - left aligned */
+    .message-item.other-message {
+        margin-right: auto;
         background: #1A1A1A;
+        border: 1px solid #2A2A2A;
     }
     
     .message-avatar {
-        width: 40px;
-        height: 40px;
+        width: 36px;
+        height: 36px;
         border-radius: 50%;
         flex-shrink: 0;
         background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
@@ -328,7 +367,7 @@
     }
     
     .message-author {
-        font-size: 15px;
+        font-size: 14px;
         font-weight: 600;
         color: #E5E5E5;
         cursor: pointer;
@@ -339,15 +378,44 @@
     }
     
     .message-time {
-        font-size: 12px;
+        font-size: 11px;
         color: #6B7280;
     }
     
     .message-text {
-        font-size: 15px;
+        font-size: 14px;
         color: #D1D5DB;
-        line-height: 1.6;
+        line-height: 1.5;
         word-wrap: break-word;
+    }
+    
+    /* System messages */
+    .message-item.system-message {
+        max-width: 100%;
+        justify-content: center;
+        background: transparent;
+        border: none;
+        padding: 4px 16px;
+    }
+    
+    .message-item.system-message .message-text {
+        color: #6B7280;
+        font-size: 12px;
+        font-style: italic;
+        text-align: center;
+    }
+    
+    /* Typing indicator */
+    .typing-indicator {
+        display: none;
+        padding: 8px 16px;
+        color: #6B7280;
+        font-size: 13px;
+        font-style: italic;
+    }
+    
+    .typing-indicator.active {
+        display: block;
     }
     
     .chat-input-container {
@@ -1491,31 +1559,67 @@
         };
     }
     
-    function addMessageToList(username, content, timestamp) {
+    const currentUsername = '{{ user.username }}';
+    
+    function addMessageToList(username, content, timestamp, isSystem = false) {
         const div = document.createElement('div');
-        div.className = 'message-item';
+        const isOwnMessage = username === currentUsername;
         
-        const date = timestamp ? new Date(timestamp) : new Date();
-        const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-        
-        const avatarLetter = username.charAt(0).toUpperCase();
-        const avatarColor = `hsl(${username.charCodeAt(0) * 137.508 % 360}, 70%, 50%)`;
-        
-        div.innerHTML = `
-            <div class="message-avatar" style="background: ${avatarColor};">
-                ${avatarLetter}
-            </div>
-            <div class="message-content">
-                <div class="message-header">
-                    <span class="message-author" onclick="openUserProfile('${escapeHtml(username)}')">${escapeHtml(username)}</span>
-                    <span class="message-time">${timeStr}</span>
+        if (isSystem) {
+            div.className = 'message-item system-message';
+            div.innerHTML = `<div class="message-text">${escapeHtml(content)}</div>`;
+        } else {
+            div.className = `message-item ${isOwnMessage ? 'own-message' : 'other-message'}`;
+            
+            const date = timestamp ? new Date(timestamp) : new Date();
+            const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+            
+            const avatarLetter = username.charAt(0).toUpperCase();
+            const avatarColor = `hsl(${username.charCodeAt(0) * 137.508 % 360}, 70%, 50%)`;
+            
+            div.innerHTML = `
+                <div class="message-avatar" style="background: ${avatarColor};">
+                    ${avatarLetter}
                 </div>
-                <div class="message-text">${escapeHtml(content)}</div>
-            </div>
-        `;
+                <div class="message-content">
+                    <div class="message-header">
+                        <span class="message-author" onclick="openUserProfile('${escapeHtml(username)}')">${escapeHtml(username)}</span>
+                        <span class="message-time">${timeStr}</span>
+                    </div>
+                    <div class="message-text">${escapeHtml(content)}</div>
+                </div>
+            `;
+        }
         
         messageList.appendChild(div);
-        messageList.scrollTop = messageList.scrollHeight;
+        scrollToBottom();
+    }
+    
+    function scrollToBottom() {
+        // Smooth scroll to bottom
+        if (messageList) {
+            requestAnimationFrame(() => {
+                messageList.scrollTo({
+                    top: messageList.scrollHeight,
+                    behavior: 'smooth'
+                });
+            });
+        }
+    }
+    
+    // Auto-scroll on new content
+    function observeMessages() {
+        const observer = new MutationObserver((mutations) => {
+            // Check if we should auto-scroll
+            const isAtBottom = messageList.scrollHeight - messageList.scrollTop <= messageList.clientHeight + 100;
+            if (isAtBottom) {
+                scrollToBottom();
+            }
+        });
+        
+        if (messageList) {
+            observer.observe(messageList, { childList: true, subtree: true });
+        }
     }
     
     function escapeHtml(text) {
@@ -1565,10 +1669,27 @@
             const response = await fetch(`/api/chat/${currentChannelSlug}/messages/`);
             const data = await response.json();
             
-            messageList.innerHTML = '';
-            data.messages.forEach(msg => {
-                addMessageToList(msg.author, msg.content, msg.timestamp);
-            });
+            if (messageList) {
+                messageList.innerHTML = '';
+                
+                if (data.messages && data.messages.length > 0) {
+                    data.messages.forEach(msg => {
+                        addMessageToList(msg.author, msg.content, msg.timestamp);
+                    });
+                } else {
+                    // Show welcome message if no messages
+                    const emptyDiv = document.createElement('div');
+                    emptyDiv.className = 'message-item system-message';
+                    emptyDiv.innerHTML = `<div class="message-text">{% trans "No messages yet. Be the first to say hello!" %}</div>`;
+                    messageList.appendChild(emptyDiv);
+                }
+                
+                // Scroll to bottom after loading
+                scrollToBottom();
+                
+                // Start observing for new messages
+                observeMessages();
+            }
         } catch (error) {
             console.error("Error loading chat history:", error);
         }
@@ -1743,47 +1864,71 @@
         
         chatSocket.onmessage = function(e) {
             const data = JSON.parse(e.data);
+            console.log('[Voice WS] Received:', data.type, data);
             
             switch(data.type) {
                 case 'member_joined':
-                    if (data.username !== '{{ user.username }}') {
+                case 'system_notification':
+                    if (data.event === 'member_joined' && data.username !== currentUsername) {
+                        console.log(`[Voice] ${data.username} joined the channel`);
                         addVoiceParticipant(data.username, false, false, false);
-                        // Create peer connection for new user
-                        createPeerConnection(data.user_id, data.username);
+                        // Initiate call to new user
+                        initiateCall(data.sender_id, data.username);
+                    } else if (data.event === 'member_left' && data.username !== currentUsername) {
+                        console.log(`[Voice] ${data.username} left the channel`);
+                        removeVoiceParticipant(data.username);
+                        if (peerConnections[data.sender_id]) {
+                            if (peerConnections[data.sender_id].audioElement) {
+                                peerConnections[data.sender_id].audioElement.remove();
+                            }
+                            peerConnections[data.sender_id].close();
+                            delete peerConnections[data.sender_id];
+                        }
                     }
                     break;
                     
                 case 'member_left':
+                    console.log(`[Voice] ${data.username} left the channel`);
                     removeVoiceParticipant(data.username);
-                    if (peerConnections[data.user_id]) {
-                        peerConnections[data.user_id].close();
-                        delete peerConnections[data.user_id];
+                    if (peerConnections[data.user_id || data.sender_id]) {
+                        const pc = peerConnections[data.user_id || data.sender_id];
+                        if (pc.audioElement) pc.audioElement.remove();
+                        pc.close();
+                        delete peerConnections[data.user_id || data.sender_id];
                     }
                     break;
                     
                 case 'webrtc_signal':
                     // Handle WebRTC signals from consumer
+                    const senderId = data.sender_id;
+                    const senderUsername = data.username || 'user';
+                    
+                    // Ignore our own signals
+                    if (senderUsername === currentUsername) break;
+                    
                     if (data.signal_type === 'offer') {
-                        handleOffer(data.sender_id, data.data);
+                        handleOffer(senderId, data.data, senderUsername);
                     } else if (data.signal_type === 'answer') {
-                        handleAnswer(data.sender_id, data.data);
+                        handleAnswer(senderId, data.data);
                     } else if (data.signal_type === 'ice_candidate') {
-                        handleIceCandidate(data.sender_id, data.data);
+                        handleIceCandidate(senderId, data.data);
                     }
                     break;
                     
                 case 'offer':
-                    // Direct offer (backward compatibility)
-                    handleOffer(data.user_id || data.sender_id, data.offer || data.data);
+                    // Direct offer
+                    if (data.username !== currentUsername) {
+                        handleOffer(data.user_id || data.sender_id, data.offer || data.data, data.username);
+                    }
                     break;
                     
                 case 'answer':
-                    // Direct answer (backward compatibility)
+                    // Direct answer
                     handleAnswer(data.user_id || data.sender_id, data.answer || data.data);
                     break;
                     
                 case 'ice_candidate':
-                    // Direct ICE candidate (backward compatibility)
+                    // Direct ICE candidate
                     handleIceCandidate(data.user_id || data.sender_id, data.candidate || data.data);
                     break;
                     
@@ -1796,17 +1941,11 @@
                     break;
                     
                 case 'screen_share_state_change':
-                    if (data.enabled && data.username !== '{{ user.username }}') {
-                        // Remote user started sharing - will be handled by ontrack
-                        console.log(`${data.username} started screen sharing`);
-                    } else if (!data.enabled && data.username !== '{{ user.username }}') {
-                        // Remote user stopped sharing
+                    if (data.enabled && data.username !== currentUsername) {
+                        console.log(`[Voice] ${data.username} started screen sharing`);
+                    } else if (!data.enabled && data.username !== currentUsername) {
                         removeScreenShare(data.username);
                     }
-                    break;
-                    
-                case 'system_notification':
-                    console.log("System:", data.message);
                     break;
             }
         };
@@ -2047,39 +2186,103 @@
         document.querySelectorAll('.channel-item').forEach(item => item.classList.remove('active'));
     }
     
-    // WebRTC Peer Connection Management
+    // =============================================
+    // ENHANCED WebRTC Peer Connection Management
+    // =============================================
+    
+    // Track pending ICE candidates for each peer
+    const pendingIceCandidates = {};
+    
+    // Connection state tracking
+    const connectionStates = {};
+    
     function createPeerConnection(userId, username) {
-        const pc = new RTCPeerConnection({ iceServers: iceServers });
-        pc.username = username; // Store username for video display
+        console.log(`[WebRTC] Creating peer connection for user: ${username} (${userId})`);
         
-        // Add local tracks
+        // Close existing connection if any
+        if (peerConnections[userId]) {
+            console.log(`[WebRTC] Closing existing connection for ${userId}`);
+            peerConnections[userId].close();
+            if (peerConnections[userId].audioElement) {
+                peerConnections[userId].audioElement.remove();
+            }
+        }
+        
+        // Initialize pending candidates array
+        pendingIceCandidates[userId] = [];
+        
+        const pc = new RTCPeerConnection({ 
+            iceServers: iceServers,
+            iceCandidatePoolSize: 10
+        });
+        
+        pc.username = username;
+        pc.userId = userId;
+        connectionStates[userId] = 'new';
+        
+        // Add local audio track
         if (localAudioTrack) {
+            console.log(`[WebRTC] Adding local audio track for ${username}`);
             const audioStream = new MediaStream([localAudioTrack]);
             pc.addTrack(localAudioTrack, audioStream);
         }
+        
+        // Add local video track if enabled
         if (localVideoTrack) {
+            console.log(`[WebRTC] Adding local video track for ${username}`);
             const videoStream = new MediaStream([localVideoTrack]);
             pc.addTrack(localVideoTrack, videoStream);
         }
         
+        // Connection state change handler
+        pc.onconnectionstatechange = () => {
+            console.log(`[WebRTC] Connection state for ${username}: ${pc.connectionState}`);
+            connectionStates[userId] = pc.connectionState;
+            
+            if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+                console.log(`[WebRTC] Connection failed/disconnected, attempting reconnect...`);
+                // Attempt reconnection after a short delay
+                setTimeout(() => {
+                    if (voiceParticipants.has(username)) {
+                        createPeerConnection(userId, username);
+                    }
+                }, 2000);
+            }
+        };
+        
+        // ICE connection state handler
+        pc.oniceconnectionstatechange = () => {
+            console.log(`[WebRTC] ICE connection state for ${username}: ${pc.iceConnectionState}`);
+        };
+        
+        // ICE gathering state handler
+        pc.onicegatheringstatechange = () => {
+            console.log(`[WebRTC] ICE gathering state for ${username}: ${pc.iceGatheringState}`);
+        };
+        
         // Handle remote stream
         pc.ontrack = (event) => {
+            console.log(`[WebRTC] Received track from ${username}:`, event.track.kind);
             const remoteStream = event.streams[0];
-            // Store remote stream for volume control
             pc.remoteStream = remoteStream;
             
-            // Create audio element for remote audio
-            const audio = document.createElement('audio');
-            audio.srcObject = remoteStream;
-            audio.autoplay = true;
-            audio.volume = isDeafened ? 0 : 1;
-            document.body.appendChild(audio);
-            pc.audioElement = audio;
+            if (event.track.kind === 'audio') {
+                // Create or update audio element
+                let audio = pc.audioElement;
+                if (!audio) {
+                    audio = document.createElement('audio');
+                    audio.autoplay = true;
+                    audio.id = `audio-${userId}`;
+                    document.body.appendChild(audio);
+                    pc.audioElement = audio;
+                }
+                audio.srcObject = remoteStream;
+                audio.volume = isDeafened ? 0 : 1;
+                console.log(`[WebRTC] Audio element set for ${username}`);
+            }
             
-            // Handle video tracks - display in participant card
-            const videoTracks = remoteStream.getVideoTracks();
-            if (videoTracks.length > 0) {
-                const participant = voiceParticipants.get(pc.username || 'user');
+            if (event.track.kind === 'video') {
+                const participant = voiceParticipants.get(username);
                 if (participant) {
                     const videoContainer = participant.element.querySelector('.participant-video-container');
                     let videoElement = participant.element.querySelector('.participant-video');
@@ -2092,27 +2295,20 @@
                         videoContainer.appendChild(videoElement);
                     }
                     
-                    // Check if it's a screen share track
-                    const isScreenShare = videoTracks[0].label.toLowerCase().includes('screen') || 
-                                         videoTracks[0].label.toLowerCase().includes('display');
+                    // Check if it's a screen share
+                    const trackLabel = event.track.label.toLowerCase();
+                    const isScreenShare = trackLabel.includes('screen') || trackLabel.includes('display');
                     
                     if (isScreenShare) {
-                        // Handle as screen share
-                        handleRemoteScreenShare(pc.username || 'user', remoteStream);
+                        handleRemoteScreenShare(username, remoteStream);
                     } else {
-                        // Regular camera video
                         videoElement.srcObject = remoteStream;
                         videoElement.classList.add('active');
-                        // Hide avatar when video is active
+                        // Hide avatar
                         const avatar = participant.element.querySelector('.participant-avatar');
                         if (avatar) avatar.style.display = 'none';
                     }
-                } else {
-                    // Participant not found, but we have a screen share - create it anyway
-                    if (videoTracks[0].label.toLowerCase().includes('screen') || 
-                        videoTracks[0].label.toLowerCase().includes('display')) {
-                        handleRemoteScreenShare(pc.username || 'user', remoteStream);
-                    }
+                    console.log(`[WebRTC] Video element set for ${username}`);
                 }
             }
         };
@@ -2120,6 +2316,7 @@
         // Handle ICE candidates
         pc.onicecandidate = (event) => {
             if (event.candidate && chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+                console.log(`[WebRTC] Sending ICE candidate to ${username}`);
                 chatSocket.send(JSON.stringify({
                     signal_type: 'ice_candidate',
                     target_user_id: userId,
@@ -2129,56 +2326,123 @@
         };
         
         peerConnections[userId] = pc;
-        
-        // Create offer
-        pc.createOffer()
-            .then(offer => pc.setLocalDescription(offer))
-            .then(() => {
-                if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
-                    chatSocket.send(JSON.stringify({
-                        signal_type: 'offer',
-                        target_user_id: userId,
-                        data: pc.localDescription
-                    }));
-                }
-            })
-            .catch(err => console.error("Error creating offer:", err));
+        return pc;
     }
     
-    function handleOffer(userId, offer) {
-        if (!peerConnections[userId]) {
-            createPeerConnection(userId, 'user');
+    async function initiateCall(userId, username) {
+        console.log(`[WebRTC] Initiating call to ${username}`);
+        
+        let pc = peerConnections[userId];
+        if (!pc || pc.connectionState === 'closed') {
+            pc = createPeerConnection(userId, username);
         }
         
-        const pc = peerConnections[userId];
-        pc.setRemoteDescription(new RTCSessionDescription(offer))
-            .then(() => pc.createAnswer())
-            .then(answer => pc.setLocalDescription(answer))
-            .then(() => {
-                if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
-                    chatSocket.send(JSON.stringify({
-                        signal_type: 'answer',
-                        target_user_id: userId,
-                        data: pc.localDescription
-                    }));
-                }
-            })
-            .catch(err => console.error("Error handling offer:", err));
-    }
-    
-    function handleAnswer(userId, answer) {
-        const pc = peerConnections[userId];
-        if (pc) {
-            pc.setRemoteDescription(new RTCSessionDescription(answer))
-                .catch(err => console.error("Error setting remote description:", err));
+        try {
+            const offer = await pc.createOffer({
+                offerToReceiveAudio: true,
+                offerToReceiveVideo: true
+            });
+            
+            await pc.setLocalDescription(offer);
+            console.log(`[WebRTC] Local description set, sending offer to ${username}`);
+            
+            if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+                chatSocket.send(JSON.stringify({
+                    signal_type: 'offer',
+                    target_user_id: userId,
+                    data: pc.localDescription
+                }));
+            }
+        } catch (err) {
+            console.error(`[WebRTC] Error creating offer:`, err);
         }
     }
     
-    function handleIceCandidate(userId, candidate) {
+    async function handleOffer(userId, offerData, username) {
+        console.log(`[WebRTC] Received offer from ${username || userId}`);
+        
+        let pc = peerConnections[userId];
+        if (!pc || pc.connectionState === 'closed') {
+            pc = createPeerConnection(userId, username || 'user');
+        }
+        
+        try {
+            // Set remote description
+            await pc.setRemoteDescription(new RTCSessionDescription(offerData));
+            console.log(`[WebRTC] Remote description set for ${username || userId}`);
+            
+            // Process pending ICE candidates
+            if (pendingIceCandidates[userId] && pendingIceCandidates[userId].length > 0) {
+                console.log(`[WebRTC] Processing ${pendingIceCandidates[userId].length} pending ICE candidates`);
+                for (const candidate of pendingIceCandidates[userId]) {
+                    await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                }
+                pendingIceCandidates[userId] = [];
+            }
+            
+            // Create answer
+            const answer = await pc.createAnswer();
+            await pc.setLocalDescription(answer);
+            console.log(`[WebRTC] Sending answer to ${username || userId}`);
+            
+            if (chatSocket && chatSocket.readyState === WebSocket.OPEN) {
+                chatSocket.send(JSON.stringify({
+                    signal_type: 'answer',
+                    target_user_id: userId,
+                    data: pc.localDescription
+                }));
+            }
+        } catch (err) {
+            console.error(`[WebRTC] Error handling offer:`, err);
+        }
+    }
+    
+    async function handleAnswer(userId, answerData) {
+        console.log(`[WebRTC] Received answer from ${userId}`);
+        
         const pc = peerConnections[userId];
-        if (pc) {
-            pc.addIceCandidate(new RTCIceCandidate(candidate))
-                .catch(err => console.error("Error adding ICE candidate:", err));
+        if (!pc) {
+            console.error(`[WebRTC] No peer connection found for ${userId}`);
+            return;
+        }
+        
+        try {
+            await pc.setRemoteDescription(new RTCSessionDescription(answerData));
+            console.log(`[WebRTC] Remote description set from answer`);
+            
+            // Process pending ICE candidates
+            if (pendingIceCandidates[userId] && pendingIceCandidates[userId].length > 0) {
+                console.log(`[WebRTC] Processing ${pendingIceCandidates[userId].length} pending ICE candidates`);
+                for (const candidate of pendingIceCandidates[userId]) {
+                    await pc.addIceCandidate(new RTCIceCandidate(candidate));
+                }
+                pendingIceCandidates[userId] = [];
+            }
+        } catch (err) {
+            console.error(`[WebRTC] Error handling answer:`, err);
+        }
+    }
+    
+    async function handleIceCandidate(userId, candidateData) {
+        console.log(`[WebRTC] Received ICE candidate from ${userId}`);
+        
+        const pc = peerConnections[userId];
+        
+        if (!pc || !pc.remoteDescription || !pc.remoteDescription.type) {
+            // Queue the candidate for later
+            if (!pendingIceCandidates[userId]) {
+                pendingIceCandidates[userId] = [];
+            }
+            pendingIceCandidates[userId].push(candidateData);
+            console.log(`[WebRTC] Queued ICE candidate for ${userId} (remote description not set yet)`);
+            return;
+        }
+        
+        try {
+            await pc.addIceCandidate(new RTCIceCandidate(candidateData));
+            console.log(`[WebRTC] Added ICE candidate for ${userId}`);
+        } catch (err) {
+            console.error(`[WebRTC] Error adding ICE candidate:`, err);
         }
     }
     

@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+{% load static %}
+{% load i18n %}
+
+{% block title %}{% trans "Verify Email" %} - Rashigo{% endblock %}
+
+{% block extra_css %}
+<style>
+    .verify-container {
+        max-width: 480px;
+        margin: 60px auto;
+        padding: 40px;
+        background: #1A1A1A;
+        border-radius: 20px;
+        border: 1px solid #2A2A2A;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+    
+    .verify-header {
+        text-align: center;
+        margin-bottom: 30px;
+    }
+    
+    .verify-icon {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 20px;
+        font-size: 36px;
+    }
+    
+    .verify-header h1 {
+        color: #E5E5E5;
+        font-size: 24px;
+        font-weight: 700;
+        margin-bottom: 8px;
+    }
+    
+    .verify-header p {
+        color: #9CA3AF;
+        font-size: 14px;
+    }
+    
+    .email-display {
+        background: #0F0F0F;
+        border: 1px solid #2A2A2A;
+        border-radius: 10px;
+        padding: 12px 16px;
+        text-align: center;
+        color: #6366F1;
+        font-weight: 600;
+        margin-bottom: 20px;
+    }
+    
+    .code-input-container {
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+        margin: 30px 0;
+    }
+    
+    .code-input {
+        width: 50px;
+        height: 60px;
+        text-align: center;
+        font-size: 24px;
+        font-weight: 700;
+        background: #0F0F0F;
+        border: 2px solid #2A2A2A;
+        border-radius: 10px;
+        color: #E5E5E5;
+        transition: all 0.2s ease;
+    }
+    
+    .code-input:focus {
+        border-color: #6366F1;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+    
+    .code-input.filled {
+        border-color: #6366F1;
+        background: rgba(99, 102, 241, 0.1);
+    }
+    
+    .btn-verify {
+        width: 100%;
+        background: #6366F1;
+        color: white;
+        border: none;
+        padding: 14px;
+        border-radius: 10px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        margin-bottom: 16px;
+    }
+    
+    .btn-verify:hover {
+        background: #4F46E5;
+        transform: translateY(-1px);
+    }
+    
+    .btn-verify:disabled {
+        background: #3A3A3A;
+        cursor: not-allowed;
+        transform: none;
+    }
+    
+    .resend-section {
+        text-align: center;
+        color: #9CA3AF;
+        font-size: 14px;
+    }
+    
+    .resend-link {
+        color: #6366F1;
+        text-decoration: none;
+        font-weight: 600;
+    }
+    
+    .resend-link:hover {
+        text-decoration: underline;
+    }
+    
+    .timer {
+        color: #9CA3AF;
+        font-size: 14px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="verify-container">
+    <div class="verify-header">
+        <div class="verify-icon">📧</div>
+        <h1>{% trans "Verify Your Email" %}</h1>
+        <p>{% trans "We've sent a 6-digit code to your email address" %}</p>
+    </div>
+    
+    <div class="email-display">
+        {{ email }}
+    </div>
+    
+    {% if messages %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}" style="background: {% if 'error' in message.tags %}#EF4444{% else %}#6366F1{% endif %}; color: white; padding: 12px 16px; border-radius: 10px; margin-bottom: 20px; font-size: 14px;">
+            {{ message }}
+        </div>
+        {% endfor %}
+    {% endif %}
+    
+    <form method="post" id="verifyForm">
+        {% csrf_token %}
+        
+        <div class="code-input-container">
+            <input type="text" class="code-input" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off" autofocus>
+            <input type="text" class="code-input" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off">
+            <input type="text" class="code-input" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off">
+            <input type="text" class="code-input" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off">
+            <input type="text" class="code-input" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off">
+            <input type="text" class="code-input" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off">
+        </div>
+        
+        <input type="hidden" name="verification_code" id="fullCode">
+        
+        <button type="submit" class="btn-verify" id="verifyBtn" disabled>
+            <i class="fas fa-check-circle"></i> {% trans "Verify Email" %}
+        </button>
+    </form>
+    
+    <div class="resend-section">
+        <span id="resendTimer">{% trans "Didn't receive the code?" %}</span>
+        <a href="?step=verify_email&resend=true" class="resend-link" id="resendLink" style="display: none;">
+            {% trans "Resend Code" %}
+        </a>
+    </div>
+</div>
+
+<script>
+    const inputs = document.querySelectorAll('.code-input');
+    const verifyBtn = document.getElementById('verifyBtn');
+    const fullCodeInput = document.getElementById('fullCode');
+    const resendTimer = document.getElementById('resendTimer');
+    const resendLink = document.getElementById('resendLink');
+    
+    // Handle input focus and navigation
+    inputs.forEach((input, index) => {
+        input.addEventListener('input', (e) => {
+            const value = e.target.value;
+            
+            // Only allow numbers
+            if (!/^\d*$/.test(value)) {
+                e.target.value = '';
+                return;
+            }
+            
+            if (value.length === 1) {
+                input.classList.add('filled');
+                // Move to next input
+                if (index < inputs.length - 1) {
+                    inputs[index + 1].focus();
+                }
+            } else {
+                input.classList.remove('filled');
+            }
+            
+            updateFullCode();
+        });
+        
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Backspace' && !input.value && index > 0) {
+                inputs[index - 1].focus();
+            }
+        });
+        
+        // Handle paste
+        input.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const pastedData = e.clipboardData.getData('text').replace(/\D/g, '');
+            
+            for (let i = 0; i < Math.min(pastedData.length, 6); i++) {
+                inputs[i].value = pastedData[i];
+                inputs[i].classList.add('filled');
+            }
+            
+            const lastFilledIndex = Math.min(pastedData.length - 1, 5);
+            inputs[lastFilledIndex].focus();
+            updateFullCode();
+        });
+    });
+    
+    function updateFullCode() {
+        let code = '';
+        inputs.forEach(input => {
+            code += input.value;
+        });
+        fullCodeInput.value = code;
+        verifyBtn.disabled = code.length !== 6;
+    }
+    
+    // Resend timer (60 seconds)
+    let countdown = 60;
+    const timerInterval = setInterval(() => {
+        countdown--;
+        if (countdown > 0) {
+            resendTimer.textContent = `{% trans "Resend available in" %} ${countdown}s`;
+        } else {
+            clearInterval(timerInterval);
+            resendTimer.style.display = 'none';
+            resendLink.style.display = 'inline';
+        }
+    }, 1000);
+</script>
+{% endblock %}
+

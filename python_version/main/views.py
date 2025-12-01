@@ -21,6 +21,15 @@ from django.conf import settings as django_settings
 from datetime import timedelta
 from django.utils import timezone
 
+# Security utilities
+from .utils.security import (
+    ProfanityFilter, 
+    BotDetector, 
+    VerificationCodeManager,
+    EmailService,
+    SMSService
+)
+
 
 def get_client_ip(request):
     """Get the client's real IP address"""
@@ -33,9 +42,24 @@ def get_client_ip(request):
 
 
 def register(request):
-    """Secure registration with fingerprint and IP tracking"""
+    """
+    Secure registration with:
+    - Fingerprint and IP tracking
+    - Profanity filter for username
+    - Bot detection
+    - Email verification
+    - Phone verification (optional)
+    """
     if request.user.is_authenticated:
         return redirect('index')
+    
+    # Check if this is a verification step
+    step = request.GET.get('step', 'register')
+    
+    if step == 'verify_email':
+        return handle_email_verification(request)
+    elif step == 'verify_phone':
+        return handle_phone_verification(request)
     
     if request.method == 'POST':
         username = request.POST.get('username', '').strip()
@@ -44,22 +68,57 @@ def register(request):
         password2 = request.POST.get('password2', '')
         fingerprint = request.POST.get('fingerprint', '')
         timezone_str = request.POST.get('timezone', '')
+        phone_number = request.POST.get('phone_number', '').strip()
         
         ip_address = get_client_ip(request)
         user_agent = request.META.get('HTTP_USER_AGENT', '')
         
-        # Security checks
         errors = []
+        is_bot_detected = False
+        profanity_detected = False
+        risk_score = 0
         
-        # Check if fingerprint is provided
+        # ========== 1. FINGERPRINT & BOT DETECTION ==========
         if not fingerprint:
             errors.append(_("Security verification failed. Please enable JavaScript."))
+            is_bot_detected = True
+        else:
+            # Advanced bot detection
+            is_suspicious, reason, risk_score = BotDetector.analyze_fingerprint(
+                fingerprint, ip_address, user_agent, timezone_str
+            )
+            
+            if is_suspicious:
+                errors.append(_("Security check failed. Your device appears suspicious. Please try a different browser."))
+                is_bot_detected = True
+                
+                RegistrationAttempt.objects.create(
+                    ip_address=ip_address,
+                    fingerprint=fingerprint,
+                    user_agent=user_agent,
+                    success=False,
+                    username_attempted=username,
+                    blocked_reason=f"Bot detected: {reason}",
+                    risk_score=risk_score,
+                    timezone=timezone_str,
+                    is_bot_detected=True
+                )
         
-        # Check password match
+        # ========== 2. PROFANITY FILTER ==========
+        has_profanity, matched = ProfanityFilter.contains_profanity(username)
+        if has_profanity:
+            errors.append(_("Username contains inappropriate content. Please choose a different username."))
+            profanity_detected = True
+        
+        is_bot_username, bot_pattern = ProfanityFilter.is_bot_username(username)
+        if is_bot_username:
+            errors.append(_("This username pattern is not allowed. Please choose a different username."))
+            is_bot_detected = True
+        
+        # ========== 3. BASIC VALIDATIONS ==========
         if password1 != password2:
             errors.append(_("Passwords do not match."))
         
-        # Check password strength
         if len(password1) < 8:
             errors.append(_("Password must be at least 8 characters long."))
         if not any(c.isupper() for c in password1):
@@ -69,15 +128,13 @@ def register(request):
         if not any(c.isdigit() for c in password1):
             errors.append(_("Password must contain at least one number."))
         
-        # Check if username already exists
         if CustomUser.objects.filter(username=username).exists():
             errors.append(_("Username already taken."))
         
-        # Check if email already exists
         if CustomUser.objects.filter(email=email).exists():
             errors.append(_("Email already registered."))
         
-        # Check for recent registration attempts from same IP (rate limiting)
+        # ========== 4. RATE LIMITING ==========
         recent_attempts = RegistrationAttempt.objects.filter(
             ip_address=ip_address,
             attempt_time__gte=timezone.now() - timedelta(hours=1)
@@ -91,10 +148,13 @@ def register(request):
                 user_agent=user_agent,
                 success=False,
                 username_attempted=username,
-                blocked_reason="Rate limit exceeded"
+                blocked_reason="Rate limit exceeded",
+                risk_score=risk_score,
+                timezone=timezone_str,
+                is_bot_detected=is_bot_detected,
+                profanity_detected=profanity_detected
             )
         
-        # Check for recent registrations from same fingerprint
         if fingerprint:
             recent_fingerprint_registrations = RegistrationAttempt.objects.filter(
                 fingerprint=fingerprint,
@@ -104,21 +164,20 @@ def register(request):
             
             if recent_fingerprint_registrations >= 3:
                 errors.append(_("Maximum accounts per device reached. Contact support if this is an error."))
-                RegistrationAttempt.objects.create(
-                    ip_address=ip_address,
-                    fingerprint=fingerprint,
-                    user_agent=user_agent,
-                    success=False,
-                    username_attempted=username,
-                    blocked_reason="Device limit exceeded"
-                )
+        
+        # Record the attempt for rate limiting
+        BotDetector.record_attempt(fingerprint, ip_address)
         
         if errors:
             for error in errors:
                 messages.error(request, error)
-            return render(request, 'register.html')
+            return render(request, 'register.html', {
+                'username': username,
+                'email': email,
+                'phone_number': phone_number,
+            })
         
-        # Create user
+        # ========== 5. CREATE USER (INACTIVE UNTIL VERIFIED) ==========
         try:
             with transaction.atomic():
                 user = CustomUser.objects.create_user(
@@ -126,28 +185,48 @@ def register(request):
                     email=email,
                     password=password1,
                     registration_ip=ip_address,
-                    registration_fingerprint=fingerprint
+                    registration_fingerprint=fingerprint,
+                    is_active=False,  # Inactive until email verified
+                    email_verified=False,
+                    phone_number=phone_number if phone_number else None,
+                    phone_verified=False,
+                    security_score=risk_score
                 )
                 
-                # Store timezone in metadata
                 if timezone_str:
                     user.metadata = user.metadata or {}
                     user.metadata['timezone'] = timezone_str
                     user.save()
                 
-                # Log successful registration
+                # Generate and send email verification code
+                code = VerificationCodeManager.generate_code()
+                VerificationCodeManager.store_email_code(email, code)
+                
+                email_sent = EmailService.send_verification_code(email, code, username)
+                
+                if not email_sent:
+                    # If email fails, still create account but log the issue
+                    messages.warning(request, _("Could not send verification email. Please contact support."))
+                
+                # Log successful registration attempt
                 RegistrationAttempt.objects.create(
                     ip_address=ip_address,
                     fingerprint=fingerprint,
                     user_agent=user_agent,
                     success=True,
-                    username_attempted=username
+                    username_attempted=username,
+                    risk_score=risk_score,
+                    timezone=timezone_str,
+                    is_bot_detected=False,
+                    profanity_detected=False
                 )
                 
-                # Log the user in
-                login(request, user)
-                messages.success(request, _("Account created successfully! Welcome to Rashigo!"))
-                return redirect('index')
+                # Store user ID in session for verification
+                request.session['pending_user_id'] = user.id
+                request.session['pending_email'] = email
+                
+                messages.info(request, _("A verification code has been sent to your email. Please enter it below."))
+                return redirect('register') + '?step=verify_email'
         
         except Exception as e:
             messages.error(request, _("An error occurred during registration. Please try again."))
@@ -157,10 +236,137 @@ def register(request):
                 user_agent=user_agent,
                 success=False,
                 username_attempted=username,
-                blocked_reason=f"Error: {str(e)}"
+                blocked_reason=f"Error: {str(e)}",
+                risk_score=risk_score,
+                timezone=timezone_str,
+                is_bot_detected=is_bot_detected,
+                profanity_detected=profanity_detected
             )
     
     return render(request, 'register.html')
+
+
+def handle_email_verification(request):
+    """Handle email verification step"""
+    pending_user_id = request.session.get('pending_user_id')
+    pending_email = request.session.get('pending_email')
+    
+    if not pending_user_id or not pending_email:
+        messages.error(request, _("Session expired. Please register again."))
+        return redirect('register')
+    
+    if request.method == 'POST':
+        code = request.POST.get('verification_code', '').strip()
+        
+        success, message = VerificationCodeManager.verify_email_code(pending_email, code)
+        
+        if success:
+            try:
+                user = CustomUser.objects.get(id=pending_user_id)
+                user.email_verified = True
+                user.is_active = True  # Activate user
+                user.save()
+                
+                # Clear session
+                del request.session['pending_user_id']
+                del request.session['pending_email']
+                
+                # Log user in
+                login(request, user)
+                messages.success(request, _("Email verified! Welcome to Rashigo!"))
+                return redirect('index')
+                
+            except CustomUser.DoesNotExist:
+                messages.error(request, _("User not found. Please register again."))
+                return redirect('register')
+        else:
+            messages.error(request, message)
+    
+    # Handle resend code
+    if request.GET.get('resend') == 'true':
+        code = VerificationCodeManager.generate_code()
+        VerificationCodeManager.store_email_code(pending_email, code)
+        EmailService.send_verification_code(pending_email, code)
+        messages.info(request, _("A new verification code has been sent to your email."))
+    
+    return render(request, 'verify_email.html', {
+        'email': pending_email,
+    })
+
+
+def handle_phone_verification(request):
+    """Handle phone verification step (optional)"""
+    pending_user_id = request.session.get('pending_user_id')
+    pending_phone = request.session.get('pending_phone')
+    
+    if not pending_user_id or not pending_phone:
+        messages.error(request, _("Session expired. Please try again."))
+        return redirect('index')
+    
+    if request.method == 'POST':
+        code = request.POST.get('verification_code', '').strip()
+        
+        success, message = VerificationCodeManager.verify_phone_code(pending_phone, code)
+        
+        if success:
+            try:
+                user = CustomUser.objects.get(id=pending_user_id)
+                user.phone_verified = True
+                user.save()
+                
+                # Clear session
+                del request.session['pending_user_id']
+                del request.session['pending_phone']
+                
+                messages.success(request, _("Phone verified successfully!"))
+                return redirect('index')
+                
+            except CustomUser.DoesNotExist:
+                messages.error(request, _("User not found."))
+                return redirect('index')
+        else:
+            messages.error(request, message)
+    
+    # Handle resend code
+    if request.GET.get('resend') == 'true':
+        code = VerificationCodeManager.generate_code()
+        VerificationCodeManager.store_phone_code(pending_phone, code)
+        SMSService.send_verification_code(pending_phone, code)
+        messages.info(request, _("A new verification code has been sent to your phone."))
+    
+    return render(request, 'verify_phone.html', {
+        'phone': pending_phone,
+    })
+
+
+@login_required
+def request_phone_verification(request):
+    """Request phone verification for existing users"""
+    if request.method == 'POST':
+        phone_number = request.POST.get('phone_number', '').strip()
+        
+        if not phone_number:
+            messages.error(request, _("Phone number is required."))
+            return redirect('settings')
+        
+        # Generate and send code
+        code = VerificationCodeManager.generate_code()
+        VerificationCodeManager.store_phone_code(phone_number, code)
+        
+        if SMSService.send_verification_code(phone_number, code):
+            request.session['pending_user_id'] = request.user.id
+            request.session['pending_phone'] = phone_number
+            
+            # Update user's phone number
+            request.user.phone_number = phone_number
+            request.user.save()
+            
+            messages.info(request, _("A verification code has been sent to your phone."))
+            return redirect('register') + '?step=verify_phone'
+        else:
+            messages.error(request, _("Could not send SMS. Please try again later."))
+    
+    return redirect('settings')
 
 
 def index(request):

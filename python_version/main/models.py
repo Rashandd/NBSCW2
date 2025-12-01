@@ -19,15 +19,25 @@ class RegistrationAttempt(models.Model):
     username_attempted = models.CharField(max_length=150, blank=True, null=True)
     blocked_reason = models.CharField(max_length=255, blank=True, null=True)
     
+    # Enhanced security tracking
+    risk_score = models.PositiveIntegerField(default=0, help_text="Bot detection risk score (0-100)")
+    timezone = models.CharField(max_length=100, blank=True, null=True)
+    screen_resolution = models.CharField(max_length=50, blank=True, null=True)
+    is_bot_detected = models.BooleanField(default=False)
+    profanity_detected = models.BooleanField(default=False)
+    
     class Meta:
         ordering = ['-attempt_time']
         indexes = [
             models.Index(fields=['ip_address', 'attempt_time']),
             models.Index(fields=['fingerprint', 'attempt_time']),
+            models.Index(fields=['is_bot_detected', 'attempt_time']),
         ]
     
     def __str__(self):
-        return f"{self.ip_address} - {self.fingerprint[:20]} - {self.attempt_time}"
+        status = "✅" if self.success else "❌"
+        bot = "🤖" if self.is_bot_detected else ""
+        return f"{status}{bot} {self.ip_address} - {self.fingerprint[:20]} - {self.attempt_time}"
 
 
 class CustomUser(AbstractUser):
@@ -68,6 +78,12 @@ class CustomUser(AbstractUser):
     registration_fingerprint = models.CharField(max_length=255, blank=True, null=True)
     last_activity = models.DateTimeField(auto_now=True, null=True, blank=True)
     last_login_ip = models.GenericIPAddressField(null=True, blank=True)
+    
+    # Email/Phone Verification
+    email_verified = models.BooleanField(default=False, help_text="Email verification status")
+    phone_number = models.CharField(max_length=20, blank=True, null=True, help_text="Phone number for verification")
+    phone_verified = models.BooleanField(default=False, help_text="Phone verification status")
+    security_score = models.PositiveIntegerField(default=0, help_text="Risk score from bot detection (0-100)")
     
     # Status fields
     is_online = models.BooleanField(default=False)
