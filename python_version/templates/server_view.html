@@ -62,6 +62,7 @@
         padding: 20px 16px;
         border-bottom: 1px solid rgba(0, 255, 255, 0.15);
         background: rgba(0, 255, 255, 0.05);
+        flex-shrink: 0; /* Prevent header from shrinking */
     }
     
     .sidebar-header h2 {
@@ -334,6 +335,7 @@
         gap: 12px;
         border-top: 1px solid rgba(0, 255, 255, 0.2);
         flex-shrink: 0;
+        margin-top: auto; /* CRITICAL: Push to bottom of flex container */
         z-index: 10;
         box-shadow: 0 -2px 20px rgba(0, 0, 0, 0.5);
     }
@@ -1469,9 +1471,20 @@
             try {
                 const data = JSON.parse(e.data);
                 if (data.type === 'chat_message' || data.message_type === 'chat_message') {
+                    // Extract message content - handle both string and object formats
+                    let messageContent = '';
+                    if (typeof data.message === 'string') {
+                        messageContent = data.message;
+                    } else if (data.message && typeof data.message === 'object') {
+                        // Backend sends entire data object as message, extract content
+                        messageContent = data.message.content || data.message.message || '';
+                    } else {
+                        messageContent = data.content || '';
+                    }
+                    
                     addMessage(
                         data.username || data.author || 'Unknown',
-                        data.message || data.content || '',
+                        messageContent,
                         data.timestamp || data.created_at,
                         data.user_id || data.sender_id
                     );
@@ -1498,9 +1511,23 @@
                 
                 if (data.messages && data.messages.length > 0) {
                     data.messages.forEach(msg => {
+                        // Extract message content - handle both string and object formats
+                        let messageContent = '';
+                        if (typeof msg.content === 'string') {
+                            messageContent = msg.content;
+                        } else if (typeof msg.message === 'string') {
+                            messageContent = msg.message;
+                        } else if (msg.content && typeof msg.content === 'object') {
+                            messageContent = msg.content.content || msg.content.message || '';
+                        } else if (msg.message && typeof msg.message === 'object') {
+                            messageContent = msg.message.content || msg.message.message || '';
+                        } else {
+                            messageContent = String(msg.content || msg.message || '');
+                        }
+                        
                         addMessage(
                             msg.author || msg.username || 'Unknown',
-                            msg.content || msg.message || '',
+                            messageContent,
                             msg.timestamp || msg.created_at,
                             msg.user_id || msg.sender_id
                         );
@@ -1523,18 +1550,32 @@
             container.innerHTML = '';
         }
         
+        // CRITICAL FIX: Ensure content is always a string, not an object
+        let messageText = '';
+        if (typeof content === 'string') {
+            messageText = content;
+        } else if (content && typeof content === 'object') {
+            // If content is an object, extract the actual text
+            messageText = content.content || content.message || content.text || JSON.stringify(content);
+        } else {
+            messageText = String(content || '');
+        }
+        
+        // Ensure username is a string
+        const usernameStr = typeof username === 'string' ? username : (username?.username || 'Unknown');
+        
         const div = document.createElement('div');
         div.className = 'message-item';
         
         // Check if message is from current user
-        const isOwnMessage = (userId && userId === currentUserId) || (username === currentUsername);
+        const isOwnMessage = (userId && userId === currentUserId) || (usernameStr === currentUsername);
         if (isOwnMessage) {
             div.classList.add('own-message');
         } else {
             div.classList.add('other-message');
         }
         
-        const avatarLetter = username.charAt(0).toUpperCase();
+        const avatarLetter = usernameStr.charAt(0).toUpperCase();
         const date = timestamp ? new Date(timestamp) : new Date();
         const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
         
@@ -1543,10 +1584,10 @@
             <div class="message-content">
                 <div class="message-bubble">
                     <div class="message-header">
-                        <span class="message-author">${escapeHtml(username).toUpperCase()}</span>
+                        <span class="message-author">${escapeHtml(usernameStr).toUpperCase()}</span>
                         <span class="message-time">${timeStr}</span>
                     </div>
-                    <div class="message-text">${escapeHtml(content)}</div>
+                    <div class="message-text">${escapeHtml(messageText)}</div>
                 </div>
             </div>
         `;
