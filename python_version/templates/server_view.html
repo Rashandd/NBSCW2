@@ -7,7 +7,7 @@
 {% block extra_css %}
 <style>
     /* ============================================
-       DISCORD CLONE - PIXEL PERFECT LAYOUT
+       CYBERPUNK GAMING HUD - RESPONSIVE DESIGN
        ============================================ */
     
     * {
@@ -17,178 +17,183 @@
     }
     
     body {
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        background: #36393F;
-        color: #DCDDDE;
+        font-family: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: #0A0E27;
+        background-image: 
+            radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.03) 0%, transparent 50%),
+            radial-gradient(circle at 80% 80%, rgba(0, 255, 128, 0.03) 0%, transparent 50%);
+        color: #E0E0E0;
         height: 100vh;
         overflow: hidden;
+        position: relative;
     }
     
     /* ============================================
-       GLOBAL LAYOUT - 3 COLUMNS
+       MAIN CONTAINER - RESPONSIVE LAYOUT
        ============================================ */
     
-    .discord-container {
+    .gaming-hud-container {
         display: flex;
         height: 100vh;
         width: 100vw;
+        position: relative;
     }
     
     /* ============================================
-       LEFT RAIL - Server Icons
+       SIDEBAR - GLASSMORPHISM PANEL
        ============================================ */
     
-    .server-rail {
-        width: 72px;
-        background: #202225;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 12px 0;
-        gap: 8px;
-        overflow-y: auto;
-        flex-shrink: 0;
-    }
-    
-    .server-icon-rail {
-        width: 48px;
-        height: 48px;
-        border-radius: 24px;
-        background: #36393F;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 20px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        margin-bottom: 8px;
-    }
-    
-    .server-icon-rail:hover {
-        background: #5865F2;
-        border-radius: 16px;
-    }
-    
-    .server-icon-rail.active {
-        background: #5865F2;
-        border-radius: 16px;
-    }
-    
-    /* ============================================
-       SIDEBAR - Channels & User Panel
-       ============================================ */
-    
-    .sidebar {
-        width: 240px;
-        background: #2F3136;
+    .sidebar-panel {
+        width: 260px;
+        background: rgba(10, 14, 39, 0.7);
+        backdrop-filter: blur(10px);
+        border-right: 1px solid rgba(0, 255, 255, 0.2);
         display: flex;
         flex-direction: column;
         height: 100vh;
         flex-shrink: 0;
+        box-shadow: 2px 0 20px rgba(0, 0, 0, 0.5);
+        position: relative;
+        z-index: 100;
     }
     
     /* Sidebar Header */
     .sidebar-header {
-        height: 48px;
-        padding: 0 16px;
-        display: flex;
-        align-items: center;
-        border-bottom: 1px solid #202225;
-        box-shadow: 0 1px 0 rgba(4, 4, 5, 0.2), 0 1.5px 0 rgba(6, 6, 7, 0.05);
-        z-index: 2;
+        padding: 20px 16px;
+        border-bottom: 1px solid rgba(0, 255, 255, 0.15);
+        background: rgba(0, 255, 255, 0.05);
     }
     
     .sidebar-header h2 {
-        font-size: 16px;
-        font-weight: 600;
-        color: #FFFFFF;
+        font-size: 14px;
+        font-weight: 700;
+        color: #00FFFF;
+        text-transform: uppercase;
+        letter-spacing: 2px;
         margin: 0;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
     }
     
-    /* Channel List - Scrollable Middle Section */
+    /* Channel List Container */
     .channel-list-container {
         flex: 1;
         overflow-y: auto;
         overflow-x: hidden;
-        padding: 16px 8px;
+        padding: 16px 12px;
         min-height: 0;
     }
     
     .channel-section {
-        margin-bottom: 24px;
+        margin-bottom: 32px;
     }
     
     .channel-section-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
+        margin-bottom: 12px;
         padding: 0 8px;
-        margin-bottom: 8px;
-        height: 16px;
     }
     
     .channel-section-title {
-        font-size: 12px;
-        font-weight: 600;
-        color: #8E9297;
+        font-size: 10px;
+        font-weight: 700;
+        color: #00FF80;
         text-transform: uppercase;
-        letter-spacing: 0.02em;
+        letter-spacing: 3px;
         display: flex;
         align-items: center;
-        gap: 4px;
+        gap: 8px;
+    }
+    
+    .channel-section-title i {
+        font-size: 12px;
+        color: #00FF80;
+        filter: drop-shadow(0 0 4px rgba(0, 255, 128, 0.6));
     }
     
     .add-channel-btn {
-        width: 16px;
-        height: 16px;
-        border: none;
-        background: transparent;
-        color: #8E9297;
+        width: 20px;
+        height: 20px;
+        border: 1px solid rgba(0, 255, 255, 0.3);
+        background: rgba(0, 255, 255, 0.1);
+        color: #00FFFF;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 18px;
-        line-height: 1;
-        padding: 0;
-        transition: color 0.15s ease;
+        font-size: 14px;
+        transition: all 0.3s ease;
+        border-radius: 4px;
     }
     
     .add-channel-btn:hover {
-        color: #DCDDDE;
+        background: rgba(0, 255, 255, 0.2);
+        border-color: #00FFFF;
+        box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
+        transform: scale(1.1);
     }
     
+    /* Channel Items - Gaming Button Style */
     .channel-item {
         display: flex;
         align-items: center;
-        padding: 6px 8px;
-        margin: 1px 0;
-        border-radius: 4px;
+        padding: 10px 12px;
+        margin: 4px 0;
+        border: 1px solid transparent;
+        border-left: 2px solid transparent;
+        background: rgba(0, 255, 255, 0.03);
         cursor: pointer;
-        transition: background-color 0.15s ease;
-        color: #96989D;
-        font-size: 16px;
+        transition: all 0.3s ease;
+        color: #B0B0B0;
+        font-size: 14px;
         text-decoration: none;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .channel-item::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        height: 100%;
+        width: 2px;
+        background: #00FFFF;
+        transform: scaleY(0);
+        transition: transform 0.3s ease;
     }
     
     .channel-item:hover {
-        background: #393C43;
-        color: #DCDDDE;
+        background: rgba(0, 255, 255, 0.1);
+        border-left-color: #00FFFF;
+        color: #00FFFF;
+        box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+    }
+    
+    .channel-item:hover::before {
+        transform: scaleY(1);
     }
     
     .channel-item.active {
-        background: #393C43;
-        color: #FFFFFF;
+        background: rgba(0, 255, 255, 0.15);
+        border-left-color: #00FFFF;
+        color: #00FFFF;
+        box-shadow: 
+            inset 0 0 20px rgba(0, 255, 255, 0.1),
+            0 0 20px rgba(0, 255, 255, 0.3);
+    }
+    
+    .channel-item.active::before {
+        transform: scaleY(1);
     }
     
     .channel-item i {
-        margin-right: 6px;
-        font-size: 20px;
+        margin-right: 10px;
+        font-size: 16px;
         width: 20px;
         text-align: center;
+        filter: drop-shadow(0 0 4px currentColor);
     }
     
     .channel-item span {
@@ -196,6 +201,7 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        font-weight: 500;
     }
     
     /* Voice Channel with Nested Participants */
@@ -206,70 +212,87 @@
     }
     
     .voice-channel-item > .channel-item {
-        padding: 6px 8px;
+        padding: 10px 12px;
     }
     
     .voice-participants-list {
         list-style: none;
         padding: 0;
         margin: 0;
-        padding-left: 24px;
-        padding-top: 4px;
+        padding-left: 32px;
+        padding-top: 6px;
         padding-bottom: 8px;
         display: flex;
         flex-direction: column;
-        gap: 2px;
+        gap: 4px;
     }
     
     .voice-participant-mini {
         display: flex;
         align-items: center;
-        gap: 8px;
-        padding: 4px 8px;
+        gap: 10px;
+        padding: 6px 10px;
+        border: 1px solid rgba(0, 255, 128, 0.2);
+        border-left: 2px solid transparent;
+        background: rgba(0, 255, 128, 0.05);
         border-radius: 4px;
-        font-size: 13px;
-        color: #96989D;
-        transition: all 0.15s ease;
+        font-size: 12px;
+        color: #90E0B0;
+        transition: all 0.3s ease;
     }
     
     .voice-participant-mini:hover {
-        background: rgba(255, 255, 255, 0.05);
-        color: #DCDDDE;
+        background: rgba(0, 255, 128, 0.1);
+        border-left-color: #00FF80;
+        color: #00FF80;
+        box-shadow: 0 0 10px rgba(0, 255, 128, 0.2);
     }
     
     .voice-participant-mini.speaking {
-        color: #FFFFFF;
+        background: rgba(0, 255, 128, 0.15);
+        border-left-color: #00FF80;
+        color: #00FF80;
+        box-shadow: 0 0 15px rgba(0, 255, 128, 0.4);
+        animation: pulse-glow 2s infinite;
+    }
+    
+    @keyframes pulse-glow {
+        0%, 100% { box-shadow: 0 0 15px rgba(0, 255, 128, 0.4); }
+        50% { box-shadow: 0 0 25px rgba(0, 255, 128, 0.6); }
     }
     
     .voice-participant-mini-avatar {
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        background: #5865F2;
+        width: 24px;
+        height: 24px;
+        border-radius: 4px;
+        background: linear-gradient(135deg, #00FFFF 0%, #00FF80 100%);
         display: flex;
         align-items: center;
         justify-content: center;
-        color: white;
-        font-weight: 600;
-        font-size: 10px;
+        color: #0A0E27;
+        font-weight: 700;
+        font-size: 11px;
         flex-shrink: 0;
         position: relative;
+        border: 1px solid rgba(0, 255, 255, 0.3);
+        box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
     }
     
     .voice-participant-mini-avatar.muted::after {
         content: '🔇';
         position: absolute;
-        bottom: -2px;
-        right: -2px;
-        background: #2F3136;
+        bottom: -4px;
+        right: -4px;
+        background: #0A0E27;
         border-radius: 50%;
-        width: 12px;
-        height: 12px;
+        width: 14px;
+        height: 14px;
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 8px;
-        border: 1px solid #202225;
+        border: 1px solid #00FF80;
+        box-shadow: 0 0 6px rgba(0, 255, 128, 0.5);
     }
     
     .voice-participant-mini-name {
@@ -277,52 +300,65 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        font-weight: 500;
     }
     
     .voice-participant-mini-status {
-        width: 6px;
-        height: 6px;
-        border-radius: 50%;
-        background: #43B581;
+        width: 8px;
+        height: 8px;
+        border-radius: 2px;
+        background: #00FF80;
         flex-shrink: 0;
+        box-shadow: 0 0 8px rgba(0, 255, 128, 0.6);
     }
     
     .voice-participant-mini-status.speaking {
-        background: #5865F2;
-        animation: pulse 1.5s infinite;
+        background: #00FFFF;
+        box-shadow: 0 0 12px rgba(0, 255, 255, 0.8);
+        animation: pulse-dot 1.5s infinite;
     }
     
-    @keyframes pulse {
-        0%, 100% { opacity: 1; transform: scale(1); }
-        50% { opacity: 0.7; transform: scale(1.2); }
+    @keyframes pulse-dot {
+        0%, 100% { transform: scale(1); opacity: 1; }
+        50% { transform: scale(1.3); opacity: 0.8; }
     }
     
     /* User Control Panel - Sticky Bottom */
     .user-panel {
-        height: 52px;
-        background: #292B2F;
-        padding: 0 8px;
+        height: 60px;
+        background: rgba(10, 14, 39, 0.8);
+        backdrop-filter: blur(10px);
+        padding: 0 12px;
         display: flex;
         align-items: center;
-        gap: 8px;
-        border-top: 1px solid #202225;
+        gap: 12px;
+        border-top: 1px solid rgba(0, 255, 255, 0.2);
         flex-shrink: 0;
         z-index: 10;
+        box-shadow: 0 -2px 20px rgba(0, 0, 0, 0.5);
     }
     
     .user-avatar {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
-        background: #5865F2;
+        width: 36px;
+        height: 36px;
+        border-radius: 6px;
+        background: linear-gradient(135deg, #00FFFF 0%, #00FF80 100%);
         display: flex;
         align-items: center;
         justify-content: center;
-        color: white;
-        font-weight: 600;
-        font-size: 14px;
+        color: #0A0E27;
+        font-weight: 700;
+        font-size: 16px;
         flex-shrink: 0;
         cursor: pointer;
+        border: 1px solid rgba(0, 255, 255, 0.4);
+        box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        transition: all 0.3s ease;
+    }
+    
+    .user-avatar:hover {
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
+        transform: scale(1.05);
     }
     
     .user-info {
@@ -340,124 +376,172 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        text-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
     }
     
     .user-status {
         font-size: 11px;
-        color: #B9BBBE;
+        color: #00FF80;
+        font-weight: 500;
     }
     
     .user-controls {
         display: flex;
-        gap: 4px;
+        gap: 6px;
         align-items: center;
     }
     
     .control-btn {
-        width: 32px;
-        height: 32px;
-        border: none;
-        background: transparent;
-        color: #B9BBBE;
+        width: 36px;
+        height: 36px;
+        border: 1px solid rgba(0, 255, 255, 0.3);
+        background: rgba(0, 255, 255, 0.1);
+        color: #00FFFF;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        border-radius: 4px;
-        transition: all 0.15s ease;
+        border-radius: 6px;
+        transition: all 0.3s ease;
         font-size: 16px;
     }
     
     .control-btn:hover {
-        background: #393C43;
-        color: #DCDDDE;
+        background: rgba(0, 255, 255, 0.2);
+        border-color: #00FFFF;
+        box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+        transform: translateY(-2px);
     }
     
     .control-btn.muted {
-        background: #ED4245;
-        color: #FFFFFF;
+        background: rgba(255, 0, 100, 0.2);
+        border-color: #FF0064;
+        color: #FF0064;
+        box-shadow: 0 0 15px rgba(255, 0, 100, 0.4);
     }
     
     .control-btn.muted:hover {
-        background: #C03537;
+        background: rgba(255, 0, 100, 0.3);
+        box-shadow: 0 0 20px rgba(255, 0, 100, 0.6);
     }
     
     .control-btn.deafened {
-        background: #FAA61A;
-        color: #FFFFFF;
+        background: rgba(255, 165, 0, 0.2);
+        border-color: #FFA500;
+        color: #FFA500;
+        box-shadow: 0 0 15px rgba(255, 165, 0, 0.4);
     }
     
     .control-btn.deafened:hover {
-        background: #D68910;
+        background: rgba(255, 165, 0, 0.3);
+        box-shadow: 0 0 20px rgba(255, 165, 0, 0.6);
     }
     
     .control-btn.disconnect {
-        background: #ED4245;
-        color: #FFFFFF;
+        background: rgba(255, 0, 100, 0.2);
+        border-color: #FF0064;
+        color: #FF0064;
     }
     
     .control-btn.disconnect:hover {
-        background: #C03537;
+        background: rgba(255, 0, 100, 0.3);
+        box-shadow: 0 0 20px rgba(255, 0, 100, 0.6);
     }
     
     /* ============================================
-       MAIN STAGE - Chat & Video
+       MAIN CHAT AREA - GLASSMORPHISM PANEL
        ============================================ */
     
-    .main-stage {
+    .chat-panel {
         flex: 1;
         display: flex;
         flex-direction: column;
-        background: #36393F;
+        background: rgba(10, 14, 39, 0.6);
+        backdrop-filter: blur(10px);
         min-width: 0;
+        position: relative;
     }
     
     /* Chat Header */
     .chat-header {
-        height: 48px;
-        padding: 0 16px;
+        height: 56px;
+        padding: 0 20px;
         display: flex;
         align-items: center;
-        border-bottom: 1px solid #202225;
-        box-shadow: 0 1px 0 rgba(4, 4, 5, 0.2), 0 1.5px 0 rgba(6, 6, 7, 0.05);
+        border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+        background: rgba(0, 255, 255, 0.05);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
         z-index: 2;
     }
     
+    .mobile-menu-toggle {
+        display: none;
+        width: 40px;
+        height: 40px;
+        border: 1px solid rgba(0, 255, 255, 0.3);
+        background: rgba(0, 255, 255, 0.1);
+        color: #00FFFF;
+        cursor: pointer;
+        border-radius: 6px;
+        margin-right: 12px;
+        align-items: center;
+        justify-content: center;
+        font-size: 18px;
+        transition: all 0.3s ease;
+    }
+    
+    .mobile-menu-toggle:hover {
+        background: rgba(0, 255, 255, 0.2);
+        box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+    }
+    
     .chat-header i {
-        color: #8E9297;
-        font-size: 24px;
-        margin-right: 8px;
+        color: #00FFFF;
+        font-size: 20px;
+        margin-right: 12px;
+        filter: drop-shadow(0 0 6px rgba(0, 255, 255, 0.6));
     }
     
     .chat-header h3 {
         font-size: 16px;
-        font-weight: 600;
-        color: #FFFFFF;
+        font-weight: 700;
+        color: #00FFFF;
         margin: 0;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
     }
     
     .chat-header .channel-topic {
-        font-size: 14px;
-        color: #8E9297;
-        margin-left: 8px;
+        font-size: 12px;
+        color: #90E0B0;
+        margin-left: 12px;
         font-weight: 400;
+        text-transform: none;
+        letter-spacing: 0;
     }
     
     .voice-indicator {
         margin-left: auto;
         display: flex;
         align-items: center;
-        gap: 6px;
-        padding: 4px 12px;
-        background: rgba(88, 101, 242, 0.1);
-        border-radius: 4px;
-        font-size: 13px;
-        color: #5865F2;
+        gap: 8px;
+        padding: 6px 14px;
+        background: rgba(0, 255, 128, 0.15);
+        border: 1px solid rgba(0, 255, 128, 0.3);
+        border-radius: 6px;
+        font-size: 12px;
+        color: #00FF80;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        box-shadow: 0 0 10px rgba(0, 255, 128, 0.3);
     }
     
     .voice-indicator i {
         font-size: 12px;
         margin: 0;
+        filter: drop-shadow(0 0 4px rgba(0, 255, 128, 0.6));
     }
     
     /* Video Grid Container */
@@ -466,8 +550,8 @@
         grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
         gap: 16px;
         padding: 16px;
-        background: #2F3136;
-        border-bottom: 1px solid #202225;
+        background: rgba(0, 0, 0, 0.3);
+        border-bottom: 1px solid rgba(0, 255, 255, 0.2);
         min-height: 200px;
         max-height: 400px;
         overflow-y: auto;
@@ -479,17 +563,17 @@
     
     .video-grid-item {
         position: relative;
-        background: #202225;
+        background: rgba(0, 0, 0, 0.5);
         border-radius: 8px;
         overflow: hidden;
-        border: 2px solid #2F3136;
+        border: 2px solid rgba(0, 255, 255, 0.3);
         aspect-ratio: 16 / 9;
         min-height: 150px;
     }
     
     .video-grid-item.speaking {
-        border-color: #5865F2;
-        box-shadow: 0 0 0 3px rgba(88, 101, 242, 0.2);
+        border-color: #00FFFF;
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
     }
     
     .video-grid-item video {
@@ -504,34 +588,38 @@
         bottom: 0;
         left: 0;
         right: 0;
-        background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
-        padding: 8px 12px;
+        background: linear-gradient(to top, rgba(10, 14, 39, 0.95), transparent);
+        padding: 10px 14px;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
+        border-top: 1px solid rgba(0, 255, 255, 0.2);
     }
     
     .video-grid-item-avatar {
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        background: #5865F2;
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        background: linear-gradient(135deg, #00FFFF 0%, #00FF80 100%);
         display: flex;
         align-items: center;
         justify-content: center;
-        color: white;
-        font-weight: 600;
-        font-size: 10px;
+        color: #0A0E27;
+        font-weight: 700;
+        font-size: 12px;
         flex-shrink: 0;
+        border: 1px solid rgba(0, 255, 255, 0.4);
+        box-shadow: 0 0 8px rgba(0, 255, 255, 0.3);
     }
     
     .video-grid-item-name {
         font-size: 13px;
-        font-weight: 500;
+        font-weight: 600;
         color: #FFFFFF;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
+        text-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
     }
     
     .video-grid-item-status {
@@ -543,14 +631,15 @@
     
     .video-grid-item-status.muted::before {
         content: '🔇';
-        font-size: 12px;
+        font-size: 14px;
     }
     
     .video-grid-item-status.speaking::before {
         content: '●';
-        color: #5865F2;
-        font-size: 12px;
-        animation: pulse 1.5s infinite;
+        color: #00FFFF;
+        font-size: 14px;
+        animation: pulse-dot 1.5s infinite;
+        filter: drop-shadow(0 0 6px rgba(0, 255, 255, 0.8));
     }
     
     /* Messages Area */
@@ -558,25 +647,27 @@
         flex: 1;
         overflow-y: auto;
         overflow-x: hidden;
-        padding: 16px;
-        background: #36393F;
+        padding: 20px;
+        background: transparent;
         min-height: 0;
     }
     
     .message-item {
         display: flex;
         gap: 16px;
-        padding: 4px 16px;
-        margin: 1px 0;
-        transition: background-color 0.15s ease;
+        padding: 12px 16px;
+        margin: 8px 0;
+        transition: all 0.3s ease;
+        max-width: 75%;
     }
     
     .message-item:hover {
-        background: rgba(4, 4, 5, 0.07);
+        transform: translateX(4px);
     }
     
-    /* Own messages - right aligned */
+    /* Own Messages - Right Aligned, Gradient Background */
     .message-item.own-message {
+        margin-left: auto;
         flex-direction: row-reverse;
     }
     
@@ -584,22 +675,57 @@
         text-align: right;
     }
     
-    .message-item.own-message .message-header {
-        justify-content: flex-end;
+    .message-item.own-message .message-bubble {
+        background: linear-gradient(135deg, #0066FF 0%, #8B00FF 100%);
+        border: 1px solid rgba(0, 255, 255, 0.3);
+        border-radius: 12px 12px 4px 12px; /* Sharp corner on left */
+        box-shadow: 
+            0 0 20px rgba(102, 0, 255, 0.4),
+            inset 0 0 20px rgba(0, 255, 255, 0.1);
+        position: relative;
+    }
+    
+    .message-item.own-message .message-bubble::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(135deg, rgba(0, 255, 255, 0.1) 0%, rgba(139, 0, 255, 0.1) 100%);
+        border-radius: inherit;
+        pointer-events: none;
+    }
+    
+    /* Other Messages - Left Aligned, Glass Background */
+    .message-item.other-message {
+        margin-right: auto;
+    }
+    
+    .message-item.other-message .message-bubble {
+        background: rgba(10, 14, 39, 0.6);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(0, 255, 255, 0.2);
+        border-radius: 12px 12px 12px 4px; /* Sharp corner on right */
+        box-shadow: 
+            0 0 15px rgba(0, 0, 0, 0.3),
+            inset 0 0 20px rgba(0, 255, 255, 0.05);
     }
     
     .message-avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background: #5865F2;
+        width: 44px;
+        height: 44px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #00FFFF 0%, #00FF80 100%);
         display: flex;
         align-items: center;
         justify-content: center;
-        color: white;
-        font-weight: 600;
-        font-size: 16px;
+        color: #0A0E27;
+        font-weight: 700;
+        font-size: 18px;
         flex-shrink: 0;
+        border: 1px solid rgba(0, 255, 255, 0.4);
+        box-shadow: 0 0 12px rgba(0, 255, 255, 0.4);
     }
     
     .message-content {
@@ -607,53 +733,70 @@
         min-width: 0;
     }
     
+    .message-bubble {
+        padding: 12px 16px;
+    }
+    
     .message-header {
         display: flex;
         align-items: baseline;
-        gap: 8px;
-        margin-bottom: 4px;
+        gap: 10px;
+        margin-bottom: 6px;
     }
     
     .message-author {
-        font-size: 16px;
-        font-weight: 500;
-        color: #FFFFFF;
+        font-size: 14px;
+        font-weight: 700;
+        color: #00FFFF;
         cursor: pointer;
+        text-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
     
     .message-author:hover {
-        text-decoration: underline;
+        text-shadow: 0 0 12px rgba(0, 255, 255, 0.8);
     }
     
     .message-time {
-        font-size: 12px;
-        color: #72767D;
+        font-size: 11px;
+        color: #90E0B0;
+        font-weight: 500;
     }
     
     .message-text {
-        font-size: 16px;
-        color: #DCDDDE;
-        line-height: 1.375;
+        font-size: 15px;
+        color: #E0E0E0;
+        line-height: 1.5;
         word-wrap: break-word;
     }
     
-    /* Input Area */
+    /* Input Area - Glowing Bar */
     .input-area {
-        padding: 0 16px 24px;
-        background: #36393F;
+        padding: 16px 20px;
+        background: rgba(10, 14, 39, 0.8);
+        backdrop-filter: blur(10px);
+        border-top: 1px solid rgba(0, 255, 255, 0.2);
     }
     
     .input-wrapper {
-        background: #40444B;
-        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.4);
+        border: 1px solid rgba(0, 255, 255, 0.3);
+        border-radius: 12px;
         padding: 0 16px;
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 12px;
+        transition: all 0.3s ease;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
     }
     
     .input-wrapper:focus-within {
-        background: #484C52;
+        border-color: #00FFFF;
+        box-shadow: 
+            0 0 30px rgba(0, 255, 255, 0.4),
+            inset 0 0 20px rgba(0, 255, 255, 0.1);
+        background: rgba(0, 0, 0, 0.5);
     }
     
     #chat-input {
@@ -661,24 +804,24 @@
         background: transparent;
         border: none;
         outline: none;
-        color: #DCDDDE;
-        font-size: 16px;
-        padding: 11px 0;
+        color: #E0E0E0;
+        font-size: 15px;
+        padding: 14px 0;
         font-family: inherit;
     }
     
     #chat-input::placeholder {
-        color: #72767D;
+        color: #6B7280;
     }
     
     .input-btn {
         background: transparent;
         border: none;
-        color: #B9BBBE;
+        color: #00FFFF;
         cursor: pointer;
         padding: 8px;
-        border-radius: 4px;
-        transition: all 0.15s ease;
+        border-radius: 6px;
+        transition: all 0.3s ease;
         font-size: 18px;
         display: flex;
         align-items: center;
@@ -686,52 +829,146 @@
     }
     
     .input-btn:hover {
-        color: #FFFFFF;
-        background: rgba(255, 255, 255, 0.1);
+        color: #00FF80;
+        background: rgba(0, 255, 255, 0.1);
+        box-shadow: 0 0 15px rgba(0, 255, 255, 0.3);
+        transform: scale(1.1);
     }
     
-    /* Scrollbars */
+    /* Scrollbars - Cyberpunk Style */
     .channel-list-container::-webkit-scrollbar,
     .messages-container::-webkit-scrollbar,
     .video-grid-container::-webkit-scrollbar {
-        width: 8px;
+        width: 6px;
+    }
+    
+    .channel-list-container::-webkit-scrollbar-track,
+    .messages-container::-webkit-scrollbar-track,
+    .video-grid-container::-webkit-scrollbar-track {
+        background: rgba(0, 0, 0, 0.2);
     }
     
     .channel-list-container::-webkit-scrollbar-thumb,
     .messages-container::-webkit-scrollbar-thumb,
     .video-grid-container::-webkit-scrollbar-thumb {
-        background: #202225;
-        border-radius: 4px;
+        background: rgba(0, 255, 255, 0.3);
+        border-radius: 3px;
     }
     
     .channel-list-container::-webkit-scrollbar-thumb:hover,
     .messages-container::-webkit-scrollbar-thumb:hover,
     .video-grid-container::-webkit-scrollbar-thumb:hover {
-        background: #1A1C1F;
+        background: rgba(0, 255, 255, 0.5);
+        box-shadow: 0 0 10px rgba(0, 255, 255, 0.4);
+    }
+    
+    /* ============================================
+       MOBILE RESPONSIVE - CRITICAL
+       ============================================ */
+    
+    @media (max-width: 768px) {
+        .gaming-hud-container {
+            flex-direction: column;
+        }
+        
+        /* Sidebar - Hidden by default, slide in from left */
+        .sidebar-panel {
+            position: fixed;
+            left: -260px;
+            top: 0;
+            height: 100vh;
+            width: 260px;
+            z-index: 1000;
+            transition: left 0.3s ease;
+            box-shadow: 2px 0 30px rgba(0, 0, 0, 0.8);
+        }
+        
+        .sidebar-panel.mobile-open {
+            left: 0;
+        }
+        
+        /* Overlay when sidebar is open */
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(4px);
+            z-index: 999;
+        }
+        
+        .sidebar-overlay.active {
+            display: block;
+        }
+        
+        /* Chat Panel - Full width on mobile */
+        .chat-panel {
+            width: 100%;
+        }
+        
+        /* Show mobile menu toggle */
+        .mobile-menu-toggle {
+            display: flex;
+        }
+        
+        /* User Panel - Fixed at bottom on mobile */
+        .user-panel {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            width: 100%;
+            z-index: 100;
+            border-top: 2px solid rgba(0, 255, 255, 0.3);
+            box-shadow: 0 -4px 30px rgba(0, 0, 0, 0.8);
+        }
+        
+        /* Adjust messages container padding for mobile */
+        .messages-container {
+            padding-bottom: 80px; /* Space for fixed user panel */
+        }
+        
+        /* Message items - smaller max-width on mobile */
+        .message-item {
+            max-width: 85%;
+        }
+        
+        /* Input area - adjust padding */
+        .input-area {
+            padding-bottom: 80px; /* Space for fixed user panel */
+        }
+    }
+    
+    /* ============================================
+       DESKTOP ENHANCEMENTS
+       ============================================ */
+    
+    @media (min-width: 769px) {
+        .sidebar-overlay {
+            display: none !important;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="discord-container">
-    <!-- LEFT RAIL - Server Icons -->
-    <div class="server-rail">
-        <div class="server-icon-rail active" title="{{ server.name }}">
-            {{ server.icon|default:"🎮" }}
-        </div>
-        <!-- Additional server icons can be added here -->
-    </div>
+<div class="gaming-hud-container">
+    <!-- Sidebar Overlay (Mobile Only) -->
+    <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
     
-    <!-- SIDEBAR - Channels & User Panel -->
-    <div class="sidebar">
+    <!-- SIDEBAR - Communication Hub -->
+    <div class="sidebar-panel" id="sidebar-panel">
         <!-- Sidebar Header -->
         <div class="sidebar-header">
-            <h2>{{ server.name }}</h2>
+            <h2>{{ server.name|upper }}</h2>
         </div>
         
         <!-- Channel List - Scrollable -->
         <div class="channel-list-container">
-            <!-- Text Channels Section - Django Template Loop -->
+            <!-- Text Channels Section - Django Loop -->
             <div class="channel-section">
                 <div class="channel-section-header">
                     <div class="channel-section-title">
@@ -760,18 +997,18 @@
                     <span>{{ channel.name }}</span>
                 </a>
                 {% empty %}
-                <div class="channel-item" style="color: #72767D; font-size: 14px; cursor: default; pointer-events: none;">
+                <div class="channel-item" style="color: #6B7280; cursor: default; pointer-events: none;">
                     {% trans "No text channels" %}
                 </div>
                 {% endfor %}
             </div>
             
-            <!-- Voice Channels Section - Django Template Loop -->
+            <!-- Voice Channels Section - Django Loop -->
             <div class="channel-section">
                 <div class="channel-section-header">
                     <div class="channel-section-title">
                         <i class="fas fa-volume-up"></i>
-                        <span>{% trans "VOICE CHANNELS" %}</span>
+                        <span>{% trans "VOICE ROOMS" %}</span>
                     </div>
                     {% if can_manage_channels %}
                     <button class="add-channel-btn" 
@@ -794,16 +1031,16 @@
                         <i class="fas fa-volume-up"></i>
                         <span>{{ channel.name }}</span>
                         {% if channel.user_limit > 0 %}
-                        <span style="font-size: 12px; color: #72767D; margin-left: 4px;">({{ channel.user_limit }})</span>
+                        <span style="font-size: 11px; color: #00FF80; margin-left: 6px;">[{{ channel.user_limit }}]</span>
                         {% endif %}
                     </a>
-                    <!-- Voice Participants List (nested) - Populated dynamically via WebSocket -->
+                    <!-- Voice Participants List (nested) - Populated dynamically -->
                     <ul class="voice-participants-list" id="voice-participants-{{ channel.slug }}" style="display: none;">
-                        <!-- Participants will be added here dynamically via JavaScript when users join -->
+                        <!-- Participants added dynamically via JavaScript -->
                     </ul>
                 </div>
                 {% empty %}
-                <div class="channel-item" style="color: #72767D; font-size: 14px; cursor: default; pointer-events: none;">
+                <div class="channel-item" style="color: #6B7280; cursor: default; pointer-events: none;">
                     {% trans "No voice channels" %}
                 </div>
                 {% endfor %}
@@ -816,8 +1053,8 @@
                 {{ user.username|first|upper }}
             </div>
             <div class="user-info">
-                <div class="user-name">{{ user.username }}</div>
-                <div class="user-status" id="user-status">{% trans "Online" %}</div>
+                <div class="user-name">{{ user.username|upper }}</div>
+                <div class="user-status" id="user-status">{% trans "ONLINE" %}</div>
             </div>
             <div class="user-controls">
                 <button class="control-btn" id="mute-btn" onclick="toggleMute()" title="{% trans 'Mute' %}">
@@ -836,12 +1073,15 @@
         </div>
     </div>
     
-    <!-- MAIN STAGE - Chat & Video -->
-    <div class="main-stage">
-        <!-- Chat Header - Dynamic Channel Info -->
+    <!-- MAIN CHAT AREA -->
+    <div class="chat-panel">
+        <!-- Chat Header -->
         <div class="chat-header">
+            <button class="mobile-menu-toggle" id="mobile-menu-toggle" onclick="toggleSidebar()">
+                <i class="fas fa-bars"></i>
+            </button>
             <i class="fas fa-hashtag" id="chat-header-icon"></i>
-            <h3 id="chat-channel-name">{% trans "Select a channel" %}</h3>
+            <h3 id="chat-channel-name">{% trans "SELECT CHANNEL" %}</h3>
             <span class="channel-topic" id="chat-channel-topic" style="display: none;"></span>
             <div class="voice-indicator" id="voice-indicator" style="display: none;">
                 <i class="fas fa-volume-up"></i>
@@ -854,11 +1094,11 @@
             <!-- Video streams added dynamically -->
         </div>
         
-        <!-- Messages Area - Messages loaded via API -->
+        <!-- Messages Area -->
         <div class="messages-container" id="messages-container">
-            <div style="text-align: center; padding: 48px; color: #72767D;">
-                <i class="fas fa-comments" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i>
-                <p>{% trans "Select a channel to start chatting" %}</p>
+            <div style="text-align: center; padding: 60px 20px; color: #6B7280;">
+                <i class="fas fa-comments" style="font-size: 64px; margin-bottom: 20px; opacity: 0.3; color: #00FFFF; filter: drop-shadow(0 0 20px rgba(0, 255, 255, 0.3));"></i>
+                <p style="font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">{% trans "SELECT A CHANNEL TO BEGIN" %}</p>
             </div>
         </div>
         
@@ -870,7 +1110,7 @@
                 </button>
                 <input type="text" 
                        id="chat-input" 
-                       placeholder="{% trans 'Message #channel' %}" 
+                       placeholder="{% trans 'Type message...' %}" 
                        autocomplete="off"
                        disabled>
                 <button class="input-btn" onclick="sendMessage()" title="{% trans 'Send message' %}">
@@ -886,26 +1126,26 @@
 <!-- Text Channel Modal -->
 <div class="modal fade" id="createTextChannelModal" tabindex="-1">
     <div class="modal-dialog">
-        <div class="modal-content" style="background: #2F3136; border: 1px solid #202225;">
-            <div class="modal-header" style="border-bottom: 1px solid #202225;">
-                <h5 class="modal-title" style="color: #FFFFFF;">{% trans "Create Text Channel" %}</h5>
+        <div class="modal-content" style="background: rgba(10, 14, 39, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(0, 255, 255, 0.3);">
+            <div class="modal-header" style="border-bottom: 1px solid rgba(0, 255, 255, 0.2);">
+                <h5 class="modal-title" style="color: #00FFFF; text-transform: uppercase; letter-spacing: 2px;">{% trans "CREATE TEXT CHANNEL" %}</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form method="post" action="{% url 'create_text_channel' server_slug=server.slug %}">
                 {% csrf_token %}
-                <div class="modal-body" style="color: #DCDDDE;">
+                <div class="modal-body" style="color: #E0E0E0;">
                     <div class="mb-3">
-                        <label class="form-label">{% trans "Channel Name" %}</label>
-                        <input type="text" class="form-control" name="name" required maxlength="100" style="background: #40444B; border: 1px solid #202225; color: #DCDDDE;">
+                        <label class="form-label" style="color: #00FF80; text-transform: uppercase; font-size: 11px; letter-spacing: 1px;">{% trans "CHANNEL NAME" %}</label>
+                        <input type="text" class="form-control" name="name" required maxlength="100" style="background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(0, 255, 255, 0.3); color: #E0E0E0; border-radius: 6px;">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">{% trans "Description" %}</label>
-                        <textarea class="form-control" name="description" rows="2" style="background: #40444B; border: 1px solid #202225; color: #DCDDDE;"></textarea>
+                        <label class="form-label" style="color: #00FF80; text-transform: uppercase; font-size: 11px; letter-spacing: 1px;">{% trans "DESCRIPTION" %}</label>
+                        <textarea class="form-control" name="description" rows="2" style="background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(0, 255, 255, 0.3); color: #E0E0E0; border-radius: 6px;"></textarea>
                     </div>
                 </div>
-                <div class="modal-footer" style="border-top: 1px solid #202225;">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="background: #40444B; border: 1px solid #202225; color: #DCDDDE;">{% trans "Cancel" %}</button>
-                    <button type="submit" class="btn btn-primary" style="background: #5865F2; border: none;">{% trans "Create" %}</button>
+                <div class="modal-footer" style="border-top: 1px solid rgba(0, 255, 255, 0.2);">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="background: rgba(255, 0, 100, 0.2); border: 1px solid rgba(255, 0, 100, 0.3); color: #FF0064;">{% trans "CANCEL" %}</button>
+                    <button type="submit" class="btn btn-primary" style="background: rgba(0, 255, 255, 0.2); border: 1px solid rgba(0, 255, 255, 0.3); color: #00FFFF;">{% trans "CREATE" %}</button>
                 </div>
             </form>
         </div>
@@ -915,26 +1155,26 @@
 <!-- Voice Channel Modal -->
 <div class="modal fade" id="createVoiceChannelModal" tabindex="-1">
     <div class="modal-dialog">
-        <div class="modal-content" style="background: #2F3136; border: 1px solid #202225;">
-            <div class="modal-header" style="border-bottom: 1px solid #202225;">
-                <h5 class="modal-title" style="color: #FFFFFF;">{% trans "Create Voice Channel" %}</h5>
+        <div class="modal-content" style="background: rgba(10, 14, 39, 0.95); backdrop-filter: blur(10px); border: 1px solid rgba(0, 255, 255, 0.3);">
+            <div class="modal-header" style="border-bottom: 1px solid rgba(0, 255, 255, 0.2);">
+                <h5 class="modal-title" style="color: #00FFFF; text-transform: uppercase; letter-spacing: 2px;">{% trans "CREATE VOICE CHANNEL" %}</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form method="post" action="{% url 'create_voice_channel' server_slug=server.slug %}">
                 {% csrf_token %}
-                <div class="modal-body" style="color: #DCDDDE;">
+                <div class="modal-body" style="color: #E0E0E0;">
                     <div class="mb-3">
-                        <label class="form-label">{% trans "Channel Name" %}</label>
-                        <input type="text" class="form-control" name="name" required maxlength="100" style="background: #40444B; border: 1px solid #202225; color: #DCDDDE;">
+                        <label class="form-label" style="color: #00FF80; text-transform: uppercase; font-size: 11px; letter-spacing: 1px;">{% trans "CHANNEL NAME" %}</label>
+                        <input type="text" class="form-control" name="name" required maxlength="100" style="background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(0, 255, 255, 0.3); color: #E0E0E0; border-radius: 6px;">
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">{% trans "User Limit" %} (0 = {% trans "Unlimited" %})</label>
-                        <input type="number" class="form-control" name="user_limit" value="0" min="0" max="99" style="background: #40444B; border: 1px solid #202225; color: #DCDDDE;">
+                        <label class="form-label" style="color: #00FF80; text-transform: uppercase; font-size: 11px; letter-spacing: 1px;">{% trans "USER LIMIT" %} (0 = {% trans "UNLIMITED" %})</label>
+                        <input type="number" class="form-control" name="user_limit" value="0" min="0" max="99" style="background: rgba(0, 0, 0, 0.4); border: 1px solid rgba(0, 255, 255, 0.3); color: #E0E0E0; border-radius: 6px;">
                     </div>
                 </div>
-                <div class="modal-footer" style="border-top: 1px solid #202225;">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="background: #40444B; border: 1px solid #202225; color: #DCDDDE;">{% trans "Cancel" %}</button>
-                    <button type="submit" class="btn btn-primary" style="background: #5865F2; border: none;">{% trans "Create" %}</button>
+                <div class="modal-footer" style="border-top: 1px solid rgba(0, 255, 255, 0.2);">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="background: rgba(255, 0, 100, 0.2); border: 1px solid rgba(255, 0, 100, 0.3); color: #FF0064;">{% trans "CANCEL" %}</button>
+                    <button type="submit" class="btn btn-primary" style="background: rgba(0, 255, 255, 0.2); border: 1px solid rgba(0, 255, 255, 0.3); color: #00FFFF;">{% trans "CREATE" %}</button>
                 </div>
             </form>
         </div>
@@ -946,7 +1186,7 @@
 {% block extra_js %}
 <script>
     // ============================================
-    // DISCORD CLONE - JAVASCRIPT
+    // CYBERPUNK GAMING HUD - JAVASCRIPT
     // ============================================
     
     // Global State
@@ -961,10 +1201,33 @@
     let videoGridItems = new Map();
     let voiceParticipants = new Map();
     let peerConnections = {};
+    let sidebarOpen = false;
     
     const currentUsername = '{{ user.username }}';
     const currentUserId = {{ user.id }};
     const iceServers = JSON.parse('{{ coturn_config_json|escapejs }}') || [{ urls: 'stun:stun.l.google.com:19302' }];
+    
+    // ============================================
+    // MOBILE SIDEBAR TOGGLE
+    // ============================================
+    
+    function toggleSidebar() {
+        const sidebar = document.getElementById('sidebar-panel');
+        const overlay = document.getElementById('sidebar-overlay');
+        
+        sidebarOpen = !sidebarOpen;
+        
+        if (sidebarOpen) {
+            sidebar.classList.add('mobile-open');
+            overlay.classList.add('active');
+        } else {
+            sidebar.classList.remove('mobile-open');
+            overlay.classList.remove('active');
+        }
+    }
+    
+    // Close sidebar when clicking overlay
+    document.getElementById('sidebar-overlay').addEventListener('click', toggleSidebar);
     
     // ============================================
     // CHANNEL MANAGEMENT
@@ -980,7 +1243,7 @@
             currentChannelId = channelElement.getAttribute('data-channel-id');
         }
         
-        // Update active state - Remove from all, add to current
+        // Update active state
         document.querySelectorAll('.channel-item').forEach(item => {
             item.classList.remove('active');
         });
@@ -989,20 +1252,25 @@
         }
         
         // Update chat header
-        document.getElementById('chat-channel-name').textContent = `# ${name}`;
+        document.getElementById('chat-channel-name').textContent = `# ${name.toUpperCase()}`;
         const topicEl = document.getElementById('chat-channel-topic');
-        topicEl.style.display = 'none'; // Topic will be loaded from API if available
+        topicEl.style.display = 'none';
         document.getElementById('chat-header-icon').className = 'fas fa-hashtag';
         
         // Update input placeholder
-        document.getElementById('chat-input').placeholder = `{% trans 'Message' %} #${name}`;
+        document.getElementById('chat-input').placeholder = `{% trans 'Type message...' %} #${name}`;
         document.getElementById('chat-input').disabled = false;
         
-        // Clear and show loading state
+        // Clear and show loading
         const messagesContainer = document.getElementById('messages-container');
-        messagesContainer.innerHTML = '<div style="text-align: center; padding: 48px; color: #72767D;"><i class="fas fa-spinner fa-spin" style="font-size: 24px;"></i></div>';
+        messagesContainer.innerHTML = '<div style="text-align: center; padding: 48px; color: #00FFFF;"><i class="fas fa-spinner fa-spin" style="font-size: 24px;"></i></div>';
         
-        // Connect WebSocket and load messages
+        // Close mobile sidebar if open
+        if (sidebarOpen) {
+            toggleSidebar();
+        }
+        
+        // Connect and load
         connectTextChannel();
         loadChatHistory();
     };
@@ -1021,10 +1289,15 @@
         
         // Show voice indicator
         document.getElementById('voice-indicator').style.display = 'flex';
-        document.getElementById('voice-indicator-name').textContent = name;
+        document.getElementById('voice-indicator-name').textContent = name.toUpperCase();
         
         // Show disconnect button
         document.getElementById('disconnect-btn').style.display = 'flex';
+        
+        // Close mobile sidebar if open
+        if (sidebarOpen) {
+            toggleSidebar();
+        }
         
         // Initialize voice
         initializeVoice();
@@ -1039,7 +1312,7 @@
         const btn = document.getElementById('mute-btn');
         btn.classList.toggle('muted', isMuted);
         btn.innerHTML = isMuted ? '<i class="fas fa-microphone-slash"></i>' : '<i class="fas fa-microphone"></i>';
-        // TODO: Implement actual mute logic with WebRTC
+        // TODO: Implement WebRTC mute logic
     }
     
     function toggleDeafen() {
@@ -1047,7 +1320,7 @@
         const btn = document.getElementById('deafen-btn');
         btn.classList.toggle('deafened', isDeafened);
         btn.innerHTML = isDeafened ? '<i class="fas fa-headphones-alt"></i>' : '<i class="fas fa-headphones"></i>';
-        // TODO: Implement actual deafen logic with WebRTC
+        // TODO: Implement WebRTC deafen logic
     }
     
     function disconnectVoice() {
@@ -1058,7 +1331,6 @@
     }
     
     function openSettings() {
-        // TODO: Open settings modal
         console.log('Settings clicked');
     }
     
@@ -1108,13 +1380,9 @@
             }
         };
         chatSocket.onclose = () => {
-            console.log('WebSocket disconnected');
             if (currentChannelType === 'text') {
                 setTimeout(connectTextChannel, 3000);
             }
-        };
-        chatSocket.onerror = (error) => {
-            console.error('WebSocket error:', error);
         };
     }
     
@@ -1137,21 +1405,19 @@
                         );
                     });
                 } else {
-                    container.innerHTML = '<div style="text-align: center; padding: 48px; color: #72767D;"><i class="fas fa-comments" style="font-size: 48px; margin-bottom: 16px; opacity: 0.5;"></i><p>{% trans "No messages yet. Be the first to say hello!" %}</p></div>';
+                    container.innerHTML = '<div style="text-align: center; padding: 60px 20px; color: #6B7280;"><i class="fas fa-comments" style="font-size: 64px; margin-bottom: 20px; opacity: 0.3; color: #00FFFF;"></i><p style="text-transform: uppercase; letter-spacing: 2px;">{% trans "NO MESSAGES YET" %}</p></div>';
                 }
                 scrollToBottom();
             })
             .catch(error => {
                 console.error('Error loading chat history:', error);
-                const container = document.getElementById('messages-container');
-                container.innerHTML = '<div style="text-align: center; padding: 48px; color: #ED4245;"><i class="fas fa-exclamation-triangle" style="font-size: 24px; margin-bottom: 16px;"></i><p>{% trans "Error loading messages" %}</p></div>';
             });
     }
     
     function addMessage(username, content, timestamp, userId = null) {
         const container = document.getElementById('messages-container');
         
-        // Remove empty state if present
+        // Remove empty state
         if (container.querySelector('div[style*="text-align: center"]')) {
             container.innerHTML = '';
         }
@@ -1163,6 +1429,8 @@
         const isOwnMessage = (userId && userId === currentUserId) || (username === currentUsername);
         if (isOwnMessage) {
             div.classList.add('own-message');
+        } else {
+            div.classList.add('other-message');
         }
         
         const avatarLetter = username.charAt(0).toUpperCase();
@@ -1172,11 +1440,13 @@
         div.innerHTML = `
             <div class="message-avatar">${avatarLetter}</div>
             <div class="message-content">
-                <div class="message-header">
-                    <span class="message-author">${escapeHtml(username)}</span>
-                    <span class="message-time">${timeStr}</span>
+                <div class="message-bubble">
+                    <div class="message-header">
+                        <span class="message-author">${escapeHtml(username).toUpperCase()}</span>
+                        <span class="message-time">${timeStr}</span>
+                    </div>
+                    <div class="message-text">${escapeHtml(content)}</div>
                 </div>
-                <div class="message-text">${escapeHtml(content)}</div>
             </div>
         `;
         container.appendChild(div);
@@ -1224,7 +1494,6 @@
         const grid = document.getElementById('video-grid');
         if (!grid) return;
         
-        // Remove existing video if any
         removeVideoFromGrid(username);
         
         const item = document.createElement('div');
@@ -1236,7 +1505,7 @@
             <video autoplay playsInline></video>
             <div class="video-grid-item-info">
                 <div class="video-grid-item-avatar">${avatarLetter}</div>
-                <div class="video-grid-item-name">${escapeHtml(username)}${isScreenShare ? ' (Screen)' : ''}</div>
+                <div class="video-grid-item-name">${escapeHtml(username).toUpperCase()}${isScreenShare ? ' [SCREEN]' : ''}</div>
                 <div class="video-grid-item-status"></div>
             </div>
         `;
@@ -1299,10 +1568,10 @@
         const avatarColor = `hsl(${username.charCodeAt(0) * 137.508 % 360}, 70%, 50%)`;
         
         item.innerHTML = `
-            <div class="voice-participant-mini-avatar ${isMuted ? 'muted' : ''}" style="background: ${avatarColor};">
+            <div class="voice-participant-mini-avatar ${isMuted ? 'muted' : ''}" style="background: linear-gradient(135deg, ${avatarColor} 0%, #00FF80 100%);">
                 ${avatarLetter}
             </div>
-            <div class="voice-participant-mini-name">${escapeHtml(username)}</div>
+            <div class="voice-participant-mini-name">${escapeHtml(username).toUpperCase()}</div>
             <div class="voice-participant-mini-status"></div>
         `;
         
@@ -1353,6 +1622,6 @@
     window.openVoiceChannel = openVoiceChannel;
     window.addVoiceParticipant = addVoiceParticipant;
     window.removeVoiceParticipant = removeVoiceParticipant;
+    window.toggleSidebar = toggleSidebar;
 </script>
 {% endblock %}
-
