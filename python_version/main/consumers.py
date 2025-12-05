@@ -290,10 +290,10 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
             return None
 
     @database_sync_to_async
-    def get_server_slug_from_channel(self, channel_object):
-        """Get the server slug from a channel object"""
+    def get_server_id_from_channel(self, channel_object):
+        """Get the server ID (primary key) from a channel object - avoids slug collision"""
         if hasattr(channel_object, 'server') and channel_object.server:
-            return channel_object.server.slug
+            return channel_object.server.id
         return None
 
     async def connect(self):
@@ -336,9 +336,9 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
             self.channel_group_name = f'voice_{self.channel_slug}'
         self.user_id = str(self.scope["user"].id)
 
-        # Get server slug for global presence broadcasting
-        self.server_slug = await self.get_server_slug_from_channel(self.channel_object)
-        self.server_presence_group = f'server_presence_{self.server_slug}' if self.server_slug else None
+        # Get server ID for global presence broadcasting (uses ID to avoid slug collision)
+        self.server_id = await self.get_server_id_from_channel(self.channel_object)
+        self.server_presence_group = f'server_presence_{self.server_id}' if self.server_id else None
 
         # 4. Join the group (channel)
         await self.channel_layer.group_add(
@@ -604,11 +604,25 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
 # For global voice presence updates (shows who's in voice channels)
 # ============================================
 
+# In-memory presence store: {server_id: {channel_slug: {user_id: {username, ...}}}}
+# NOTE: In production with multiple workers, use Redis instead
+voice_presence_store = {}
+
+
 class ServerPresenceConsumer(AsyncJsonWebsocketConsumer):
     """
     Lightweight WebSocket consumer for server-wide presence updates.
     Allows users to see who is in voice channels without joining them.
     """
+    
+    @database_sync_to_async
+    def get_server_by_id(self, server_id):
+        """Get server by ID to validate it exists"""
+        from .models import Server
+        try:
+            return Server.objects.get(id=server_id)
+        except Server.DoesNotExist:
+            return None
     
     async def connect(self):
         if self.scope["user"].is_anonymous:
@@ -616,17 +630,24 @@ class ServerPresenceConsumer(AsyncJsonWebsocketConsumer):
             await self.close()
             return
         
-        # Get server slug from query string
+        # Get server_id from query string (using ID to avoid slug collision)
         query_params = parse_qs(self.scope['query_string'].decode('utf-8'))
-        server_slug = query_params.get('server_slug', [None])[0]
+        server_id = query_params.get('server_id', [None])[0]
         
-        if not server_slug:
-            logger.warning("[Presence] No server_slug provided. Rejecting connection.")
+        if not server_id:
+            logger.warning("[Presence] No server_id provided. Rejecting connection.")
             await self.close()
             return
         
-        self.server_slug = server_slug
-        self.server_presence_group = f'server_presence_{server_slug}'
+        # Validate server exists
+        server = await self.get_server_by_id(server_id)
+        if not server:
+            logger.warning(f"[Presence] Server {server_id} not found. Rejecting connection.")
+            await self.close()
+            return
+        
+        self.server_id = str(server_id)
+        self.server_presence_group = f'server_presence_{self.server_id}'
         self.user_id = str(self.scope["user"].id)
         self.username = self.scope["user"].username
         
@@ -638,6 +659,28 @@ class ServerPresenceConsumer(AsyncJsonWebsocketConsumer):
         
         logger.info(f"[Presence] User {self.username} joined presence group: {self.server_presence_group}")
         await self.accept()
+        
+        # Send current presence state to the newly connected user
+        await self.send_current_presence()
+    
+    async def send_current_presence(self):
+        """Send current voice presence state to the client on connect"""
+        if self.server_id not in voice_presence_store:
+            voice_presence_store[self.server_id] = {}
+        
+        current_presence = voice_presence_store[self.server_id]
+        
+        # Send all current participants
+        await self.send_json({
+            "type": "presence_snapshot",
+            "presence": {
+                channel_slug: [
+                    {"user_id": uid, "username": info["username"]}
+                    for uid, info in users.items()
+                ]
+                for channel_slug, users in current_presence.items()
+            }
+        })
     
     async def disconnect(self, close_code):
         if hasattr(self, 'server_presence_group'):
@@ -648,27 +691,44 @@ class ServerPresenceConsumer(AsyncJsonWebsocketConsumer):
         await super().disconnect(close_code)
     
     async def receive_json(self, content, **kwargs):
-        # This consumer only receives presence updates, no user input expected
         signal_type = content.get("signal_type")
         
         if signal_type == 'request_presence':
             # Client requesting current voice presence state
-            # This would require storing presence in Redis or memory
-            # For now, we just acknowledge
-            await self.send_json({
-                "type": "presence_ack",
-                "message": "Presence request received"
-            })
+            await self.send_current_presence()
     
     # Handler for voice presence updates (from VoiceChatConsumer)
     async def voice_presence_update(self, event):
+        action = event["action"]
+        channel_slug = event["channel_slug"]
+        user_id = event["user_id"]
+        username = event["username"]
+        
+        # Update in-memory presence store
+        if self.server_id not in voice_presence_store:
+            voice_presence_store[self.server_id] = {}
+        
+        server_presence = voice_presence_store[self.server_id]
+        
+        if action == "joined":
+            if channel_slug not in server_presence:
+                server_presence[channel_slug] = {}
+            server_presence[channel_slug][user_id] = {"username": username}
+        elif action == "left":
+            if channel_slug in server_presence and user_id in server_presence[channel_slug]:
+                del server_presence[channel_slug][user_id]
+                # Clean up empty channels
+                if not server_presence[channel_slug]:
+                    del server_presence[channel_slug]
+        
+        # Forward the update to the client
         await self.send_json({
             "type": "voice_presence_update",
-            "action": event["action"],  # "joined" or "left"
-            "channel_slug": event["channel_slug"],
+            "action": action,
+            "channel_slug": channel_slug,
             "channel_name": event["channel_name"],
-            "user_id": event["user_id"],
-            "username": event["username"],
+            "user_id": user_id,
+            "username": username,
         })
 
 

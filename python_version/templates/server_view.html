@@ -481,6 +481,119 @@
         50% { transform: scale(1.3); opacity: 0.8; }
     }
     
+    /* ============================================
+       VOLUME CONTROL POPOVER
+       ============================================ */
+    
+    .volume-popover {
+        background: rgba(10, 14, 39, 0.95);
+        border: 1px solid rgba(0, 255, 255, 0.4);
+        border-radius: 8px;
+        padding: 12px;
+        min-width: 180px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 20px rgba(0, 255, 255, 0.2);
+        backdrop-filter: blur(10px);
+        animation: popover-appear 0.2s ease-out;
+    }
+    
+    @keyframes popover-appear {
+        from {
+            opacity: 0;
+            transform: translateX(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+    
+    .volume-popover-header {
+        font-size: 12px;
+        color: #00FF80;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-bottom: 10px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid rgba(0, 255, 128, 0.2);
+    }
+    
+    .volume-popover-body {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .volume-slider-popover {
+        flex: 1;
+        -webkit-appearance: none;
+        appearance: none;
+        height: 6px;
+        background: rgba(0, 255, 128, 0.2);
+        border-radius: 3px;
+        cursor: pointer;
+    }
+    
+    .volume-slider-popover::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 16px;
+        height: 16px;
+        background: linear-gradient(135deg, #00FFFF 0%, #00FF80 100%);
+        border-radius: 50%;
+        cursor: pointer;
+        box-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
+        transition: transform 0.15s ease;
+    }
+    
+    .volume-slider-popover::-webkit-slider-thumb:hover {
+        transform: scale(1.2);
+    }
+    
+    .volume-slider-popover::-moz-range-thumb {
+        width: 16px;
+        height: 16px;
+        background: linear-gradient(135deg, #00FFFF 0%, #00FF80 100%);
+        border: none;
+        border-radius: 50%;
+        cursor: pointer;
+        box-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
+    }
+    
+    .volume-value {
+        font-size: 12px;
+        color: #00FFFF;
+        font-weight: 600;
+        min-width: 40px;
+        text-align: right;
+    }
+    
+    .voice-participant-volume-control {
+        position: absolute;
+        right: 5px;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+    
+    .volume-slider {
+        width: 60px;
+        height: 4px;
+        -webkit-appearance: none;
+        appearance: none;
+        background: rgba(0, 255, 128, 0.3);
+        border-radius: 2px;
+        cursor: pointer;
+    }
+    
+    .volume-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 12px;
+        height: 12px;
+        background: #00FF80;
+        border-radius: 50%;
+        cursor: pointer;
+    }
+    
     /* User Control Panel - Sticky Bottom */
     .user-panel {
         height: 60px;
@@ -1756,6 +1869,10 @@
     const currentUsername = '{{ user.username }}';
     const currentUserId = '{{ user.id }}';
     const serverSlug = '{{ server.slug }}';
+    const serverId = '{{ server.id }}';  // Use ID for presence to avoid slug collision
+    
+    // Volume control map: user_id -> volume (0-1)
+    const userVolumes = new Map();
     
     // ============================================
     // WEBRTC ICE SERVER CONFIGURATION
@@ -2433,20 +2550,29 @@
             const stream = event.streams[0];
             
             if (event.track.kind === 'video') {
-                // Add video to the grid
-                addVideoToGrid(peerUsername, stream, false);
+                // Add video to the grid (with user ID for volume control)
+                addVideoToGrid(peerUsername, stream, false, peerId);
             } else if (event.track.kind === 'audio') {
                 // Create audio element for remote audio
                 let audioEl = document.getElementById(`audio-${peerId}`);
                 if (!audioEl) {
                     audioEl = document.createElement('audio');
                     audioEl.id = `audio-${peerId}`;
+                    audioEl.dataset.userId = peerId;  // For volume control
+                    audioEl.dataset.username = peerUsername;
                     audioEl.autoplay = true;
                     audioEl.playsInline = true;
                     audioEl.style.display = 'none';
                     document.body.appendChild(audioEl);
                 }
                 audioEl.srcObject = stream;
+                
+                // Apply any saved volume setting
+                const savedVolume = userVolumes.get(peerId);
+                if (savedVolume !== undefined) {
+                    audioEl.volume = savedVolume;
+                    console.log(`[WebRTC] Applied saved volume ${savedVolume} to ${peerUsername}`);
+                }
                 
                 // Try to play (may need user interaction)
                 audioEl.play().then(() => {
@@ -2912,7 +3038,7 @@
     // VIDEO GRID FUNCTIONS
     // ============================================
     
-    function addVideoToGrid(username, stream, isScreenShare = false) {
+    function addVideoToGrid(username, stream, isScreenShare = false, userId = null) {
         const grid = document.getElementById('video-grid');
         if (!grid) return;
         
@@ -2926,12 +3052,15 @@
         }
         item.id = `video-${username}`;
         item.dataset.username = username;
+        if (userId) {
+            item.dataset.userId = userId;
+        }
         
         const avatarLetter = username.charAt(0).toUpperCase();
         const avatarColor = `hsl(${username.charCodeAt(0) * 137.508 % 360}, 70%, 50%)`;
         
         item.innerHTML = `
-            <video autoplay playsInline ${isScreenShare ? '' : 'muted'}></video>
+            <video autoplay playsInline ${isScreenShare ? '' : 'muted'} ${userId ? `data-user-id="${userId}"` : ''}></video>
             <div class="video-grid-item-info">
                 <div class="video-grid-item-avatar" style="background: linear-gradient(135deg, ${avatarColor} 0%, #00FF80 100%);">
                     ${avatarLetter}
@@ -2946,6 +3075,14 @@
         
         const video = item.querySelector('video');
         video.srcObject = stream;
+        
+        // Apply saved volume if exists
+        if (userId) {
+            const savedVolume = userVolumes.get(userId);
+            if (savedVolume !== undefined) {
+                video.volume = savedVolume;
+            }
+        }
         
         // Handle video load error
         video.onerror = (e) => {
@@ -3155,8 +3292,8 @@
     
     function connectPresenceSocket() {
         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        // Connect to dedicated presence endpoint for server-wide voice presence updates
-        const wsUrl = `${wsProtocol}//${window.location.host}/ws/presence/?server_slug=${serverSlug}`;
+        // Connect to dedicated presence endpoint using server ID (not slug) to avoid collision
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws/presence/?server_id=${serverId}`;
         
         console.log('[Presence] Connecting to:', wsUrl);
         presenceSocket = new WebSocket(wsUrl);
@@ -3169,7 +3306,11 @@
             try {
                 const data = JSON.parse(e.data);
                 console.log('[Presence] Received:', data.type);
-                if (data.type === 'voice_presence_update') {
+                
+                if (data.type === 'presence_snapshot') {
+                    // Initial presence state on connect - render all current voice users
+                    handlePresenceSnapshot(data.presence);
+                } else if (data.type === 'voice_presence_update') {
                     handleVoicePresenceUpdate(data);
                 }
             } catch (err) {
@@ -3190,6 +3331,28 @@
         };
     }
     
+    function handlePresenceSnapshot(presence) {
+        // presence = { channel_slug: [{user_id, username}, ...], ... }
+        console.log('[Presence] Received initial presence snapshot:', presence);
+        
+        // Clear existing global presence
+        globalVoicePresence.clear();
+        
+        // Render all users in all voice channels
+        for (const [channelSlug, users] of Object.entries(presence)) {
+            globalVoicePresence.set(channelSlug, new Set());
+            
+            for (const user of users) {
+                globalVoicePresence.get(channelSlug).add(user.username);
+                
+                // Add to sidebar (except self - self is added when joining)
+                if (user.username !== currentUsername) {
+                    addVoiceParticipantToSidebar(channelSlug, user.user_id, user.username);
+                }
+            }
+        }
+    }
+    
     function handleVoicePresenceUpdate(data) {
         console.log('[Presence] Voice presence update:', data);
         const { action, channel_slug, username, user_id } = data;
@@ -3203,42 +3366,64 @@
         
         if (action === 'joined') {
             channelUsers.add(username);
-            // Add to sidebar if not already there
-            if (username !== currentUsername) {
-                addVoiceParticipantToSidebar(channel_slug, username);
+            // Add to sidebar if not already there (use user_id as unique key)
+            if (user_id !== currentUserId) {
+                addVoiceParticipantToSidebar(channel_slug, user_id, username);
             }
         } else if (action === 'left') {
             channelUsers.delete(username);
-            // Remove from sidebar
-            removeVoiceParticipantFromSidebar(channel_slug, username);
+            // Remove from sidebar using user_id
+            removeVoiceParticipantFromSidebar(channel_slug, user_id);
         }
     }
     
-    function addVoiceParticipantToSidebar(channelSlug, username) {
+    function addVoiceParticipantToSidebar(channelSlug, userId, username) {
         const list = document.getElementById(`voice-participants-${channelSlug}`);
         if (!list) return;
         
-        // Check if already exists
-        if (document.getElementById(`global-participant-${channelSlug}-${username}`)) return;
+        // CRITICAL: Check if user already exists using user_id (prevents duplicates)
+        const existingElement = document.getElementById(`user-avatar-${userId}`);
+        if (existingElement) {
+            console.log(`[Presence] User ${username} (${userId}) already in sidebar, skipping duplicate`);
+            return;
+        }
         
         list.style.display = 'flex';
         
+        const avatarColor = `hsl(${username.charCodeAt(0) * 137.508 % 360}, 70%, 50%)`;
+        
         const item = document.createElement('li');
         item.className = 'voice-participant-mini';
-        item.id = `global-participant-${channelSlug}-${username}`;
+        item.id = `user-avatar-${userId}`;  // Use user_id for unique identification
+        item.dataset.userId = userId;
         item.dataset.username = username;
+        item.dataset.channelSlug = channelSlug;
         
         item.innerHTML = `
-            <div class="voice-participant-mini-avatar">${username.charAt(0).toUpperCase()}</div>
-            <span class="voice-participant-mini-name">${username}</span>
+            <div class="voice-participant-mini-avatar" style="background: linear-gradient(135deg, ${avatarColor} 0%, #00FF80 100%);">
+                ${escapeHtml(username.charAt(0).toUpperCase())}
+            </div>
+            <span class="voice-participant-mini-name">${escapeHtml(username)}</span>
             <span class="voice-participant-mini-status"></span>
+            <div class="voice-participant-volume-control" style="display: none;">
+                <input type="range" min="0" max="1" step="0.1" value="1" 
+                       class="volume-slider" data-user-id="${userId}"
+                       title="Volume: ${username}">
+            </div>
         `;
+        
+        // Add click handler for volume control popover
+        item.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            showVolumeControl(item, userId, username);
+        });
         
         list.appendChild(item);
     }
     
-    function removeVoiceParticipantFromSidebar(channelSlug, username) {
-        const item = document.getElementById(`global-participant-${channelSlug}-${username}`);
+    function removeVoiceParticipantFromSidebar(channelSlug, userId) {
+        // Find by user_id
+        const item = document.getElementById(`user-avatar-${userId}`);
         if (item) {
             item.remove();
         }
@@ -3247,6 +3432,100 @@
         const list = document.getElementById(`voice-participants-${channelSlug}`);
         if (list && list.children.length === 0) {
             list.style.display = 'none';
+        }
+    }
+    
+    // ============================================
+    // INDIVIDUAL VOLUME CONTROL
+    // ============================================
+    
+    let activeVolumePopover = null;
+    
+    function showVolumeControl(participantElement, userId, username) {
+        // Close any existing popover
+        if (activeVolumePopover) {
+            activeVolumePopover.remove();
+            activeVolumePopover = null;
+        }
+        
+        const currentVolume = userVolumes.get(userId) || 1;
+        
+        const popover = document.createElement('div');
+        popover.className = 'volume-popover';
+        popover.innerHTML = `
+            <div class="volume-popover-header">
+                <span>🔊 ${escapeHtml(username)}</span>
+            </div>
+            <div class="volume-popover-body">
+                <input type="range" min="0" max="1" step="0.05" value="${currentVolume}" 
+                       class="volume-slider-popover" id="volume-slider-${userId}">
+                <span class="volume-value">${Math.round(currentVolume * 100)}%</span>
+            </div>
+        `;
+        
+        // Position popover near the participant
+        const rect = participantElement.getBoundingClientRect();
+        popover.style.position = 'fixed';
+        popover.style.top = `${rect.top}px`;
+        popover.style.left = `${rect.right + 10}px`;
+        popover.style.zIndex = '10000';
+        
+        document.body.appendChild(popover);
+        activeVolumePopover = popover;
+        
+        // Bind slider events
+        const slider = popover.querySelector('.volume-slider-popover');
+        const valueDisplay = popover.querySelector('.volume-value');
+        
+        slider.addEventListener('input', (e) => {
+            const volume = parseFloat(e.target.value);
+            userVolumes.set(userId, volume);
+            valueDisplay.textContent = `${Math.round(volume * 100)}%`;
+            
+            // Apply volume to the audio element for this user
+            applyUserVolume(userId, volume);
+        });
+        
+        // Close popover on click outside
+        setTimeout(() => {
+            document.addEventListener('click', closeVolumePopover);
+        }, 100);
+    }
+    
+    function closeVolumePopover(e) {
+        if (activeVolumePopover && !activeVolumePopover.contains(e.target)) {
+            activeVolumePopover.remove();
+            activeVolumePopover = null;
+            document.removeEventListener('click', closeVolumePopover);
+        }
+    }
+    
+    function applyUserVolume(userId, volume) {
+        let applied = false;
+        
+        // Find the audio element for this user (by data-user-id attribute)
+        let audioElement = document.querySelector(`audio[data-user-id="${userId}"]`);
+        if (!audioElement) {
+            // Fallback: find by id pattern audio-{userId}
+            audioElement = document.getElementById(`audio-${userId}`);
+        }
+        
+        if (audioElement) {
+            audioElement.volume = volume;
+            applied = true;
+            console.log(`[Volume] Set audio volume for user ${userId} to ${Math.round(volume * 100)}%`);
+        }
+        
+        // Also update any video elements with audio
+        let videoElement = document.querySelector(`video[data-user-id="${userId}"]`);
+        if (videoElement) {
+            videoElement.volume = volume;
+            applied = true;
+            console.log(`[Volume] Set video volume for user ${userId} to ${Math.round(volume * 100)}%`);
+        }
+        
+        if (!applied) {
+            console.log(`[Volume] No audio/video elements found for user ${userId} - will apply when stream is received`);
         }
     }
     
