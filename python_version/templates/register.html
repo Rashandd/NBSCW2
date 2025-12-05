@@ -4,6 +4,9 @@
 
 {% block title %}{% trans "Register" %} - Rashigo{% endblock %}
 
+{# Hide navbar on register page #}
+{% block navbar %}{% endblock %}
+
 {% block extra_head %}
 <!-- Cloudflare Turnstile -->
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
@@ -15,13 +18,18 @@
        CYBERPUNK REGISTER PAGE
        ============================================ */
     
-    main.container {
+    body {
+        background: #0A0E27 !important;
+    }
+    
+    main.container, main.full-width {
         max-width: 100% !important;
         padding: 0 !important;
+        margin: 0 !important;
     }
     
     .register-page {
-        min-height: calc(100vh - 60px);
+        min-height: 100vh;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -442,15 +450,19 @@
             </div>
             
             <!-- Cloudflare Turnstile -->
-            {% if turnstile_site_key %}
             <div class="turnstile-container">
+                {% if turnstile_site_key %}
                 <div class="cf-turnstile" 
                      data-sitekey="{{ turnstile_site_key }}"
                      data-theme="dark"
                      data-callback="onTurnstileSuccess"
                      data-expired-callback="onTurnstileExpired"></div>
+                {% else %}
+                <div class="turnstile-placeholder" style="padding: 10px; text-align: center; color: #8B9DC3; font-size: 12px;">
+                    <i class="fas fa-shield-alt" style="color: #00FF80;"></i> {% trans "Security verification" %}
+                </div>
+                {% endif %}
             </div>
-            {% endif %}
             
             <button type="submit" class="btn-register" id="submitBtn">
                 <span class="btn-text">

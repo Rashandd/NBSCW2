@@ -1740,6 +1740,7 @@
     let currentChannelType = null;
     let currentChannelId = null;
     let currentVoiceChannelSlug = null;
+    let currentVoiceChannelName = null;
     let chatSocket = null;
     let voiceSocket = null;
     let isMuted = false;
@@ -1869,7 +1870,9 @@
     };
     
     window.openVoiceChannel = function(slug, name) {
+        console.log('[Voice] Opening voice channel:', slug, name);
         currentVoiceChannelSlug = slug;
+        currentVoiceChannelName = name;
         
         // Update active state
         document.querySelectorAll('.channel-item').forEach(item => {
@@ -1908,16 +1911,34 @@
     // ============================================
     
     function toggleMute() {
+        console.log('[Voice] Toggle mute called, current state:', isMuted);
+        
+        // Check if we're in a voice channel
+        if (!currentVoiceChannelSlug) {
+            console.log('[Voice] Not in voice channel, mute ignored');
+            return;
+        }
+        
         isMuted = !isMuted;
+        console.log('[Voice] New mute state:', isMuted);
+        
         const btn = document.getElementById('mute-btn');
-        btn.classList.toggle('muted', isMuted);
-        btn.innerHTML = isMuted ? '<i class="fas fa-microphone-slash"></i>' : '<i class="fas fa-microphone"></i>';
+        if (btn) {
+            btn.classList.toggle('muted', isMuted);
+            btn.innerHTML = isMuted ? '<i class="fas fa-microphone-slash"></i>' : '<i class="fas fa-microphone"></i>';
+            btn.title = isMuted ? '{% trans "Unmute" %}' : '{% trans "Mute" %}';
+        }
         
         // Mute/unmute local audio tracks
         if (localStream) {
-            localStream.getAudioTracks().forEach(track => {
+            const audioTracks = localStream.getAudioTracks();
+            console.log('[Voice] Found', audioTracks.length, 'audio tracks to', isMuted ? 'mute' : 'unmute');
+            audioTracks.forEach(track => {
                 track.enabled = !isMuted;
+                console.log('[Voice] Track', track.label, 'enabled:', track.enabled);
             });
+        } else {
+            console.warn('[Voice] No local stream available for mute toggle');
         }
         
         // Update own participant state in sidebar
@@ -1925,31 +1946,55 @@
         
         // Notify others via WebSocket
         if (voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
+            console.log('[Voice] Sending mute state to server');
             voiceSocket.send(JSON.stringify({
                 signal_type: 'mic_state_change',
                 data: { muted: isMuted }
             }));
+        } else {
+            console.warn('[Voice] Cannot send mute state - WebSocket not connected');
         }
     }
     
     function toggleDeafen() {
+        console.log('[Voice] Toggle deafen called, current state:', isDeafened);
+        
+        // Check if we're in a voice channel
+        if (!currentVoiceChannelSlug) {
+            console.log('[Voice] Not in voice channel, deafen ignored');
+            return;
+        }
+        
         isDeafened = !isDeafened;
+        console.log('[Voice] New deafen state:', isDeafened);
+        
         const btn = document.getElementById('deafen-btn');
-        btn.classList.toggle('deafened', isDeafened);
-        btn.innerHTML = isDeafened ? '<i class="fas fa-headphones-alt"></i>' : '<i class="fas fa-headphones"></i>';
+        if (btn) {
+            btn.classList.toggle('deafened', isDeafened);
+            btn.innerHTML = isDeafened ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-headphones"></i>';
+            btn.title = isDeafened ? '{% trans "Undeafen" %}' : '{% trans "Deafen" %}';
+        }
         
         // Deafen: mute all remote audio elements
-        document.querySelectorAll('audio[id^="audio-"]').forEach(audio => {
+        const audioElements = document.querySelectorAll('audio[id^="audio-"]');
+        console.log('[Voice] Found', audioElements.length, 'audio elements to', isDeafened ? 'mute' : 'unmute');
+        audioElements.forEach(audio => {
             audio.muted = isDeafened;
         });
         
         // Also mute self when deafened
         if (isDeafened && !isMuted) {
+            console.log('[Voice] Auto-muting due to deafen');
             toggleMute();
         }
     }
     
     function disconnectVoice() {
+        console.log('[Voice] Disconnecting from voice channel');
+        
+        // Clear voice state from sessionStorage
+        clearVoiceState();
+        
         // Close voice WebSocket
         if (voiceSocket) {
             voiceSocket.close();
@@ -1968,9 +2013,15 @@
         }
         
         currentVoiceChannelSlug = null;
-        document.getElementById('voice-indicator').style.display = 'none';
-        document.getElementById('disconnect-btn').style.display = 'none';
-        document.getElementById('screen-share-btn').style.display = 'none';
+        currentVoiceChannelName = null;
+        
+        const voiceIndicator = document.getElementById('voice-indicator');
+        const disconnectBtn = document.getElementById('disconnect-btn');
+        const screenShareBtn = document.getElementById('screen-share-btn');
+        
+        if (voiceIndicator) voiceIndicator.style.display = 'none';
+        if (disconnectBtn) disconnectBtn.style.display = 'none';
+        if (screenShareBtn) screenShareBtn.style.display = 'none';
         
         // Stop screen share if active
         if (isScreenSharing && screenStream) {
@@ -2150,6 +2201,13 @@
             console.log('[Voice] ✅ WebSocket connected');
             console.log('[Voice] Current user:', currentUsername, 'ID:', currentUserId);
             
+            // Save voice state for mini box on other pages
+            saveVoiceState(true);
+            
+            // Hide mini box since we're on the server view page
+            const miniBox = document.getElementById('voice-mini-box');
+            if (miniBox) miniBox.style.display = 'none';
+            
             // Notify others that we joined (handled by backend on connect)
             // But we can send additional info if needed
             voiceSocket.send(JSON.stringify({
@@ -2201,19 +2259,21 @@
     }
     
     function handleVoiceMessage(data) {
-        console.log('Voice message received:', data.type || data.event);
+        console.log('[Voice] Message received:', data.type || data.event, data);
         
         switch (data.type) {
             case 'system_notification':
                 if (data.event === 'member_joined') {
                     // Another user joined the voice channel
-                    if (data.username !== currentUsername) {
+                    if (data.username !== currentUsername && data.sender_id !== currentUserId) {
+                        console.log(`[Voice] User ${data.username} joined, adding to participants`);
                         addVoiceParticipant(data.username, false, false, false);
                         // Initiate WebRTC connection as the existing user
                         createPeerConnection(data.sender_id, data.username, true);
                     }
                 } else if (data.event === 'member_left') {
                     // User left the voice channel
+                    console.log(`[Voice] User ${data.username} left`);
                     removeVoiceParticipant(data.username);
                     closePeerConnection(data.sender_id);
                     removeVideoFromGrid(data.username);
@@ -2221,10 +2281,19 @@
                 break;
                 
             case 'webrtc_signal':
+                // When receiving an offer, the sender is already in the voice channel
+                // Make sure they're in the participant list
+                if (data.signal_type === 'offer' && data.username && data.username !== currentUsername) {
+                    if (!voiceParticipants.has(data.username)) {
+                        console.log(`[Voice] Adding ${data.username} from WebRTC offer`);
+                        addVoiceParticipant(data.username, false, false, false);
+                    }
+                }
                 handleWebRTCSignal(data);
                 break;
                 
             case 'mic_state_change':
+                console.log(`[Voice] ${data.username} mute state: ${data.muted}`);
                 updateParticipantMuteState(data.username, data.muted);
                 break;
                 
@@ -2232,6 +2301,13 @@
                 // Handle camera enable/disable
                 if (!data.enabled) {
                     removeVideoFromGrid(data.username);
+                }
+                break;
+                
+            case 'member_status_update':
+                // Handle mute/deafen status updates
+                if (data.status && data.username !== currentUsername) {
+                    updateParticipantMuteState(data.username, data.status.muted);
                 }
                 break;
         }
@@ -2997,6 +3073,45 @@
             e.preventDefault();
             sendMessage();
         }
+    });
+    
+    // ============================================
+    // VOICE STATE PERSISTENCE (for mini box)
+    // ============================================
+    
+    function saveVoiceState(connected) {
+        const state = {
+            connected: connected,
+            channelName: currentVoiceChannelName || 'Voice Channel',
+            serverSlug: '{{ server.slug }}',
+            channelSlug: currentVoiceChannelSlug,
+            muted: isMuted,
+            deafened: isDeafened
+        };
+        sessionStorage.setItem('voiceState', JSON.stringify(state));
+        console.log('[Voice] State saved:', state);
+    }
+    
+    function clearVoiceState() {
+        sessionStorage.removeItem('voiceState');
+        console.log('[Voice] State cleared');
+    }
+    
+    // Warn before leaving page if in voice
+    window.addEventListener('beforeunload', (event) => {
+        if (currentVoiceChannelSlug && voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
+            // Save current state before leaving
+            saveVoiceState(true);
+            // Note: Most browsers ignore custom messages now
+            event.preventDefault();
+            event.returnValue = '';
+        }
+    });
+    
+    // Hide mini box when on this page
+    document.addEventListener('DOMContentLoaded', () => {
+        const miniBox = document.getElementById('voice-mini-box');
+        if (miniBox) miniBox.style.display = 'none';
     });
     
     // Expose functions globally

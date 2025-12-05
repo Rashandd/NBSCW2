@@ -422,6 +422,241 @@
         document.documentElement.setAttribute('data-theme', 'dark');
     </script>
 
+    <!-- Voice Chat Mini Box (Global) -->
+    <div id="voice-mini-box" class="voice-mini-box" style="display: none;">
+        <div class="voice-mini-header">
+            <span class="voice-mini-status">
+                <span class="voice-mini-dot"></span>
+                <span id="voice-mini-channel">Voice Connected</span>
+            </span>
+            <button class="voice-mini-close" onclick="returnToVoice()" title="{% trans 'Return to Voice' %}">
+                <i class="fas fa-external-link-alt"></i>
+            </button>
+        </div>
+        <div class="voice-mini-controls">
+            <button class="voice-mini-btn" id="voice-mini-mute" onclick="toggleMiniMute()" title="{% trans 'Mute' %}">
+                <i class="fas fa-microphone"></i>
+            </button>
+            <button class="voice-mini-btn" id="voice-mini-deafen" onclick="toggleMiniDeafen()" title="{% trans 'Deafen' %}">
+                <i class="fas fa-headphones"></i>
+            </button>
+            <button class="voice-mini-btn disconnect" onclick="disconnectMiniVoice()" title="{% trans 'Disconnect' %}">
+                <i class="fas fa-phone-slash"></i>
+            </button>
+        </div>
+    </div>
+    
+    <style>
+        /* Voice Mini Box - Global */
+        .voice-mini-box {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(10, 14, 39, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-radius: 12px;
+            padding: 12px 16px;
+            min-width: 200px;
+            box-shadow: 
+                0 10px 40px rgba(0, 0, 0, 0.5),
+                0 0 20px rgba(0, 255, 255, 0.2);
+            z-index: 10000;
+            animation: slideInUp 0.3s ease;
+        }
+        
+        @keyframes slideInUp {
+            from { transform: translateY(100px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        
+        .voice-mini-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+        
+        .voice-mini-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #00FF80;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .voice-mini-dot {
+            width: 8px;
+            height: 8px;
+            background: #00FF80;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(0, 255, 128, 0.6);
+            animation: pulse-dot 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes pulse-dot {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.6; transform: scale(1.1); }
+        }
+        
+        .voice-mini-close {
+            background: none;
+            border: none;
+            color: #00FFFF;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: 4px;
+            transition: all 0.2s ease;
+        }
+        
+        .voice-mini-close:hover {
+            background: rgba(0, 255, 255, 0.1);
+        }
+        
+        .voice-mini-controls {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .voice-mini-btn {
+            flex: 1;
+            padding: 8px;
+            background: rgba(0, 255, 255, 0.1);
+            border: 1px solid rgba(0, 255, 255, 0.2);
+            border-radius: 8px;
+            color: #00FFFF;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .voice-mini-btn:hover {
+            background: rgba(0, 255, 255, 0.2);
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+        
+        .voice-mini-btn.muted {
+            background: rgba(255, 0, 100, 0.2);
+            border-color: rgba(255, 0, 100, 0.3);
+            color: #FF0064;
+        }
+        
+        .voice-mini-btn.disconnect {
+            background: rgba(255, 0, 100, 0.2);
+            border-color: rgba(255, 0, 100, 0.3);
+            color: #FF0064;
+        }
+        
+        .voice-mini-btn.disconnect:hover {
+            background: rgba(255, 0, 100, 0.3);
+        }
+    </style>
+    
+    <script>
+        // Global voice state management
+        window.voiceState = {
+            connected: false,
+            channelName: '',
+            serverSlug: '',
+            channelSlug: '',
+            muted: false,
+            deafened: false
+        };
+        
+        // Check if there's an active voice session on page load
+        function checkVoiceSession() {
+            const savedState = sessionStorage.getItem('voiceState');
+            if (savedState) {
+                try {
+                    const state = JSON.parse(savedState);
+                    // Only show mini box if we're NOT on the server view page
+                    const isServerView = document.querySelector('.gaming-hud-container');
+                    if (state.connected && !isServerView) {
+                        showVoiceMiniBox(state);
+                    }
+                } catch (e) {
+                    console.error('Error parsing voice state:', e);
+                }
+            }
+        }
+        
+        function showVoiceMiniBox(state) {
+            const miniBox = document.getElementById('voice-mini-box');
+            const channelLabel = document.getElementById('voice-mini-channel');
+            
+            if (miniBox && channelLabel) {
+                window.voiceState = state;
+                channelLabel.textContent = state.channelName || 'Voice Connected';
+                miniBox.style.display = 'block';
+                
+                // Update button states
+                updateMiniButtonStates();
+            }
+        }
+        
+        function hideVoiceMiniBox() {
+            const miniBox = document.getElementById('voice-mini-box');
+            if (miniBox) {
+                miniBox.style.display = 'none';
+            }
+        }
+        
+        function updateMiniButtonStates() {
+            const muteBtn = document.getElementById('voice-mini-mute');
+            const deafenBtn = document.getElementById('voice-mini-deafen');
+            
+            if (muteBtn) {
+                muteBtn.classList.toggle('muted', window.voiceState.muted);
+                muteBtn.innerHTML = window.voiceState.muted ? 
+                    '<i class="fas fa-microphone-slash"></i>' : 
+                    '<i class="fas fa-microphone"></i>';
+            }
+            
+            if (deafenBtn) {
+                deafenBtn.classList.toggle('muted', window.voiceState.deafened);
+                deafenBtn.innerHTML = window.voiceState.deafened ? 
+                    '<i class="fas fa-volume-mute"></i>' : 
+                    '<i class="fas fa-headphones"></i>';
+            }
+        }
+        
+        function returnToVoice() {
+            if (window.voiceState.serverSlug) {
+                window.location.href = '/server/' + window.voiceState.serverSlug + '/';
+            }
+        }
+        
+        function toggleMiniMute() {
+            window.voiceState.muted = !window.voiceState.muted;
+            sessionStorage.setItem('voiceState', JSON.stringify(window.voiceState));
+            updateMiniButtonStates();
+            // Note: Actual audio muting would need to be handled via postMessage to server_view iframe or reconnection
+        }
+        
+        function toggleMiniDeafen() {
+            window.voiceState.deafened = !window.voiceState.deafened;
+            if (window.voiceState.deafened && !window.voiceState.muted) {
+                window.voiceState.muted = true;
+            }
+            sessionStorage.setItem('voiceState', JSON.stringify(window.voiceState));
+            updateMiniButtonStates();
+        }
+        
+        function disconnectMiniVoice() {
+            window.voiceState = { connected: false };
+            sessionStorage.removeItem('voiceState');
+            hideVoiceMiniBox();
+        }
+        
+        // Run on page load
+        document.addEventListener('DOMContentLoaded', checkVoiceSession);
+    </script>
+
     {% block extra_js %}{% endblock %}
 
 </body>
