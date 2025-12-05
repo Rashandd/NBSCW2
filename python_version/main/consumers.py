@@ -361,6 +361,19 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
         if isinstance(self.channel_object, VoiceChannel):
             logger.info(f"Notifying voice channel group that {username} joined")
             
+            # CRITICAL: Directly update the global presence store (for snapshot on new connections)
+            server_id_str = str(self.server_id) if self.server_id else None
+            if server_id_str:
+                if server_id_str not in voice_presence_store:
+                    voice_presence_store[server_id_str] = {}
+                if self.channel_slug not in voice_presence_store[server_id_str]:
+                    voice_presence_store[server_id_str][self.channel_slug] = {}
+                voice_presence_store[server_id_str][self.channel_slug][self.user_id] = {
+                    "username": self.scope["user"].username,
+                    "channel_name": self.channel_object.name,
+                }
+                logger.info(f"[Presence Store] Added {self.scope['user'].username} to channel {self.channel_slug}")
+            
             # Notify the specific voice channel group
             await self.channel_layer.group_send(
                 self.channel_group_name,
@@ -395,6 +408,17 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
             
             # 2. Notify channel that user left (only for voice channels)
             if hasattr(self, 'channel_object') and isinstance(self.channel_object, VoiceChannel):
+                # CRITICAL: Remove user from global presence store FIRST
+                server_id_str = str(self.server_id) if hasattr(self, 'server_id') and self.server_id else None
+                if server_id_str and server_id_str in voice_presence_store:
+                    if self.channel_slug in voice_presence_store[server_id_str]:
+                        if self.user_id in voice_presence_store[server_id_str][self.channel_slug]:
+                            del voice_presence_store[server_id_str][self.channel_slug][self.user_id]
+                            logger.info(f"[Presence Store] Removed {self.scope['user'].username} from channel {self.channel_slug}")
+                        # Clean up empty channel
+                        if not voice_presence_store[server_id_str][self.channel_slug]:
+                            del voice_presence_store[server_id_str][self.channel_slug]
+                
                 await self.channel_layer.group_send(
                     self.channel_group_name,
                     {
@@ -664,22 +688,26 @@ class ServerPresenceConsumer(AsyncJsonWebsocketConsumer):
         await self.send_current_presence()
     
     async def send_current_presence(self):
-        """Send current voice presence state to the client on connect"""
+        """Send current voice presence state to the client on connect (initial_state pattern)"""
         if self.server_id not in voice_presence_store:
             voice_presence_store[self.server_id] = {}
         
         current_presence = voice_presence_store[self.server_id]
         
-        # Send all current participants
+        # Build data structure: { channel_slug: [user1, user2, ...], ... }
+        data = {}
+        for channel_slug, users in current_presence.items():
+            data[channel_slug] = [
+                {"user_id": uid, "username": info["username"]}
+                for uid, info in users.items()
+            ]
+        
+        logger.info(f"[Presence] Sending initial_state to {self.username}: {len(data)} channels with users")
+        
+        # Send all current participants using "initial_state" type
         await self.send_json({
-            "type": "presence_snapshot",
-            "presence": {
-                channel_slug: [
-                    {"user_id": uid, "username": info["username"]}
-                    for uid, info in users.items()
-                ]
-                for channel_slug, users in current_presence.items()
-            }
+            "type": "initial_state",
+            "data": data
         })
     
     async def disconnect(self, close_code):

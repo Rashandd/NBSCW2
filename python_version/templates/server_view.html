@@ -476,6 +476,45 @@
         animation: pulse-dot 1.5s infinite;
     }
     
+    /* Inline volume slider in participant list */
+    .voice-participant-mini .volume-slider {
+        width: 50px;
+        height: 4px;
+        margin-left: auto;
+        -webkit-appearance: none;
+        appearance: none;
+        background: rgba(0, 255, 128, 0.3);
+        border-radius: 2px;
+        cursor: pointer;
+        opacity: 0.6;
+        transition: opacity 0.2s, width 0.2s;
+    }
+    
+    .voice-participant-mini:hover .volume-slider {
+        opacity: 1;
+        width: 60px;
+    }
+    
+    .voice-participant-mini .volume-slider::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 10px;
+        height: 10px;
+        background: #00FF80;
+        border-radius: 50%;
+        cursor: pointer;
+        box-shadow: 0 0 6px rgba(0, 255, 128, 0.6);
+    }
+    
+    .voice-participant-mini .volume-slider::-moz-range-thumb {
+        width: 10px;
+        height: 10px;
+        background: #00FF80;
+        border: none;
+        border-radius: 50%;
+        cursor: pointer;
+        box-shadow: 0 0 6px rgba(0, 255, 128, 0.6);
+    }
+    
     @keyframes pulse-dot {
         0%, 100% { transform: scale(1); opacity: 1; }
         50% { transform: scale(1.3); opacity: 0.8; }
@@ -2096,8 +2135,8 @@
             btn.title = isDeafened ? '{% trans "Undeafen" %}' : '{% trans "Deafen" %}';
         }
         
-        // Deafen: mute all remote audio elements
-        const audioElements = document.querySelectorAll('audio[id^="audio-"]');
+        // Deafen: mute all remote audio elements (using strict ID pattern: remote-audio-{USER_ID})
+        const audioElements = document.querySelectorAll('audio[id^="remote-audio-"]');
         console.log('[Voice] Found', audioElements.length, 'audio elements to', isDeafened ? 'mute' : 'unmute');
         audioElements.forEach(audio => {
             audio.muted = isDeafened;
@@ -2553,17 +2592,19 @@
                 // Add video to the grid (with user ID for volume control)
                 addVideoToGrid(peerUsername, stream, false, peerId);
             } else if (event.track.kind === 'audio') {
-                // Create audio element for remote audio
-                let audioEl = document.getElementById(`audio-${peerId}`);
+                // Create audio element for remote audio with strict ID pattern: remote-audio-{USER_ID}
+                const audioElementId = `remote-audio-${peerId}`;
+                let audioEl = document.getElementById(audioElementId);
                 if (!audioEl) {
                     audioEl = document.createElement('audio');
-                    audioEl.id = `audio-${peerId}`;
-                    audioEl.dataset.userId = peerId;  // For volume control
+                    audioEl.id = audioElementId;  // Strict ID: remote-audio-{USER_ID}
+                    audioEl.dataset.userId = peerId;
                     audioEl.dataset.username = peerUsername;
                     audioEl.autoplay = true;
                     audioEl.playsInline = true;
                     audioEl.style.display = 'none';
                     document.body.appendChild(audioEl);
+                    console.log(`[WebRTC] Created audio element: ${audioElementId}`);
                 }
                 audioEl.srcObject = stream;
                 
@@ -2571,12 +2612,12 @@
                 const savedVolume = userVolumes.get(peerId);
                 if (savedVolume !== undefined) {
                     audioEl.volume = savedVolume;
-                    console.log(`[WebRTC] Applied saved volume ${savedVolume} to ${peerUsername}`);
+                    console.log(`[WebRTC] Applied saved volume ${Math.round(savedVolume * 100)}% to ${peerUsername}`);
                 }
                 
                 // Try to play (may need user interaction)
                 audioEl.play().then(() => {
-                    console.log(`[WebRTC] ✅ Audio playing from ${peerUsername}`);
+                    console.log(`[WebRTC] ✅ Audio playing from ${peerUsername} (element: ${audioElementId})`);
                 }).catch(err => {
                     console.warn(`[WebRTC] Audio autoplay blocked for ${peerUsername}:`, err);
                 });
@@ -2831,11 +2872,12 @@
             delete iceCandidateQueues[peerId];
         }
         
-        // Remove audio element
-        const audioEl = document.getElementById(`audio-${peerId}`);
+        // Remove audio element (strict ID pattern: remote-audio-{USER_ID})
+        const audioEl = document.getElementById(`remote-audio-${peerId}`);
         if (audioEl) {
             audioEl.srcObject = null;
             audioEl.remove();
+            console.log(`[WebRTC] Removed audio element: remote-audio-${peerId}`);
         }
         
         console.log(`[WebRTC] Peer connection closed for ${peerId}`);
@@ -2959,7 +3001,7 @@
         // CRITICAL FIX: Ensure content is always a string, not an object
         let messageText = '';
         if (typeof content === 'string') {
-            messageText = content;
+            messageText = content.content;
         } else if (content && typeof content === 'object') {
             // If content is an object, extract the actual text
             messageText = content.content || content.message || content.text || JSON.stringify(content);
@@ -3307,9 +3349,9 @@
                 const data = JSON.parse(e.data);
                 console.log('[Presence] Received:', data.type);
                 
-                if (data.type === 'presence_snapshot') {
+                if (data.type === 'initial_state') {
                     // Initial presence state on connect - render all current voice users
-                    handlePresenceSnapshot(data.presence);
+                    handleInitialState(data.data);
                 } else if (data.type === 'voice_presence_update') {
                     handleVoicePresenceUpdate(data);
                 }
@@ -3331,26 +3373,55 @@
         };
     }
     
-    function handlePresenceSnapshot(presence) {
-        // presence = { channel_slug: [{user_id, username}, ...], ... }
-        console.log('[Presence] Received initial presence snapshot:', presence);
+    function handleInitialState(data) {
+        // data = { channel_slug: [{user_id, username}, ...], ... }
+        console.log('[Presence] Received initial_state:', data);
         
-        // Clear existing global presence
+        // Clear existing global presence and sidebar
         globalVoicePresence.clear();
+        clearAllPresenceFromSidebar();
+        
+        if (!data || Object.keys(data).length === 0) {
+            console.log('[Presence] No active voice users on this server');
+            return;
+        }
         
         // Render all users in all voice channels
-        for (const [channelSlug, users] of Object.entries(presence)) {
+        for (const [channelSlug, users] of Object.entries(data)) {
+            if (!users || !Array.isArray(users)) continue;
+            
             globalVoicePresence.set(channelSlug, new Set());
             
             for (const user of users) {
+                if (!user.user_id || !user.username) continue;
+                
                 globalVoicePresence.get(channelSlug).add(user.username);
                 
                 // Add to sidebar (except self - self is added when joining)
-                if (user.username !== currentUsername) {
+                if (user.user_id !== currentUserId && user.username !== currentUsername) {
                     addVoiceParticipantToSidebar(channelSlug, user.user_id, user.username);
                 }
             }
         }
+        
+        console.log(`[Presence] Populated sidebar with users from ${Object.keys(data).length} voice channels`);
+    }
+    
+    function clearAllPresenceFromSidebar() {
+        // Remove all global-presence items from sidebar
+        document.querySelectorAll('[id^="user-avatar-"]').forEach(el => {
+            // Only remove if it's from global presence (not from local voice participant list)
+            if (el.closest('.voice-participants-list')) {
+                el.remove();
+            }
+        });
+        
+        // Hide empty participant lists
+        document.querySelectorAll('.voice-participants-list').forEach(list => {
+            if (list.children.length === 0) {
+                list.style.display = 'none';
+            }
+        });
     }
     
     function handleVoicePresenceUpdate(data) {
@@ -3379,7 +3450,10 @@
     
     function addVoiceParticipantToSidebar(channelSlug, userId, username) {
         const list = document.getElementById(`voice-participants-${channelSlug}`);
-        if (!list) return;
+        if (!list) {
+            console.warn(`[Presence] Participant list not found for channel: ${channelSlug}`);
+            return;
+        }
         
         // CRITICAL: Check if user already exists using user_id (prevents duplicates)
         const existingElement = document.getElementById(`user-avatar-${userId}`);
@@ -3391,6 +3465,7 @@
         list.style.display = 'flex';
         
         const avatarColor = `hsl(${username.charCodeAt(0) * 137.508 % 360}, 70%, 50%)`;
+        const currentVolume = userVolumes.get(userId) || 1;
         
         const item = document.createElement('li');
         item.className = 'voice-participant-mini';
@@ -3405,20 +3480,40 @@
             </div>
             <span class="voice-participant-mini-name">${escapeHtml(username)}</span>
             <span class="voice-participant-mini-status"></span>
-            <div class="voice-participant-volume-control" style="display: none;">
-                <input type="range" min="0" max="1" step="0.1" value="1" 
-                       class="volume-slider" data-user-id="${userId}"
-                       title="Volume: ${username}">
-            </div>
+            <input type="range" min="0" max="1" step="0.1" value="${currentVolume}" 
+                   class="volume-slider" data-target-user="${userId}"
+                   title="Volume: ${escapeHtml(username)}">
         `;
         
-        // Add click handler for volume control popover
+        // STRICT VOLUME BINDING: Bind volume slider to remote-audio-{USER_ID}
+        const volumeSlider = item.querySelector('.volume-slider');
+        if (volumeSlider) {
+            volumeSlider.addEventListener('input', function() {
+                const targetUserId = this.dataset.targetUser;
+                const newVolume = parseFloat(this.value);
+                
+                // Save to local map
+                userVolumes.set(targetUserId, newVolume);
+                
+                // Apply to audio element
+                const audioEl = document.getElementById(`remote-audio-${targetUserId}`);
+                if (audioEl) {
+                    audioEl.volume = newVolume;
+                    console.log(`[Volume] Set volume for ${username} to ${Math.round(newVolume * 100)}%`);
+                } else {
+                    console.warn(`[Volume] Audio element not found: remote-audio-${targetUserId}`);
+                }
+            });
+        }
+        
+        // Add click handler for volume control popover (right-click)
         item.addEventListener('contextmenu', (e) => {
             e.preventDefault();
             showVolumeControl(item, userId, username);
         });
         
         list.appendChild(item);
+        console.log(`[Presence] Added ${username} (${userId}) to channel ${channelSlug}`);
     }
     
     function removeVoiceParticipantFromSidebar(channelSlug, userId) {
@@ -3458,7 +3553,7 @@
             </div>
             <div class="volume-popover-body">
                 <input type="range" min="0" max="1" step="0.05" value="${currentVolume}" 
-                       class="volume-slider-popover" id="volume-slider-${userId}">
+                       class="volume-slider-popover" data-target-user="${userId}">
                 <span class="volume-value">${Math.round(currentVolume * 100)}%</span>
             </div>
         `;
@@ -3473,17 +3568,28 @@
         document.body.appendChild(popover);
         activeVolumePopover = popover;
         
-        // Bind slider events
+        // STRICT VOLUME BINDING: Bind slider to remote-audio-{USER_ID}
         const slider = popover.querySelector('.volume-slider-popover');
         const valueDisplay = popover.querySelector('.volume-value');
         
-        slider.addEventListener('input', (e) => {
-            const volume = parseFloat(e.target.value);
-            userVolumes.set(userId, volume);
+        slider.addEventListener('input', function() {
+            const targetUserId = this.dataset.targetUser;
+            const volume = parseFloat(this.value);
+            
+            // Update display
             valueDisplay.textContent = `${Math.round(volume * 100)}%`;
             
-            // Apply volume to the audio element for this user
-            applyUserVolume(userId, volume);
+            // Save to local map
+            userVolumes.set(targetUserId, volume);
+            
+            // Apply to audio element directly using strict ID pattern
+            const audioEl = document.getElementById(`remote-audio-${targetUserId}`);
+            if (audioEl) {
+                audioEl.volume = volume;
+                console.log(`[Volume] Set volume for ${username} to ${Math.round(volume * 100)}%`);
+            } else {
+                console.error(`[Volume] Audio element not found for user: ${targetUserId} (expected: remote-audio-${targetUserId})`);
+            }
         });
         
         // Close popover on click outside
@@ -3503,21 +3609,19 @@
     function applyUserVolume(userId, volume) {
         let applied = false;
         
-        // Find the audio element for this user (by data-user-id attribute)
-        let audioElement = document.querySelector(`audio[data-user-id="${userId}"]`);
-        if (!audioElement) {
-            // Fallback: find by id pattern audio-{userId}
-            audioElement = document.getElementById(`audio-${userId}`);
-        }
+        // Find the audio element using strict ID pattern: remote-audio-{USER_ID}
+        const audioElement = document.getElementById(`remote-audio-${userId}`);
         
         if (audioElement) {
             audioElement.volume = volume;
             applied = true;
-            console.log(`[Volume] Set audio volume for user ${userId} to ${Math.round(volume * 100)}%`);
+            console.log(`[Volume] Set audio volume for user ${userId} to ${Math.round(volume * 100)}% (element: remote-audio-${userId})`);
+        } else {
+            console.warn(`[Volume] Audio element not found for user: ${userId} (expected: remote-audio-${userId})`);
         }
         
         // Also update any video elements with audio
-        let videoElement = document.querySelector(`video[data-user-id="${userId}"]`);
+        const videoElement = document.querySelector(`video[data-user-id="${userId}"]`);
         if (videoElement) {
             videoElement.volume = volume;
             applied = true;
