@@ -269,6 +269,41 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
                     return None
 
     @database_sync_to_async
+    def get_chat_history(self, limit=50):
+        """Fetch last N messages from the database for this text channel"""
+        if not hasattr(self, 'channel_object') or not isinstance(self.channel_object, TextChannel):
+            return []
+        
+        try:
+            messages = ChatMessage.objects.filter(
+                channel=self.channel_object
+            ).select_related('user').order_by('-created_at')[:limit]
+            
+            # Return as list of dicts (reversed to show oldest first)
+            return [
+                {
+                    "message_id": str(msg.id),
+                    "username": msg.user.username,
+                    "user_id": str(msg.user.id),
+                    "content": msg.content,
+                    "timestamp": msg.created_at.isoformat() if msg.created_at else None,
+                }
+                for msg in reversed(list(messages))
+            ]
+        except Exception as e:
+            logger.error(f"Error fetching chat history: {e}")
+            return []
+    
+    async def send_chat_history(self):
+        """Send chat history to the client on connect"""
+        history = await self.get_chat_history(50)
+        logger.info(f"Sending {len(history)} messages as chat history")
+        await self.send_json({
+            "type": "chat_history",
+            "messages": history
+        })
+
+    @database_sync_to_async
     def save_chat_message(self, content):
         """Save chat message to database (only for TextChannel)"""
         if not hasattr(self, 'channel_object') or not self.channel_object:
@@ -356,9 +391,13 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
         logger.info(f"User {username} joined {channel_type} group: {self.channel_group_name}")
         await self.accept()
 
-        # 5. Notify group that user joined (only for voice channels)
+        # 5a. For TEXT channels: Send chat history on connect
+        if isinstance(self.channel_object, TextChannel):
+            await self.send_chat_history()
+        
+        # 5b. Notify group that user joined (only for voice channels)
         # Don't send "joined room" message for text channels
-        if isinstance(self.channel_object, VoiceChannel):
+        elif isinstance(self.channel_object, VoiceChannel):
             logger.info(f"Notifying voice channel group that {username} joined")
             
             # CRITICAL: Directly update the global presence store (for snapshot on new connections)

@@ -241,6 +241,81 @@
         margin-bottom: 32px;
     }
     
+    /* Global Activity Feed Styles */
+    .activity-section {
+        margin-top: 16px;
+        border-top: 1px solid rgba(0, 255, 255, 0.1);
+        padding-top: 16px;
+    }
+    
+    .activity-feed {
+        max-height: 200px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .activity-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+        padding: 20px;
+        color: #6B7280;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .activity-empty i {
+        font-size: 24px;
+        opacity: 0.4;
+        color: #00FFFF;
+    }
+    
+    .activity-item {
+        padding: 8px 10px;
+        background: rgba(0, 255, 128, 0.05);
+        border-left: 2px solid #00FF80;
+        border-radius: 0 4px 4px 0;
+        font-size: 11px;
+        color: #8B9DC3;
+        animation: activity-slide 0.3s ease-out;
+    }
+    
+    @keyframes activity-slide {
+        from {
+            opacity: 0;
+            transform: translateX(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+    
+    .activity-item-user {
+        color: #00FFFF;
+        font-weight: 600;
+        margin-right: 4px;
+    }
+    
+    .activity-item-channel {
+        color: #6B7280;
+        font-size: 9px;
+        margin-top: 2px;
+    }
+    
+    .activity-item-text {
+        color: #B8C4D0;
+        word-break: break-word;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    
     .channel-section-header {
         display: flex;
         align-items: center;
@@ -1696,6 +1771,22 @@
                 </div>
                 {% endfor %}
             </div>
+            
+            <!-- Global Activity Stream -->
+            <div class="channel-section activity-section">
+                <div class="channel-section-header">
+                    <div class="channel-section-title">
+                        <i class="fas fa-stream"></i>
+                        <span>{% trans "ACTIVITY" %}</span>
+                    </div>
+                </div>
+                <div id="global-activity-feed" class="activity-feed">
+                    <div class="activity-empty">
+                        <i class="fas fa-comment-dots"></i>
+                        <span>{% trans "No recent activity" %}</span>
+                    </div>
+                </div>
+            </div>
         </div>
         
         <!-- User Control Panel - Sticky Bottom -->
@@ -2518,8 +2609,12 @@
         // Handle ICE candidates - CRITICAL for connection
         pc.onicecandidate = (event) => {
             if (event.candidate) {
-                console.log(`[WebRTC] ICE candidate generated for ${peerUsername}:`, 
-                    event.candidate.candidate.substring(0, 50) + '...');
+                // DEFENSIVE: Check if candidate.candidate is a string before substring
+                let candidatePreview = '[candidate data]';
+                if (event.candidate && event.candidate.candidate && typeof event.candidate.candidate === 'string') {
+                    candidatePreview = event.candidate.candidate.substring(0, 50) + '...';
+                }
+                console.log(`[WebRTC] ICE candidate generated for ${peerUsername}:`, candidatePreview);
                 
                 if (voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
                     voiceSocket.send(JSON.stringify({
@@ -2918,7 +3013,52 @@
         chatSocket.onmessage = (e) => {
             try {
                 const data = JSON.parse(e.data);
-                if (data.type === 'chat_message' || data.message_type === 'chat_message') {
+                console.log('[Chat] Received message type:', data.type);
+                
+                // Handle chat history on connect
+                if (data.type === 'chat_history') {
+                    console.log('[Chat] Received chat history with', data.messages?.length || 0, 'messages');
+                    const container = document.getElementById('messages-container');
+                    if (container) {
+                        container.innerHTML = ''; // Clear loading/empty state
+                    }
+                    
+                    if (data.messages && Array.isArray(data.messages) && data.messages.length > 0) {
+                        data.messages.forEach(msg => {
+                            // DEFENSIVE: Ensure content is a string
+                            let messageContent = '';
+                            if (msg && typeof msg.content === 'string') {
+                                messageContent = msg.content;
+                            } else if (msg && msg.content) {
+                                messageContent = String(msg.content);
+                            }
+                            
+                            addMessage(
+                                msg.username || 'Unknown',
+                                messageContent,
+                                msg.timestamp,
+                                msg.user_id
+                            );
+                        });
+                        scrollToBottom();
+                    } else {
+                        // Show empty state
+                        if (container) {
+                            container.innerHTML = '<div style="text-align: center; padding: 60px 20px; color: #6B7280;"><i class="fas fa-comments" style="font-size: 64px; margin-bottom: 20px; opacity: 0.3; color: #00FFFF;"></i><p style="text-transform: uppercase; letter-spacing: 2px;">{% trans "NO MESSAGES YET" %}</p></div>';
+                        }
+                    }
+                    
+                    // Also add to global activity feed
+                    if (data.messages && data.messages.length > 0) {
+                        // Only show last few in activity feed (not entire history)
+                        const recentMessages = data.messages.slice(-3);
+                        recentMessages.forEach(msg => {
+                            addToGlobalActivityFeed(msg.username, msg.content, currentChannelSlug);
+                        });
+                    }
+                }
+                // Handle new chat message
+                else if (data.type === 'chat_message' || data.message_type === 'chat_message') {
                     // Extract message content - handle both string and object formats
                     let messageContent = '';
                     if (typeof data.message === 'string') {
@@ -2930,15 +3070,24 @@
                         messageContent = data.content || '';
                     }
                     
+                    // DEFENSIVE: Ensure it's a string
+                    if (typeof messageContent !== 'string') {
+                        messageContent = String(messageContent || '');
+                    }
+                    
+                    const username = data.username || data.author || 'Unknown';
                     addMessage(
-                        data.username || data.author || 'Unknown',
+                        username,
                         messageContent,
                         data.timestamp || data.created_at,
                         data.user_id || data.sender_id
                     );
+                    
+                    // Add to global activity feed
+                    addToGlobalActivityFeed(username, messageContent, currentChannelSlug);
                 }
             } catch (err) {
-                console.error('Error parsing WebSocket message:', err);
+                console.error('Error parsing WebSocket message:', err, e.data);
             }
         };
         chatSocket.onclose = () => {
@@ -3074,6 +3223,54 @@
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
+    }
+    
+    // ============================================
+    // GLOBAL ACTIVITY FEED
+    // ============================================
+    
+    const MAX_ACTIVITY_ITEMS = 15;
+    
+    function addToGlobalActivityFeed(username, message, channelSlug) {
+        const feed = document.getElementById('global-activity-feed');
+        if (!feed) return;
+        
+        // DEFENSIVE: Ensure message is a string
+        if (!message || typeof message !== 'string') {
+            if (message && typeof message === 'object') {
+                message = message.content || message.message || String(message);
+            } else {
+                message = String(message || '');
+            }
+        }
+        
+        // Truncate long messages
+        const truncatedMessage = message.length > 60 ? message.substring(0, 60) + '...' : message;
+        
+        // Remove empty state if present
+        const emptyState = feed.querySelector('.activity-empty');
+        if (emptyState) {
+            emptyState.remove();
+        }
+        
+        // Create activity item
+        const item = document.createElement('div');
+        item.className = 'activity-item';
+        item.innerHTML = `
+            <div>
+                <span class="activity-item-user">${escapeHtml(username)}:</span>
+                <span class="activity-item-text">${escapeHtml(truncatedMessage)}</span>
+            </div>
+            <div class="activity-item-channel">#${escapeHtml(channelSlug || 'unknown')}</div>
+        `;
+        
+        // Prepend to keep newest at top
+        feed.insertBefore(item, feed.firstChild);
+        
+        // Limit number of items
+        while (feed.children.length > MAX_ACTIVITY_ITEMS) {
+            feed.removeChild(feed.lastChild);
+        }
     }
     
     // ============================================
@@ -3504,9 +3701,22 @@
                     console.warn(`[Volume] Audio element not found: remote-audio-${targetUserId}`);
                 }
             });
+            
+            // Stop click propagation on slider to prevent opening popover when adjusting volume
+            volumeSlider.addEventListener('click', (e) => {
+                e.stopPropagation();
+            });
         }
         
-        // Add click handler for volume control popover (right-click)
+        // Add LEFT-CLICK handler for volume control popover (user requested)
+        item.addEventListener('click', (e) => {
+            // Don't open if clicking on the slider itself
+            if (e.target.classList.contains('volume-slider')) return;
+            e.preventDefault();
+            showVolumeControl(item, userId, username);
+        });
+        
+        // Also keep right-click handler for users who prefer context menu
         item.addEventListener('contextmenu', (e) => {
             e.preventDefault();
             showVolumeControl(item, userId, username);
