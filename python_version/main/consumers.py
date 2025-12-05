@@ -289,6 +289,13 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
             logger.error(f"Error saving chat message: {e}")
             return None
 
+    @database_sync_to_async
+    def get_server_slug_from_channel(self, channel_object):
+        """Get the server slug from a channel object"""
+        if hasattr(channel_object, 'server') and channel_object.server:
+            return channel_object.server.slug
+        return None
+
     async def connect(self):
         username = self.scope["user"].username if not self.scope["user"].is_anonymous else "Anonymous"
         logger.info(f"New connection attempt from user: {username}, Anonymous: {self.scope['user'].is_anonymous}")
@@ -329,11 +336,22 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
             self.channel_group_name = f'voice_{self.channel_slug}'
         self.user_id = str(self.scope["user"].id)
 
+        # Get server slug for global presence broadcasting
+        self.server_slug = await self.get_server_slug_from_channel(self.channel_object)
+        self.server_presence_group = f'server_presence_{self.server_slug}' if self.server_slug else None
+
         # 4. Join the group (channel)
         await self.channel_layer.group_add(
             self.channel_group_name,
             self.channel_name
         )
+
+        # Also join server-wide presence group for global voice presence
+        if self.server_presence_group:
+            await self.channel_layer.group_add(
+                self.server_presence_group,
+                self.channel_name
+            )
 
         logger.info(f"User {username} joined {channel_type} group: {self.channel_group_name}")
         await self.accept()
@@ -342,6 +360,8 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
         # Don't send "joined room" message for text channels
         if isinstance(self.channel_object, VoiceChannel):
             logger.info(f"Notifying voice channel group that {username} joined")
+            
+            # Notify the specific voice channel group
             await self.channel_layer.group_send(
                 self.channel_group_name,
                 {
@@ -350,16 +370,30 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
                     "username": self.scope["user"].username,
                 }
             )
+            
+            # Also broadcast to server-wide presence group (for global voice presence)
+            if self.server_presence_group:
+                await self.channel_layer.group_send(
+                    self.server_presence_group,
+                    {
+                        "type": "voice.presence.update",
+                        "action": "joined",
+                        "channel_slug": self.channel_slug,
+                        "channel_name": self.channel_object.name,
+                        "user_id": self.user_id,
+                        "username": self.scope["user"].username,
+                    }
+                )
 
     async def disconnect(self, close_code):
         if hasattr(self, 'channel_group_name') and self.channel_group_name and not self.scope["user"].is_anonymous:
-            # 1. Gruptan (Oda) ayrıl
+            # 1. Leave the channel group
             await self.channel_layer.group_discard(
                 self.channel_group_name,
                 self.channel_name
             )
-            # 2. Ayrıldığını gruba bildir (sadece voice channel için)
-            # Text channel için "left room" mesajı gönderme
+            
+            # 2. Notify channel that user left (only for voice channels)
             if hasattr(self, 'channel_object') and isinstance(self.channel_object, VoiceChannel):
                 await self.channel_layer.group_send(
                     self.channel_group_name,
@@ -368,6 +402,27 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
                         "sender_id": self.user_id,
                         "username": self.scope["user"].username,
                     }
+                )
+                
+                # Also broadcast to server-wide presence group
+                if hasattr(self, 'server_presence_group') and self.server_presence_group:
+                    await self.channel_layer.group_send(
+                        self.server_presence_group,
+                        {
+                            "type": "voice.presence.update",
+                            "action": "left",
+                            "channel_slug": self.channel_slug,
+                            "channel_name": self.channel_object.name,
+                            "user_id": self.user_id,
+                            "username": self.scope["user"].username,
+                        }
+                    )
+            
+            # 3. Leave server presence group
+            if hasattr(self, 'server_presence_group') and self.server_presence_group:
+                await self.channel_layer.group_discard(
+                    self.server_presence_group,
+                    self.channel_name
                 )
 
         await super().disconnect(close_code)
@@ -485,6 +540,17 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
             "username": event["username"],
             "message": _("{username} left the room.").format(username=event['username'])
         })
+    
+    # Global voice presence update (broadcast to all server members)
+    async def voice_presence_update(self, event):
+        await self.send_json({
+            "type": "voice_presence_update",
+            "action": event["action"],  # "joined" or "left"
+            "channel_slug": event["channel_slug"],
+            "channel_name": event["channel_name"],
+            "user_id": event["user_id"],
+            "username": event["username"],
+        })
 
     # WebRTC sinyallerini istemciye ilet
     async def webrtc_signal(self, event):
@@ -533,7 +599,77 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
         })
 
 
-# main/consumers.py
+# ============================================
+# SERVER PRESENCE CONSUMER
+# For global voice presence updates (shows who's in voice channels)
+# ============================================
+
+class ServerPresenceConsumer(AsyncJsonWebsocketConsumer):
+    """
+    Lightweight WebSocket consumer for server-wide presence updates.
+    Allows users to see who is in voice channels without joining them.
+    """
+    
+    async def connect(self):
+        if self.scope["user"].is_anonymous:
+            logger.warning("[Presence] Unauthenticated user rejected.")
+            await self.close()
+            return
+        
+        # Get server slug from query string
+        query_params = parse_qs(self.scope['query_string'].decode('utf-8'))
+        server_slug = query_params.get('server_slug', [None])[0]
+        
+        if not server_slug:
+            logger.warning("[Presence] No server_slug provided. Rejecting connection.")
+            await self.close()
+            return
+        
+        self.server_slug = server_slug
+        self.server_presence_group = f'server_presence_{server_slug}'
+        self.user_id = str(self.scope["user"].id)
+        self.username = self.scope["user"].username
+        
+        # Join server presence group
+        await self.channel_layer.group_add(
+            self.server_presence_group,
+            self.channel_name
+        )
+        
+        logger.info(f"[Presence] User {self.username} joined presence group: {self.server_presence_group}")
+        await self.accept()
+    
+    async def disconnect(self, close_code):
+        if hasattr(self, 'server_presence_group'):
+            await self.channel_layer.group_discard(
+                self.server_presence_group,
+                self.channel_name
+            )
+        await super().disconnect(close_code)
+    
+    async def receive_json(self, content, **kwargs):
+        # This consumer only receives presence updates, no user input expected
+        signal_type = content.get("signal_type")
+        
+        if signal_type == 'request_presence':
+            # Client requesting current voice presence state
+            # This would require storing presence in Redis or memory
+            # For now, we just acknowledge
+            await self.send_json({
+                "type": "presence_ack",
+                "message": "Presence request received"
+            })
+    
+    # Handler for voice presence updates (from VoiceChatConsumer)
+    async def voice_presence_update(self, event):
+        await self.send_json({
+            "type": "voice_presence_update",
+            "action": event["action"],  # "joined" or "left"
+            "channel_slug": event["channel_slug"],
+            "channel_name": event["channel_name"],
+            "user_id": event["user_id"],
+            "username": event["username"],
+        })
 
 
 dw = DiceWars()

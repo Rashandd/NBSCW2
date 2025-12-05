@@ -108,9 +108,12 @@ DATABASES = {
 # Custom User Model
 AUTH_USER_MODEL = 'main.CustomUser'
 
-LOGIN_REDIRECT_URL = '/' # Kök dizine (anasayfaya) yönlendir
+LOGIN_REDIRECT_URL = '/'  # Redirect to home after login
 
-# Kullanıcının giriş yapması gerektiğinde yönlendirileceği URL'in adı
+# Redirect to user login page after logout (not admin)
+LOGOUT_REDIRECT_URL = '/login/'
+
+# URL to redirect to when login is required
 LOGIN_URL = '/login/'
 
 # Password validation
@@ -242,43 +245,37 @@ EMAIL_HOST = 'localhost'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
-EMAIL_HOST_USER = ''
-EMAIL_HOST_PASSWORD = ''
-DEFAULT_FROM_EMAIL = 'noreply@rashigo.com'
-SERVER_EMAIL = 'admin@rashigo.com'
-TURNSTILE_SITE_KEY = ''
-TURNSTILE_SECRET_KEY = ''
-
-# Load from JSON file
+# Load email and turnstile config from JSON file
+_email_config = {}
 try:
     if EMAIL_CONFIG_FILE.exists():
         with open(EMAIL_CONFIG_FILE, 'r', encoding='utf-8') as f:
-            email_config = json.load(f)
-            
-            # SMTP settings
-            smtp = email_config.get('smtp', {})
-            EMAIL_HOST = smtp.get('host', 'localhost')
-            EMAIL_PORT = int(smtp.get('port', 587))
-            EMAIL_USE_TLS = smtp.get('use_tls', True)
-            EMAIL_USE_SSL = smtp.get('use_ssl', False)
-            EMAIL_HOST_USER = smtp.get('username', '')
-            EMAIL_HOST_PASSWORD = smtp.get('password', '')
-            
-            # Email addresses
-            DEFAULT_FROM_EMAIL = email_config.get('from_email', 'noreply@rashigo.com')
-            SERVER_EMAIL = email_config.get('server_email', 'admin@rashigo.com')
-            
-            # Cloudflare Turnstile
-            turnstile = email_config.get('cloudflare_turnstile', {})
-            TURNSTILE_SITE_KEY = turnstile.get('site_key', '')
-            TURNSTILE_SECRET_KEY = turnstile.get('secret_key', '')
-            
+            _email_config = json.load(f)
             print(f"[Email] Loaded config from {EMAIL_CONFIG_FILE}")
-            print(f"[Email] SMTP Host: {EMAIL_HOST}:{EMAIL_PORT}")
     else:
         print(f"[Email] Warning: {EMAIL_CONFIG_FILE} not found. Using defaults.")
 except Exception as e:
     print(f"[Email] Error loading {EMAIL_CONFIG_FILE}: {e}")
+
+# SMTP settings
+_smtp = _email_config.get('smtp', {})
+EMAIL_HOST = _smtp.get('host', 'localhost')
+EMAIL_PORT = int(_smtp.get('port', 587))
+EMAIL_USE_TLS = _smtp.get('use_tls', True)
+EMAIL_USE_SSL = _smtp.get('use_ssl', False)
+EMAIL_HOST_USER = _smtp.get('username', '')
+EMAIL_HOST_PASSWORD = _smtp.get('password', '')
+
+# Email addresses
+DEFAULT_FROM_EMAIL = _email_config.get('from_email', 'noreply@rashigo.com')
+SERVER_EMAIL = _email_config.get('server_email', 'admin@rashigo.com')
+
+# Cloudflare Turnstile
+_turnstile = _email_config.get('cloudflare_turnstile', {})
+TURNSTILE_SITE_KEY = _turnstile.get('site_key', '')
+TURNSTILE_SECRET_KEY = _turnstile.get('secret_key', '')
+
+print(f"[Email] SMTP Host: {EMAIL_HOST}:{EMAIL_PORT}")
 
 # For testing, use Cloudflare's test keys if none configured
 if DEBUG and not TURNSTILE_SITE_KEY:

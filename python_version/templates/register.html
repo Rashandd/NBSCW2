@@ -4,8 +4,7 @@
 
 {% block title %}{% trans "Register" %} - Rashigo{% endblock %}
 
-{# Hide navbar on register page #}
-{% block navbar %}{% endblock %}
+{# Show navbar on register page - do NOT override navbar block #}
 
 {% block extra_head %}
 <!-- Cloudflare Turnstile -->
@@ -29,7 +28,7 @@
     }
     
     .register-page {
-        min-height: 100vh;
+        min-height: calc(100vh - 60px); /* Account for navbar height */
         display: flex;
         align-items: center;
         justify-content: center;

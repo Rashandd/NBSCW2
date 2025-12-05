@@ -1743,15 +1743,19 @@
     let currentVoiceChannelName = null;
     let chatSocket = null;
     let voiceSocket = null;
+    let presenceSocket = null;  // Server-wide presence socket
     let isMuted = false;
     let isDeafened = false;
     let videoGridItems = new Map();
     let voiceParticipants = new Map();
+    let globalVoicePresence = new Map();  // channel_slug -> Set of usernames
     let peerConnections = {};
     let sidebarOpen = false;
+    let isNavigatingInternally = false;  // Flag to suppress beforeunload
     
     const currentUsername = '{{ user.username }}';
     const currentUserId = '{{ user.id }}';
+    const serverSlug = '{{ server.slug }}';
     
     // ============================================
     // WEBRTC ICE SERVER CONFIGURATION
@@ -3097,8 +3101,13 @@
         console.log('[Voice] State cleared');
     }
     
-    // Warn before leaving page if in voice
+    // Warn before leaving page if in voice (only for external navigation)
     window.addEventListener('beforeunload', (event) => {
+        // Don't warn if navigating internally
+        if (isNavigatingInternally) {
+            return;
+        }
+        
         if (currentVoiceChannelSlug && voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
             // Save current state before leaving
             saveVoiceState(true);
@@ -3108,10 +3117,149 @@
         }
     });
     
-    // Hide mini box when on this page
+    // Intercept navigation links to handle voice chat gracefully
+    function setupNavigationInterception() {
+        // Find all navigation links in the navbar
+        const navLinks = document.querySelectorAll('.server-navbar a[href], .server-nav-link');
+        
+        navLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                const href = link.getAttribute('href');
+                
+                // Skip if it's javascript:void(0) or # or same page
+                if (!href || href.startsWith('javascript:') || href === '#') {
+                    return;
+                }
+                
+                // Check if user is in voice chat
+                if (currentVoiceChannelSlug && voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
+                    e.preventDefault();
+                    
+                    // Show custom confirmation
+                    if (confirm('{% trans "You are in a voice chat. Leaving this page will disconnect you. Continue?" %}')) {
+                        isNavigatingInternally = true;
+                        saveVoiceState(true);
+                        window.location.href = href;
+                    }
+                } else {
+                    // Not in voice, allow normal navigation
+                    isNavigatingInternally = true;
+                }
+            });
+        });
+    }
+    
+    // ============================================
+    // SERVER-WIDE PRESENCE WEBSOCKET
+    // ============================================
+    
+    function connectPresenceSocket() {
+        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+        // Connect to dedicated presence endpoint for server-wide voice presence updates
+        const wsUrl = `${wsProtocol}//${window.location.host}/ws/presence/?server_slug=${serverSlug}`;
+        
+        console.log('[Presence] Connecting to:', wsUrl);
+        presenceSocket = new WebSocket(wsUrl);
+        
+        presenceSocket.onopen = () => {
+            console.log('[Presence] Server presence socket connected');
+        };
+        
+        presenceSocket.onmessage = (e) => {
+            try {
+                const data = JSON.parse(e.data);
+                console.log('[Presence] Received:', data.type);
+                if (data.type === 'voice_presence_update') {
+                    handleVoicePresenceUpdate(data);
+                }
+            } catch (err) {
+                console.error('[Presence] Error parsing message:', err);
+            }
+        };
+        
+        presenceSocket.onclose = () => {
+            console.log('[Presence] Presence socket disconnected');
+            // Reconnect after delay (only if page is still active)
+            if (!document.hidden) {
+                setTimeout(connectPresenceSocket, 5000);
+            }
+        };
+        
+        presenceSocket.onerror = (err) => {
+            console.error('[Presence] Socket error:', err);
+        };
+    }
+    
+    function handleVoicePresenceUpdate(data) {
+        console.log('[Presence] Voice presence update:', data);
+        const { action, channel_slug, username, user_id } = data;
+        
+        // Update global presence map
+        if (!globalVoicePresence.has(channel_slug)) {
+            globalVoicePresence.set(channel_slug, new Set());
+        }
+        
+        const channelUsers = globalVoicePresence.get(channel_slug);
+        
+        if (action === 'joined') {
+            channelUsers.add(username);
+            // Add to sidebar if not already there
+            if (username !== currentUsername) {
+                addVoiceParticipantToSidebar(channel_slug, username);
+            }
+        } else if (action === 'left') {
+            channelUsers.delete(username);
+            // Remove from sidebar
+            removeVoiceParticipantFromSidebar(channel_slug, username);
+        }
+    }
+    
+    function addVoiceParticipantToSidebar(channelSlug, username) {
+        const list = document.getElementById(`voice-participants-${channelSlug}`);
+        if (!list) return;
+        
+        // Check if already exists
+        if (document.getElementById(`global-participant-${channelSlug}-${username}`)) return;
+        
+        list.style.display = 'flex';
+        
+        const item = document.createElement('li');
+        item.className = 'voice-participant-mini';
+        item.id = `global-participant-${channelSlug}-${username}`;
+        item.dataset.username = username;
+        
+        item.innerHTML = `
+            <div class="voice-participant-mini-avatar">${username.charAt(0).toUpperCase()}</div>
+            <span class="voice-participant-mini-name">${username}</span>
+            <span class="voice-participant-mini-status"></span>
+        `;
+        
+        list.appendChild(item);
+    }
+    
+    function removeVoiceParticipantFromSidebar(channelSlug, username) {
+        const item = document.getElementById(`global-participant-${channelSlug}-${username}`);
+        if (item) {
+            item.remove();
+        }
+        
+        // Hide list if empty
+        const list = document.getElementById(`voice-participants-${channelSlug}`);
+        if (list && list.children.length === 0) {
+            list.style.display = 'none';
+        }
+    }
+    
+    // Hide mini box when on this page and setup navigation
     document.addEventListener('DOMContentLoaded', () => {
         const miniBox = document.getElementById('voice-mini-box');
         if (miniBox) miniBox.style.display = 'none';
+        
+        // Setup navigation interception
+        setupNavigationInterception();
+        
+        // Connect presence socket for global voice presence
+        connectPresenceSocket();
     });
     
     // Expose functions globally
