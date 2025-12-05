@@ -228,3 +228,63 @@ except Exception as e:
 # Export as JSON string for frontend (used in views.py)
 # This will be serialized and passed to JavaScript via template context
 COTURN_CONFIG_JSON = json.dumps(COTURN_CONFIG['ice_servers'])
+
+# ============================================
+# EMAIL & TURNSTILE CONFIGURATION
+# ============================================
+# Load from email_config.json file
+
+EMAIL_CONFIG_FILE = BASE_DIR / 'email_config.json'
+
+# Default values
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'localhost'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_USE_SSL = False
+EMAIL_HOST_USER = ''
+EMAIL_HOST_PASSWORD = ''
+DEFAULT_FROM_EMAIL = 'noreply@rashigo.com'
+SERVER_EMAIL = 'admin@rashigo.com'
+TURNSTILE_SITE_KEY = ''
+TURNSTILE_SECRET_KEY = ''
+
+# Load from JSON file
+try:
+    if EMAIL_CONFIG_FILE.exists():
+        with open(EMAIL_CONFIG_FILE, 'r', encoding='utf-8') as f:
+            email_config = json.load(f)
+            
+            # SMTP settings
+            smtp = email_config.get('smtp', {})
+            EMAIL_HOST = smtp.get('host', 'localhost')
+            EMAIL_PORT = int(smtp.get('port', 587))
+            EMAIL_USE_TLS = smtp.get('use_tls', True)
+            EMAIL_USE_SSL = smtp.get('use_ssl', False)
+            EMAIL_HOST_USER = smtp.get('username', '')
+            EMAIL_HOST_PASSWORD = smtp.get('password', '')
+            
+            # Email addresses
+            DEFAULT_FROM_EMAIL = email_config.get('from_email', 'noreply@rashigo.com')
+            SERVER_EMAIL = email_config.get('server_email', 'admin@rashigo.com')
+            
+            # Cloudflare Turnstile
+            turnstile = email_config.get('cloudflare_turnstile', {})
+            TURNSTILE_SITE_KEY = turnstile.get('site_key', '')
+            TURNSTILE_SECRET_KEY = turnstile.get('secret_key', '')
+            
+            print(f"[Email] Loaded config from {EMAIL_CONFIG_FILE}")
+            print(f"[Email] SMTP Host: {EMAIL_HOST}:{EMAIL_PORT}")
+    else:
+        print(f"[Email] Warning: {EMAIL_CONFIG_FILE} not found. Using defaults.")
+except Exception as e:
+    print(f"[Email] Error loading {EMAIL_CONFIG_FILE}: {e}")
+
+# For testing, use Cloudflare's test keys if none configured
+if DEBUG and not TURNSTILE_SITE_KEY:
+    TURNSTILE_SITE_KEY = '1x00000000000000000000AA'
+    TURNSTILE_SECRET_KEY = '1x0000000000000000000000000000000AA'
+    print("[Turnstile] Using Cloudflare test keys (DEBUG mode)")
+
+# Email verification expiry (in seconds)
+EMAIL_VERIFICATION_EXPIRY = 600  # 10 minutes

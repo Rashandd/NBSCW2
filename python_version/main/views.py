@@ -21,14 +21,13 @@ from django.conf import settings as django_settings
 from datetime import timedelta
 from django.utils import timezone
 
-# Security utilities
+# Security utilities (simplified - only email verification)
 from .utils.security import (
     ProfanityFilter, 
-    BotDetector, 
     VerificationCodeManager,
     EmailService,
-    SMSService
 )
+import requests
 
 
 def get_client_ip(request):
@@ -41,14 +40,48 @@ def get_client_ip(request):
     return ip
 
 
+def verify_turnstile(token, ip_address):
+    """
+    Verify Cloudflare Turnstile token.
+    Returns (success, error_message)
+    """
+    if not token:
+        return False, _("Please complete the security check.")
+    
+    secret_key = django_settings.TURNSTILE_SECRET_KEY
+    if not secret_key:
+        # If no secret key configured, skip verification (dev mode)
+        return True, None
+    
+    try:
+        response = requests.post(
+            'https://challenges.cloudflare.com/turnstile/v0/siteverify',
+            data={
+                'secret': secret_key,
+                'response': token,
+                'remoteip': ip_address,
+            },
+            timeout=10
+        )
+        result = response.json()
+        
+        if result.get('success'):
+            return True, None
+        else:
+            error_codes = result.get('error-codes', [])
+            return False, _("Security verification failed. Please try again.")
+    except Exception as e:
+        print(f"Turnstile verification error: {e}")
+        # On error, allow registration but log it
+        return True, None
+
+
 def register(request):
     """
-    Secure registration with:
-    - Fingerprint and IP tracking
-    - Profanity filter for username
-    - Bot detection
+    Registration with:
+    - Cloudflare Turnstile (anti-bot)
     - Email verification
-    - Phone verification (optional)
+    - Basic profanity filter
     """
     if request.user.is_authenticated:
         return redirect('index')
@@ -58,186 +91,78 @@ def register(request):
     
     if step == 'verify_email':
         return handle_email_verification(request)
-    elif step == 'verify_phone':
-        return handle_phone_verification(request)
+    
+    # Pass Turnstile site key to template
+    context = {
+        'turnstile_site_key': django_settings.TURNSTILE_SITE_KEY,
+    }
     
     if request.method == 'POST':
-        first_name = request.POST.get('first_name', '').strip()
-        last_name = request.POST.get('last_name', '').strip()
+        # Get form data
         username = request.POST.get('username', '').strip()
-        email = request.POST.get('email', '').strip()
+        email = request.POST.get('email', '').strip().lower()
         password1 = request.POST.get('password1', '')
         password2 = request.POST.get('password2', '')
-        fingerprint = request.POST.get('fingerprint', '')
-        timezone_str = request.POST.get('timezone', '')
-        phone_number = request.POST.get('phone_number', '').strip()
+        turnstile_token = request.POST.get('cf-turnstile-response', '')
         
         ip_address = get_client_ip(request)
-        user_agent = request.META.get('HTTP_USER_AGENT', '')
-        
         errors = []
-        is_bot_detected = False
-        profanity_detected = False
-        risk_score = 0
         
-        # ========== 1. FINGERPRINT & BOT DETECTION ==========
-        if not fingerprint:
-            errors.append(_("Security verification failed. Please enable JavaScript."))
-            is_bot_detected = True
-        else:
-            # Advanced bot detection
-            is_suspicious, reason, risk_score = BotDetector.analyze_fingerprint(
-                fingerprint, ip_address, user_agent, timezone_str
-            )
-            
-            if is_suspicious:
-                errors.append(_("Security check failed. Your device appears suspicious. Please try a different browser."))
-                is_bot_detected = True
-                
-                RegistrationAttempt.objects.create(
-                    ip_address=ip_address,
-                    fingerprint=fingerprint,
-                    user_agent=user_agent,
-                    success=False,
-                    username_attempted=username,
-                    blocked_reason=f"Bot detected: {reason}",
-                    risk_score=risk_score,
-                    timezone=timezone_str,
-                    is_bot_detected=True
-                )
+        # ========== 1. CLOUDFLARE TURNSTILE VERIFICATION ==========
+        turnstile_success, turnstile_error = verify_turnstile(turnstile_token, ip_address)
+        if not turnstile_success:
+            errors.append(turnstile_error)
         
-        # ========== 2. PROFANITY FILTER - First Name & Last Name ==========
-        if first_name:
-            has_profanity_first, matched_first = ProfanityFilter.contains_profanity(first_name)
-            if has_profanity_first:
-                errors.append(_("First name contains inappropriate content. Please use a valid name."))
-                profanity_detected = True
-                RegistrationAttempt.objects.create(
-                    ip_address=ip_address,
-                    fingerprint=fingerprint,
-                    user_agent=user_agent,
-                    success=False,
-                    username_attempted=username,
-                    blocked_reason=f"Profanity in first name: {matched_first}",
-                    risk_score=risk_score,
-                    timezone=timezone_str,
-                    profanity_detected=True
-                )
+        # ========== 2. BASIC VALIDATIONS ==========
+        if not username or len(username) < 3:
+            errors.append(_("Username must be at least 3 characters."))
+        elif len(username) > 30:
+            errors.append(_("Username cannot exceed 30 characters."))
+        elif not username.replace('_', '').replace('-', '').isalnum():
+            errors.append(_("Username can only contain letters, numbers, underscores and hyphens."))
         
-        if last_name:
-            has_profanity_last, matched_last = ProfanityFilter.contains_profanity(last_name)
-            if has_profanity_last:
-                errors.append(_("Last name contains inappropriate content. Please use a valid name."))
-                profanity_detected = True
-                RegistrationAttempt.objects.create(
-                    ip_address=ip_address,
-                    fingerprint=fingerprint,
-                    user_agent=user_agent,
-                    success=False,
-                    username_attempted=username,
-                    blocked_reason=f"Profanity in last name: {matched_last}",
-                    risk_score=risk_score,
-                    timezone=timezone_str,
-                    profanity_detected=True
-                )
+        if not email or '@' not in email:
+            errors.append(_("Please enter a valid email address."))
         
-        # Username profanity check
-        has_profanity, matched = ProfanityFilter.contains_profanity(username)
-        if has_profanity:
-            errors.append(_("Username contains inappropriate content. Please choose a different username."))
-            profanity_detected = True
-        
-        is_bot_username, bot_pattern = ProfanityFilter.is_bot_username(username)
-        if is_bot_username:
-            errors.append(_("This username pattern is not allowed. Please choose a different username."))
-            is_bot_detected = True
-        
-        # ========== 3. BASIC VALIDATIONS ==========
         if password1 != password2:
             errors.append(_("Passwords do not match."))
         
         if len(password1) < 8:
             errors.append(_("Password must be at least 8 characters long."))
-        if not any(c.isupper() for c in password1):
-            errors.append(_("Password must contain at least one uppercase letter."))
-        if not any(c.islower() for c in password1):
-            errors.append(_("Password must contain at least one lowercase letter."))
-        if not any(c.isdigit() for c in password1):
-            errors.append(_("Password must contain at least one number."))
         
-        if CustomUser.objects.filter(username=username).exists():
-            errors.append(_("Username already taken."))
+        # Check username availability
+        if CustomUser.objects.filter(username__iexact=username).exists():
+            errors.append(_("This username is already taken."))
         
-        if CustomUser.objects.filter(email=email).exists():
-            errors.append(_("Email already registered."))
+        # Check email availability
+        if CustomUser.objects.filter(email__iexact=email).exists():
+            errors.append(_("This email is already registered."))
         
-        # ========== 4. RATE LIMITING ==========
-        recent_attempts = RegistrationAttempt.objects.filter(
-            ip_address=ip_address,
-            attempt_time__gte=timezone.now() - timedelta(hours=1)
-        ).count()
+        # ========== 3. PROFANITY FILTER (optional) ==========
+        has_profanity, _ = ProfanityFilter.contains_profanity(username)
+        if has_profanity:
+            errors.append(_("Username contains inappropriate content."))
         
-        if recent_attempts >= 5:
-            errors.append(_("Too many registration attempts. Please try again later."))
-            RegistrationAttempt.objects.create(
-                ip_address=ip_address,
-                fingerprint=fingerprint,
-                user_agent=user_agent,
-                success=False,
-                username_attempted=username,
-                blocked_reason="Rate limit exceeded",
-                risk_score=risk_score,
-                timezone=timezone_str,
-                is_bot_detected=is_bot_detected,
-                profanity_detected=profanity_detected
-            )
-        
-        if fingerprint:
-            recent_fingerprint_registrations = RegistrationAttempt.objects.filter(
-                fingerprint=fingerprint,
-                success=True,
-                attempt_time__gte=timezone.now() - timedelta(days=1)
-            ).count()
-            
-            if recent_fingerprint_registrations >= 3:
-                errors.append(_("Maximum accounts per device reached. Contact support if this is an error."))
-        
-        # Record the attempt for rate limiting
-        BotDetector.record_attempt(fingerprint, ip_address)
-        
+        # Return errors if any
         if errors:
             for error in errors:
                 messages.error(request, error)
-            return render(request, 'register.html', {
-                'first_name': first_name,
-                'last_name': last_name,
+            context.update({
                 'username': username,
                 'email': email,
-                'phone_number': phone_number,
             })
+            return render(request, 'register.html', context)
         
-        # ========== 5. CREATE USER (INACTIVE UNTIL VERIFIED) ==========
+        # ========== 4. CREATE USER (INACTIVE UNTIL EMAIL VERIFIED) ==========
         try:
             with transaction.atomic():
                 user = CustomUser.objects.create_user(
                     username=username,
                     email=email,
                     password=password1,
-                    first_name=first_name,
-                    last_name=last_name,
-                    registration_ip=ip_address,
-                    registration_fingerprint=fingerprint,
                     is_active=False,  # Inactive until email verified
                     email_verified=False,
-                    phone_number=phone_number if phone_number else None,
-                    phone_verified=False,
-                    security_score=risk_score
                 )
-                
-                if timezone_str:
-                    user.metadata = user.metadata or {}
-                    user.metadata['timezone'] = timezone_str
-                    user.save()
                 
                 # Generate and send email verification code
                 code = VerificationCodeManager.generate_code()
@@ -246,45 +171,20 @@ def register(request):
                 email_sent = EmailService.send_verification_code(email, code, username)
                 
                 if not email_sent:
-                    # If email fails, still create account but log the issue
                     messages.warning(request, _("Could not send verification email. Please contact support."))
-                
-                # Log successful registration attempt
-                RegistrationAttempt.objects.create(
-                    ip_address=ip_address,
-                    fingerprint=fingerprint,
-                    user_agent=user_agent,
-                    success=True,
-                    username_attempted=username,
-                    risk_score=risk_score,
-                    timezone=timezone_str,
-                    is_bot_detected=False,
-                    profanity_detected=False
-                )
                 
                 # Store user ID in session for verification
                 request.session['pending_user_id'] = user.id
                 request.session['pending_email'] = email
                 
-                messages.info(request, _("A verification code has been sent to your email. Please enter it below."))
-                return redirect('register') + '?step=verify_email'
+                messages.success(request, _("Account created! Please check your email for the verification code."))
+                return redirect(reverse('register') + '?step=verify_email')
         
         except Exception as e:
             messages.error(request, _("An error occurred during registration. Please try again."))
-            RegistrationAttempt.objects.create(
-                ip_address=ip_address,
-                fingerprint=fingerprint,
-                user_agent=user_agent,
-                success=False,
-                username_attempted=username,
-                blocked_reason=f"Error: {str(e)}",
-                risk_score=risk_score,
-                timezone=timezone_str,
-                is_bot_detected=is_bot_detected,
-                profanity_detected=profanity_detected
-            )
+            print(f"Registration error: {e}")
     
-    return render(request, 'register.html')
+    return render(request, 'register.html', context)
 
 
 def handle_email_verification(request):

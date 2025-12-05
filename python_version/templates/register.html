@@ -5,219 +5,289 @@
 {% block title %}{% trans "Register" %} - Rashigo{% endblock %}
 
 {% block extra_head %}
-    <!-- FingerprintJS for device fingerprinting -->
-    <script src="https://cdn.jsdelivr.net/npm/@fingerprintjs/fingerprintjs@3/dist/fp.min.js"></script>
+<!-- Cloudflare Turnstile -->
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 {% endblock %}
 
 {% block extra_css %}
 <style>
+    /* ============================================
+       CYBERPUNK REGISTER PAGE
+       ============================================ */
+    
     main.container {
         max-width: 100% !important;
         padding: 0 !important;
     }
     
-    body {
-        background: linear-gradient(135deg, #0F0F0F 0%, #1A1A1A 100%);
-    }
-    
-    .register-wrapper {
-        min-height: calc(100vh - 80px);
+    .register-page {
+        min-height: calc(100vh - 60px);
         display: flex;
         align-items: center;
         justify-content: center;
         padding: 40px 20px;
+        background: linear-gradient(135deg, #0A0E27 0%, #0F1635 50%, #0A0E27 100%);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    /* Animated background effects */
+    .register-page::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: 
+            radial-gradient(circle at 20% 20%, rgba(0, 255, 255, 0.08) 0%, transparent 40%),
+            radial-gradient(circle at 80% 80%, rgba(0, 255, 128, 0.06) 0%, transparent 40%),
+            radial-gradient(circle at 50% 50%, rgba(138, 43, 226, 0.04) 0%, transparent 60%);
+        pointer-events: none;
+        animation: pulse-bg 8s ease-in-out infinite;
+    }
+    
+    @keyframes pulse-bg {
+        0%, 100% { opacity: 0.8; }
+        50% { opacity: 1; }
+    }
+    
+    /* Grid lines effect */
+    .register-page::after {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image: 
+            linear-gradient(rgba(0, 255, 255, 0.03) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0, 255, 255, 0.03) 1px, transparent 1px);
+        background-size: 50px 50px;
+        pointer-events: none;
     }
     
     .register-container {
-        background: #1A1A1A;
+        position: relative;
+        z-index: 10;
+        width: 100%;
+        max-width: 460px;
+        background: rgba(10, 14, 39, 0.85);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(0, 255, 255, 0.2);
         border-radius: 20px;
         padding: 40px;
-        max-width: 520px;
-        width: 100%;
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-        border: 1px solid #2A2A2A;
+        box-shadow: 
+            0 25px 80px rgba(0, 0, 0, 0.6),
+            0 0 60px rgba(0, 255, 255, 0.1),
+            inset 0 1px 0 rgba(255, 255, 255, 0.05);
     }
     
+    /* Header */
     .register-header {
         text-align: center;
-        margin-bottom: 30px;
+        margin-bottom: 32px;
     }
     
-    .register-icon {
-        width: 70px;
-        height: 70px;
-        border-radius: 18px;
-        background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+    .register-logo {
+        width: 80px;
+        height: 80px;
+        margin: 0 auto 20px;
+        background: linear-gradient(135deg, #00FFFF 0%, #00FF80 50%, #00FFFF 100%);
+        border-radius: 20px;
         display: flex;
         align-items: center;
         justify-content: center;
-        margin: 0 auto 16px;
-        box-shadow: 0 8px 24px rgba(99, 102, 241, 0.3);
+        box-shadow: 
+            0 10px 40px rgba(0, 255, 255, 0.3),
+            0 0 20px rgba(0, 255, 128, 0.2);
+        animation: logo-glow 3s ease-in-out infinite;
     }
     
-    .register-icon i {
-        font-size: 28px;
-        color: white;
+    @keyframes logo-glow {
+        0%, 100% { box-shadow: 0 10px 40px rgba(0, 255, 255, 0.3), 0 0 20px rgba(0, 255, 128, 0.2); }
+        50% { box-shadow: 0 10px 50px rgba(0, 255, 255, 0.5), 0 0 30px rgba(0, 255, 128, 0.4); }
+    }
+    
+    .register-logo i {
+        font-size: 36px;
+        color: #0A0E27;
     }
     
     .register-header h1 {
-        color: #E5E5E5;
         font-size: 28px;
         font-weight: 700;
+        color: #FFFFFF;
         margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 3px;
     }
     
     .register-header p {
-        color: #9CA3AF;
+        color: #8B9DC3;
         font-size: 14px;
+        letter-spacing: 1px;
     }
     
-    .security-badge {
-        background: rgba(99, 102, 241, 0.1);
-        border: 1px solid rgba(99, 102, 241, 0.3);
-        border-radius: 10px;
-        padding: 12px 16px;
-        margin-bottom: 24px;
+    /* Alerts */
+    .alert {
+        border-radius: 12px;
+        padding: 14px 18px;
+        margin-bottom: 20px;
+        font-size: 14px;
         display: flex;
         align-items: center;
         gap: 12px;
+        border: 1px solid;
     }
     
-    .security-badge i {
-        color: #6366F1;
-        font-size: 20px;
+    .alert-danger, .alert-error {
+        background: rgba(255, 0, 100, 0.1);
+        border-color: rgba(255, 0, 100, 0.3);
+        color: #FF6B9D;
     }
     
-    .security-badge-text {
-        font-size: 13px;
-        color: #9CA3AF;
+    .alert-success {
+        background: rgba(0, 255, 128, 0.1);
+        border-color: rgba(0, 255, 128, 0.3);
+        color: #00FF80;
     }
     
+    .alert-info, .alert-warning {
+        background: rgba(0, 255, 255, 0.1);
+        border-color: rgba(0, 255, 255, 0.3);
+        color: #00FFFF;
+    }
+    
+    /* Form */
     .form-group {
-        margin-bottom: 20px;
+        margin-bottom: 22px;
     }
     
     .form-label {
-        color: #E5E5E5;
-        font-size: 14px;
-        font-weight: 500;
-        margin-bottom: 8px;
         display: flex;
         align-items: center;
         gap: 8px;
+        font-size: 12px;
+        font-weight: 600;
+        color: #00FF80;
+        text-transform: uppercase;
+        letter-spacing: 1.5px;
+        margin-bottom: 10px;
     }
     
     .form-label i {
-        color: #6366F1;
         font-size: 14px;
+        filter: drop-shadow(0 0 4px rgba(0, 255, 128, 0.5));
     }
     
     .form-control {
-        background: #0F0F0F;
-        border: 1px solid #2A2A2A;
-        color: #E5E5E5;
-        padding: 12px 16px;
-        border-radius: 10px;
-        font-size: 15px;
-        transition: all 0.2s ease;
         width: 100%;
+        padding: 14px 18px;
+        background: rgba(0, 0, 0, 0.4);
+        border: 1px solid rgba(0, 255, 255, 0.2);
+        border-radius: 12px;
+        color: #FFFFFF;
+        font-size: 15px;
+        transition: all 0.3s ease;
     }
     
     .form-control:focus {
-        background: #0F0F0F;
-        border-color: #6366F1;
-        color: #E5E5E5;
-        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
         outline: none;
+        border-color: #00FFFF;
+        background: rgba(0, 0, 0, 0.5);
+        box-shadow: 0 0 20px rgba(0, 255, 255, 0.15);
     }
     
     .form-control::placeholder {
-        color: #6B7280;
+        color: #5A6B8C;
     }
     
-    .form-control.error {
-        border-color: #EF4444;
+    .form-hint {
+        font-size: 11px;
+        color: #5A6B8C;
+        margin-top: 6px;
+        padding-left: 4px;
     }
     
-    .form-control.success {
-        border-color: #10B981;
-    }
-    
+    /* Password Strength */
     .password-strength {
         height: 4px;
-        background: #2A2A2A;
+        background: rgba(255, 255, 255, 0.1);
         border-radius: 2px;
-        margin-top: 8px;
+        margin-top: 10px;
         overflow: hidden;
     }
     
     .password-strength-bar {
         height: 100%;
         width: 0%;
-        transition: all 0.3s ease;
+        transition: all 0.4s ease;
         border-radius: 2px;
     }
     
-    .password-strength-bar.weak { background: #EF4444; width: 25%; }
-    .password-strength-bar.fair { background: #F59E0B; width: 50%; }
-    .password-strength-bar.good { background: #10B981; width: 75%; }
-    .password-strength-bar.strong { background: #6366F1; width: 100%; }
+    .password-strength-bar.weak { background: #FF0064; width: 25%; }
+    .password-strength-bar.fair { background: #FFA500; width: 50%; }
+    .password-strength-bar.good { background: #00FF80; width: 75%; }
+    .password-strength-bar.strong { background: #00FFFF; width: 100%; box-shadow: 0 0 10px rgba(0, 255, 255, 0.5); }
     
-    .password-requirements {
-        font-size: 12px;
-        color: #6B7280;
-        margin-top: 8px;
-        list-style: none;
-        padding: 0;
-    }
-    
-    .password-requirements li {
-        padding: 4px 0;
+    /* Turnstile container */
+    .turnstile-container {
         display: flex;
-        align-items: center;
-        gap: 8px;
+        justify-content: center;
+        margin: 24px 0;
     }
     
-    .password-requirements li::before {
-        content: '○';
-        color: #6B7280;
-    }
-    
-    .password-requirements li.met {
-        color: #10B981;
-    }
-    
-    .password-requirements li.met::before {
-        content: '●';
-        color: #10B981;
-    }
-    
+    /* Submit Button */
     .btn-register {
         width: 100%;
-        background: #6366F1;
-        color: white;
+        padding: 16px 24px;
+        background: linear-gradient(135deg, #00FFFF 0%, #00FF80 100%);
         border: none;
-        padding: 14px;
-        border-radius: 10px;
-        font-size: 16px;
-        font-weight: 600;
+        border-radius: 12px;
+        color: #0A0E27;
+        font-size: 15px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 2px;
         cursor: pointer;
-        transition: all 0.2s ease;
-        margin-top: 10px;
+        transition: all 0.3s ease;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 8px;
+        gap: 10px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .btn-register::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+        transition: left 0.5s ease;
+    }
+    
+    .btn-register:hover::before {
+        left: 100%;
     }
     
     .btn-register:hover {
-        background: #4F46E5;
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+        transform: translateY(-2px);
+        box-shadow: 
+            0 10px 40px rgba(0, 255, 255, 0.4),
+            0 0 20px rgba(0, 255, 128, 0.3);
+    }
+    
+    .btn-register:active {
+        transform: translateY(0);
     }
     
     .btn-register:disabled {
-        background: #3A3A3A;
+        background: linear-gradient(135deg, #3A4A6B 0%, #2A3A5B 100%);
         cursor: not-allowed;
         transform: none;
         box-shadow: none;
@@ -226,8 +296,8 @@
     .loading-spinner {
         width: 20px;
         height: 20px;
-        border: 2px solid rgba(255, 255, 255, 0.3);
-        border-top-color: white;
+        border: 2px solid rgba(10, 14, 39, 0.3);
+        border-top-color: #0A0E27;
         border-radius: 50%;
         animation: spin 0.8s linear infinite;
         display: none;
@@ -237,153 +307,80 @@
         to { transform: rotate(360deg); }
     }
     
-    .btn-register.loading .loading-spinner {
-        display: inline-block;
-    }
+    .btn-register.loading .loading-spinner { display: block; }
+    .btn-register.loading .btn-text { display: none; }
     
-    .btn-register.loading .btn-text {
-        display: none;
-    }
-    
+    /* Login Link */
     .login-link {
         text-align: center;
-        margin-top: 24px;
+        margin-top: 28px;
         padding-top: 24px;
-        border-top: 1px solid #2A2A2A;
-        color: #9CA3AF;
+        border-top: 1px solid rgba(0, 255, 255, 0.15);
+        color: #8B9DC3;
         font-size: 14px;
     }
     
     .login-link a {
-        color: #6366F1;
+        color: #00FFFF;
         text-decoration: none;
         font-weight: 600;
+        transition: all 0.3s ease;
     }
     
     .login-link a:hover {
-        text-decoration: underline;
+        color: #00FF80;
+        text-shadow: 0 0 10px rgba(0, 255, 128, 0.5);
     }
     
-    .alert {
-        border-radius: 10px;
-        padding: 12px 16px;
-        margin-bottom: 20px;
-        font-size: 14px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-    
-    .alert-danger {
-        background: rgba(239, 68, 68, 0.1);
-        border: 1px solid rgba(239, 68, 68, 0.3);
-        color: #EF4444;
-    }
-    
-    .alert-success {
-        background: rgba(16, 185, 129, 0.1);
-        border: 1px solid rgba(16, 185, 129, 0.3);
-        color: #10B981;
-    }
-    
-    .form-hint {
-        font-size: 12px;
-        color: #6B7280;
-        margin-top: 4px;
-    }
-    
-    .phone-input-wrapper {
-        display: flex;
-        gap: 8px;
-    }
-    
-    .country-code {
-        width: 80px;
-        flex-shrink: 0;
-    }
-    
-    .optional-badge {
-        font-size: 11px;
-        background: #2A2A2A;
-        color: #9CA3AF;
-        padding: 2px 8px;
-        border-radius: 4px;
-        margin-left: 8px;
+    /* Responsive */
+    @media (max-width: 480px) {
+        .register-container {
+            padding: 30px 24px;
+            margin: 10px;
+        }
+        
+        .register-header h1 {
+            font-size: 24px;
+        }
+        
+        .register-logo {
+            width: 70px;
+            height: 70px;
+        }
+        
+        .register-logo i {
+            font-size: 30px;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="register-wrapper">
+<div class="register-page">
     <div class="register-container">
         <div class="register-header">
-            <div class="register-icon">
-                <i class="fas fa-user-plus"></i>
+            <div class="register-logo">
+                <i class="fas fa-rocket"></i>
             </div>
-            <h1>{% trans "Create Account" %}</h1>
-            <p>{% trans "Join Rashigo - Gaming & Communication Platform" %}</p>
-        </div>
-        
-        <div class="security-badge">
-            <i class="fas fa-shield-alt"></i>
-            <div class="security-badge-text">
-                {% trans "Your device and IP are verified for security. Automated registrations are blocked." %}
-            </div>
+            <h1>{% trans "Join Rashigo" %}</h1>
+            <p>{% trans "Create your gaming account" %}</p>
         </div>
         
         {% if messages %}
             {% for message in messages %}
             <div class="alert alert-{{ message.tags }}">
-                <i class="fas {% if 'error' in message.tags %}fa-exclamation-circle{% else %}fa-check-circle{% endif %}"></i>
+                <i class="fas {% if 'error' in message.tags or 'danger' in message.tags %}fa-exclamation-circle{% elif 'success' in message.tags %}fa-check-circle{% else %}fa-info-circle{% endif %}"></i>
                 {{ message }}
             </div>
             {% endfor %}
         {% endif %}
         
-        <form method="post" id="registerForm">
+        <form method="post" id="registerForm" novalidate>
             {% csrf_token %}
-            <input type="hidden" name="fingerprint" id="fingerprint">
-            <input type="hidden" name="timezone" id="timezone">
-            
-            <div class="form-group">
-                <label class="form-label" for="first_name">
-                    <i class="fas fa-user"></i> {% trans "First Name" %}
-                </label>
-                <input type="text" 
-                       class="form-control" 
-                       id="first_name" 
-                       name="first_name" 
-                       placeholder="{% trans 'Enter your first name' %}"
-                       value="{{ first_name|default:'' }}"
-                       required
-                       minlength="2"
-                       maxlength="50"
-                       pattern="[a-zA-Z\s\-'\.]+"
-                       autocomplete="given-name">
-                <div class="form-hint">{% trans "Your first name (2-50 characters, letters only)" %}</div>
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label" for="last_name">
-                    <i class="fas fa-user"></i> {% trans "Last Name" %}
-                </label>
-                <input type="text" 
-                       class="form-control" 
-                       id="last_name" 
-                       name="last_name" 
-                       placeholder="{% trans 'Enter your last name' %}"
-                       value="{{ last_name|default:'' }}"
-                       required
-                       minlength="2"
-                       maxlength="50"
-                       pattern="[a-zA-Z\s\-'\.]+"
-                       autocomplete="family-name">
-                <div class="form-hint">{% trans "Your last name (2-50 characters, letters only)" %}</div>
-            </div>
             
             <div class="form-group">
                 <label class="form-label" for="username">
-                    <i class="fas fa-at"></i> {% trans "Username" %}
+                    <i class="fas fa-user"></i> {% trans "Username" %}
                 </label>
                 <input type="text" 
                        class="form-control" 
@@ -394,14 +391,13 @@
                        required
                        minlength="3"
                        maxlength="30"
-                       pattern="[a-zA-Z0-9_-]+"
                        autocomplete="username">
-                <div class="form-hint">{% trans "3-30 characters, letters, numbers, underscore and hyphen only" %}</div>
+                <div class="form-hint">{% trans "3-30 characters, letters, numbers, _ and -" %}</div>
             </div>
             
             <div class="form-group">
                 <label class="form-label" for="email">
-                    <i class="fas fa-envelope"></i> {% trans "Email Address" %}
+                    <i class="fas fa-envelope"></i> {% trans "Email" %}
                 </label>
                 <input type="email" 
                        class="form-control" 
@@ -411,22 +407,7 @@
                        value="{{ email|default:'' }}"
                        required
                        autocomplete="email">
-                <div class="form-hint">{% trans "A verification code will be sent to this email" %}</div>
-            </div>
-            
-            <div class="form-group">
-                <label class="form-label" for="phone_number">
-                    <i class="fas fa-phone"></i> {% trans "Phone Number" %}
-                    <span class="optional-badge">{% trans "Optional" %}</span>
-                </label>
-                <input type="tel" 
-                       class="form-control" 
-                       id="phone_number" 
-                       name="phone_number" 
-                       placeholder="{% trans '+1 234 567 8900' %}"
-                       value="{{ phone_number|default:'' }}"
-                       autocomplete="tel">
-                <div class="form-hint">{% trans "Optional. Adds extra security to your account." %}</div>
+                <div class="form-hint">{% trans "We'll send a verification code to this email" %}</div>
             </div>
             
             <div class="form-group">
@@ -444,12 +425,7 @@
                 <div class="password-strength">
                     <div class="password-strength-bar" id="strengthBar"></div>
                 </div>
-                <ul class="password-requirements" id="passwordRequirements">
-                    <li id="req-length">{% trans "At least 8 characters" %}</li>
-                    <li id="req-uppercase">{% trans "One uppercase letter" %}</li>
-                    <li id="req-lowercase">{% trans "One lowercase letter" %}</li>
-                    <li id="req-number">{% trans "One number" %}</li>
-                </ul>
+                <div class="form-hint">{% trans "At least 8 characters" %}</div>
             </div>
             
             <div class="form-group">
@@ -463,14 +439,22 @@
                        placeholder="{% trans 'Re-enter your password' %}"
                        required
                        autocomplete="new-password">
-                <div class="form-hint" id="passwordMismatch" style="display: none; color: #EF4444;">
-                    <i class="fas fa-exclamation-circle"></i> {% trans "Passwords do not match" %}
-                </div>
             </div>
+            
+            <!-- Cloudflare Turnstile -->
+            {% if turnstile_site_key %}
+            <div class="turnstile-container">
+                <div class="cf-turnstile" 
+                     data-sitekey="{{ turnstile_site_key }}"
+                     data-theme="dark"
+                     data-callback="onTurnstileSuccess"
+                     data-expired-callback="onTurnstileExpired"></div>
+            </div>
+            {% endif %}
             
             <button type="submit" class="btn-register" id="submitBtn">
                 <span class="btn-text">
-                    <i class="fas fa-user-plus"></i> {% trans "Create Account" %}
+                    <i class="fas fa-rocket"></i> {% trans "Create Account" %}
                 </span>
                 <span class="loading-spinner"></span>
             </button>
@@ -483,96 +467,63 @@
 </div>
 
 <script>
-    // Initialize FingerprintJS
-    let visitorId = null;
-    let fingerprintReady = false;
+    // Turnstile callbacks
+    let turnstileVerified = false;
     
-    FingerprintJS.load().then(fp => {
-        fp.get().then(result => {
-            visitorId = result.visitorId;
-            document.getElementById('fingerprint').value = visitorId;
-            fingerprintReady = true;
-            console.log('Device fingerprint ready');
-        });
-    }).catch(err => {
-        console.error('Fingerprint error:', err);
-        // Generate a fallback fingerprint
-        visitorId = 'fallback_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        document.getElementById('fingerprint').value = visitorId;
-        fingerprintReady = true;
-    });
+    function onTurnstileSuccess(token) {
+        turnstileVerified = true;
+        console.log('Turnstile verified');
+    }
     
-    // Set timezone
-    document.getElementById('timezone').value = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    function onTurnstileExpired() {
+        turnstileVerified = false;
+        console.log('Turnstile expired');
+    }
     
     // Password strength checker
     const password1 = document.getElementById('password1');
     const password2 = document.getElementById('password2');
     const strengthBar = document.getElementById('strengthBar');
     const submitBtn = document.getElementById('submitBtn');
-    const passwordMismatch = document.getElementById('passwordMismatch');
-    
-    const requirements = {
-        length: { regex: /.{8,}/, element: document.getElementById('req-length') },
-        uppercase: { regex: /[A-Z]/, element: document.getElementById('req-uppercase') },
-        lowercase: { regex: /[a-z]/, element: document.getElementById('req-lowercase') },
-        number: { regex: /[0-9]/, element: document.getElementById('req-number') }
-    };
     
     password1.addEventListener('input', function() {
         const password = this.value;
         let strength = 0;
         
-        // Check requirements
-        for (const [key, req] of Object.entries(requirements)) {
-            if (req.regex.test(password)) {
-                req.element.classList.add('met');
-                strength++;
-            } else {
-                req.element.classList.remove('met');
-            }
-        }
+        if (password.length >= 8) strength++;
+        if (/[A-Z]/.test(password)) strength++;
+        if (/[a-z]/.test(password)) strength++;
+        if (/[0-9]/.test(password)) strength++;
+        if (/[^A-Za-z0-9]/.test(password)) strength++;
         
-        // Update strength bar
         strengthBar.className = 'password-strength-bar';
-        if (strength === 4) {
+        if (strength >= 5) {
             strengthBar.classList.add('strong');
-        } else if (strength === 3) {
+        } else if (strength >= 4) {
             strengthBar.classList.add('good');
-        } else if (strength === 2) {
+        } else if (strength >= 3) {
             strengthBar.classList.add('fair');
         } else if (strength >= 1) {
             strengthBar.classList.add('weak');
         }
-        
-        checkPasswordMatch();
     });
     
-    password2.addEventListener('input', checkPasswordMatch);
-    
-    function checkPasswordMatch() {
-        if (password2.value && password1.value !== password2.value) {
-            passwordMismatch.style.display = 'block';
-            password2.classList.add('error');
-            password2.classList.remove('success');
-        } else if (password2.value && password1.value === password2.value) {
-            passwordMismatch.style.display = 'none';
-            password2.classList.remove('error');
-            password2.classList.add('success');
-        } else {
-            passwordMismatch.style.display = 'none';
-            password2.classList.remove('error', 'success');
-        }
-    }
+    // Username validation
+    const username = document.getElementById('username');
+    username.addEventListener('input', function() {
+        this.value = this.value.replace(/[^a-zA-Z0-9_-]/g, '');
+    });
     
     // Form submission
     document.getElementById('registerForm').addEventListener('submit', function(e) {
-        // Check if fingerprint is ready
-        if (!fingerprintReady) {
+        // Check Turnstile (if configured)
+        {% if turnstile_site_key %}
+        if (!turnstileVerified && !document.querySelector('[name="cf-turnstile-response"]')?.value) {
             e.preventDefault();
-            alert('{% trans "Please wait, security check in progress..." %}');
+            alert('{% trans "Please complete the security check." %}');
             return;
         }
+        {% endif %}
         
         // Check password match
         if (password1.value !== password2.value) {
@@ -581,30 +532,16 @@
             return;
         }
         
-        // Check password strength
-        let allMet = true;
-        for (const req of Object.values(requirements)) {
-            if (!req.element.classList.contains('met')) {
-                allMet = false;
-                break;
-            }
-        }
-        
-        if (!allMet) {
+        // Check minimum password length
+        if (password1.value.length < 8) {
             e.preventDefault();
-            alert('{% trans "Please meet all password requirements" %}');
+            alert('{% trans "Password must be at least 8 characters." %}');
             return;
         }
         
         // Show loading state
         submitBtn.classList.add('loading');
         submitBtn.disabled = true;
-    });
-    
-    // Username validation - only allow valid characters
-    const username = document.getElementById('username');
-    username.addEventListener('input', function() {
-        this.value = this.value.replace(/[^a-zA-Z0-9_-]/g, '');
     });
 </script>
 {% endblock %}

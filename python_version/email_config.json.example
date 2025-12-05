@@ -1,0 +1,19 @@
+{
+  "comment": "Email/SMTP Configuration for Rashigo - COPY THIS TO email_config.json",
+  "smtp": {
+    "host": "localhost",
+    "port": 587,
+    "use_tls": true,
+    "use_ssl": false,
+    "username": "your_smtp_username",
+    "password": "your_smtp_password"
+  },
+  "from_email": "noreply@yourdomain.com",
+  "server_email": "admin@yourdomain.com",
+  "cloudflare_turnstile": {
+    "comment": "Get keys from https://dash.cloudflare.com/turnstile",
+    "site_key": "your_turnstile_site_key",
+    "secret_key": "your_turnstile_secret_key"
+  }
+}
+

@@ -6,189 +6,293 @@
 
 {% block extra_css %}
 <style>
+    main.container {
+        max-width: 100% !important;
+        padding: 0 !important;
+    }
+    
+    .verify-page {
+        min-height: calc(100vh - 60px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 40px 20px;
+        background: linear-gradient(135deg, #0A0E27 0%, #0F1635 50%, #0A0E27 100%);
+        position: relative;
+    }
+    
+    .verify-page::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: 
+            radial-gradient(circle at 30% 30%, rgba(0, 255, 255, 0.08) 0%, transparent 40%),
+            radial-gradient(circle at 70% 70%, rgba(0, 255, 128, 0.06) 0%, transparent 40%);
+        pointer-events: none;
+    }
+    
     .verify-container {
+        position: relative;
+        z-index: 10;
         max-width: 480px;
-        margin: 60px auto;
-        padding: 40px;
-        background: rgba(10, 14, 39, 0.8);
-        backdrop-filter: blur(10px);
-        border-radius: 20px;
+        width: 100%;
+        background: rgba(10, 14, 39, 0.85);
+        backdrop-filter: blur(20px);
+        border-radius: 24px;
         border: 1px solid rgba(0, 255, 255, 0.2);
-        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        padding: 48px 40px;
+        box-shadow: 
+            0 25px 80px rgba(0, 0, 0, 0.6),
+            0 0 60px rgba(0, 255, 255, 0.1);
     }
     
     .verify-header {
         text-align: center;
-        margin-bottom: 30px;
+        margin-bottom: 32px;
     }
     
     .verify-icon {
-        width: 80px;
-        height: 80px;
-        border-radius: 50%;
+        width: 90px;
+        height: 90px;
+        border-radius: 24px;
         background: linear-gradient(135deg, #00FFFF 0%, #00FF80 100%);
         display: flex;
         align-items: center;
         justify-content: center;
-        margin: 0 auto 20px;
-        font-size: 36px;
-        box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+        margin: 0 auto 24px;
+        font-size: 42px;
+        box-shadow: 
+            0 15px 50px rgba(0, 255, 255, 0.4),
+            0 0 30px rgba(0, 255, 128, 0.3);
+        animation: icon-pulse 2s ease-in-out infinite;
+    }
+    
+    @keyframes icon-pulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
     }
     
     .verify-header h1 {
-        color: #00FFFF;
-        font-size: 24px;
+        color: #FFFFFF;
+        font-size: 26px;
         font-weight: 700;
-        margin-bottom: 8px;
-        text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        margin-bottom: 10px;
         text-transform: uppercase;
+        letter-spacing: 2px;
     }
     
     .verify-header p {
-        color: #90E0B0;
+        color: #8B9DC3;
         font-size: 14px;
+        line-height: 1.5;
     }
     
     .email-display {
-        background: rgba(0, 0, 0, 0.4);
-        border: 1px solid rgba(0, 255, 255, 0.3);
-        border-radius: 10px;
-        padding: 12px 16px;
+        background: rgba(0, 255, 255, 0.08);
+        border: 1px solid rgba(0, 255, 255, 0.25);
+        border-radius: 12px;
+        padding: 16px 20px;
         text-align: center;
         color: #00FFFF;
         font-weight: 600;
-        margin-bottom: 20px;
-        box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+        font-size: 15px;
+        margin-bottom: 28px;
+        letter-spacing: 1px;
+    }
+    
+    .alert {
+        border-radius: 12px;
+        padding: 14px 18px;
+        margin-bottom: 24px;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        border: 1px solid;
+    }
+    
+    .alert-danger, .alert-error {
+        background: rgba(255, 0, 100, 0.1);
+        border-color: rgba(255, 0, 100, 0.3);
+        color: #FF6B9D;
+    }
+    
+    .alert-success {
+        background: rgba(0, 255, 128, 0.1);
+        border-color: rgba(0, 255, 128, 0.3);
+        color: #00FF80;
+    }
+    
+    .alert-info, .alert-warning {
+        background: rgba(0, 255, 255, 0.1);
+        border-color: rgba(0, 255, 255, 0.3);
+        color: #00FFFF;
     }
     
     .code-input-container {
         display: flex;
         justify-content: center;
-        gap: 10px;
-        margin: 30px 0;
+        gap: 12px;
+        margin: 32px 0;
     }
     
     .code-input {
-        width: 50px;
-        height: 60px;
+        width: 52px;
+        height: 64px;
         text-align: center;
-        font-size: 24px;
+        font-size: 26px;
         font-weight: 700;
-        background: rgba(0, 0, 0, 0.4);
-        border: 2px solid rgba(0, 255, 255, 0.3);
-        border-radius: 10px;
-        color: #E0E0E0;
-        transition: all 0.2s ease;
+        background: rgba(0, 0, 0, 0.5);
+        border: 2px solid rgba(0, 255, 255, 0.25);
+        border-radius: 14px;
+        color: #FFFFFF;
+        transition: all 0.3s ease;
+        caret-color: #00FFFF;
     }
     
     .code-input:focus {
         border-color: #00FFFF;
         outline: none;
-        box-shadow: 0 0 20px rgba(0, 255, 255, 0.4);
+        box-shadow: 0 0 25px rgba(0, 255, 255, 0.4);
+        background: rgba(0, 255, 255, 0.05);
     }
     
     .code-input.filled {
-        border-color: #00FFFF;
-        background: rgba(0, 255, 255, 0.1);
+        border-color: #00FF80;
+        background: rgba(0, 255, 128, 0.08);
+        color: #00FF80;
     }
     
     .btn-verify {
         width: 100%;
+        padding: 16px 24px;
         background: linear-gradient(135deg, #00FFFF 0%, #00FF80 100%);
+        border: none;
+        border-radius: 14px;
         color: #0A0E27;
-        border: 1px solid rgba(0, 255, 255, 0.3);
-        padding: 14px;
-        border-radius: 10px;
         font-size: 16px;
-        font-weight: 600;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 2px;
         cursor: pointer;
-        transition: all 0.2s ease;
-        margin-bottom: 16px;
-        box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        transition: all 0.3s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        margin-bottom: 20px;
     }
     
-    .btn-verify:hover {
-        box-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
-        transform: translateY(-1px);
+    .btn-verify:hover:not(:disabled) {
+        transform: translateY(-2px);
+        box-shadow: 
+            0 12px 40px rgba(0, 255, 255, 0.4),
+            0 0 25px rgba(0, 255, 128, 0.3);
     }
     
     .btn-verify:disabled {
-        background: rgba(0, 0, 0, 0.4);
-        border-color: rgba(0, 255, 255, 0.2);
-        color: #6B7280;
+        background: linear-gradient(135deg, #3A4A6B 0%, #2A3A5B 100%);
         cursor: not-allowed;
         transform: none;
+        box-shadow: none;
     }
     
     .resend-section {
         text-align: center;
-        color: #90E0B0;
+        color: #8B9DC3;
         font-size: 14px;
+        padding-top: 20px;
+        border-top: 1px solid rgba(0, 255, 255, 0.1);
     }
     
     .resend-link {
         color: #00FFFF;
         text-decoration: none;
         font-weight: 600;
-        text-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
+        transition: all 0.3s ease;
     }
     
     .resend-link:hover {
-        text-decoration: underline;
-        text-shadow: 0 0 12px rgba(0, 255, 255, 0.8);
+        color: #00FF80;
+        text-shadow: 0 0 10px rgba(0, 255, 128, 0.5);
     }
     
     .timer {
-        color: #90E0B0;
-        font-size: 14px;
+        display: inline-block;
+        color: #00FF80;
+        font-weight: 600;
+        min-width: 30px;
+    }
+    
+    @media (max-width: 480px) {
+        .verify-container {
+            padding: 36px 24px;
+            margin: 10px;
+        }
+        
+        .code-input {
+            width: 44px;
+            height: 54px;
+            font-size: 22px;
+        }
+        
+        .code-input-container {
+            gap: 8px;
+        }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="verify-container">
-    <div class="verify-header">
-        <div class="verify-icon">📧</div>
-        <h1>{% trans "Verify Your Email" %}</h1>
-        <p>{% trans "We've sent a 6-digit code to your email address" %}</p>
-    </div>
-    
-    <div class="email-display">
-        {{ email }}
-    </div>
-    
-    {% if messages %}
-        {% for message in messages %}
-        <div class="alert alert-{{ message.tags }}" style="background: {% if 'error' in message.tags %}#EF4444{% else %}#6366F1{% endif %}; color: white; padding: 12px 16px; border-radius: 10px; margin-bottom: 20px; font-size: 14px;">
-            {{ message }}
-        </div>
-        {% endfor %}
-    {% endif %}
-    
-    <form method="post" id="verifyForm">
-        {% csrf_token %}
-        
-        <div class="code-input-container">
-            <input type="text" class="code-input" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off" autofocus>
-            <input type="text" class="code-input" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off">
-            <input type="text" class="code-input" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off">
-            <input type="text" class="code-input" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off">
-            <input type="text" class="code-input" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off">
-            <input type="text" class="code-input" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off">
+<div class="verify-page">
+    <div class="verify-container">
+        <div class="verify-header">
+            <div class="verify-icon">✉️</div>
+            <h1>{% trans "Check Your Email" %}</h1>
+            <p>{% trans "We've sent a 6-digit verification code to" %}</p>
         </div>
         
-        <input type="hidden" name="verification_code" id="fullCode">
+        <div class="email-display">
+            {{ masked_email|default:email }}
+        </div>
         
-        <button type="submit" class="btn-verify" id="verifyBtn" disabled>
-            <i class="fas fa-check-circle"></i> {% trans "Verify Email" %}
-        </button>
-    </form>
-    
-    <div class="resend-section">
-        <span id="resendTimer">{% trans "Didn't receive the code?" %}</span>
-        <a href="?step=verify_email&resend=true" class="resend-link" id="resendLink" style="display: none;">
-            {% trans "Resend Code" %}
-        </a>
+        {% if messages %}
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                <i class="fas {% if 'error' in message.tags or 'danger' in message.tags %}fa-exclamation-circle{% elif 'success' in message.tags %}fa-check-circle{% else %}fa-info-circle{% endif %}"></i>
+                {{ message }}
+            </div>
+            {% endfor %}
+        {% endif %}
+        
+        <form method="post" id="verifyForm">
+            {% csrf_token %}
+            
+            <div class="code-input-container">
+                <input type="text" class="code-input" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off" autofocus>
+                <input type="text" class="code-input" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off">
+                <input type="text" class="code-input" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off">
+                <input type="text" class="code-input" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off">
+                <input type="text" class="code-input" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off">
+                <input type="text" class="code-input" maxlength="1" pattern="[0-9]" inputmode="numeric" autocomplete="off">
+            </div>
+            
+            <input type="hidden" name="verification_code" id="fullCode">
+            
+            <button type="submit" class="btn-verify" id="verifyBtn" disabled>
+                <i class="fas fa-check-circle"></i> {% trans "Verify Email" %}
+            </button>
+        </form>
+        
+        <div class="resend-section">
+            <span id="resendTimer">{% trans "Resend code in" %} <span class="timer" id="countdown">60</span>s</span>
+            <a href="?step=verify_email&resend=true" class="resend-link" id="resendLink" style="display: none;">
+                <i class="fas fa-redo"></i> {% trans "Resend Code" %}
+            </a>
+        </div>
     </div>
 </div>
 
@@ -198,6 +302,7 @@
     const fullCodeInput = document.getElementById('fullCode');
     const resendTimer = document.getElementById('resendTimer');
     const resendLink = document.getElementById('resendLink');
+    const countdownEl = document.getElementById('countdown');
     
     // Handle input focus and navigation
     inputs.forEach((input, index) => {
@@ -240,7 +345,9 @@
             }
             
             const lastFilledIndex = Math.min(pastedData.length - 1, 5);
-            inputs[lastFilledIndex].focus();
+            if (lastFilledIndex >= 0) {
+                inputs[lastFilledIndex].focus();
+            }
             updateFullCode();
         });
     });
@@ -258,9 +365,9 @@
     let countdown = 60;
     const timerInterval = setInterval(() => {
         countdown--;
-        if (countdown > 0) {
-            resendTimer.textContent = `{% trans "Resend available in" %} ${countdown}s`;
-        } else {
+        countdownEl.textContent = countdown;
+        
+        if (countdown <= 0) {
             clearInterval(timerInterval);
             resendTimer.style.display = 'none';
             resendLink.style.display = 'inline';
@@ -268,4 +375,3 @@
     }, 1000);
 </script>
 {% endblock %}
-
