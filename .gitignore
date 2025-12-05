@@ -170,6 +170,10 @@ local_settings.py
 .env.local
 .env.*.local
 
+# WebRTC server configuration (contains credentials)
+webrtc_servers.json
+!webrtc_servers.json.example
+
 # Backup files
 *.bak
 *.backup

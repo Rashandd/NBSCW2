@@ -376,12 +376,18 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
 
     async def receive_json(self, content, **kwargs):
         signal_type = content.get("signal_type")
-        recipient_id = content.get("recipient_id")
+        # Handle recipient_id from both root level and inside data object
+        recipient_id = content.get("recipient_id") or (content.get("data", {}).get("recipient_id") if content.get("data") else None)
         data = content.get("data")
+
+        logger.debug(f"Received signal: {signal_type} from user {self.scope['user'].username} to {recipient_id}")
 
         # 1. WebRTC Sinyalleşmesi (Offer/Answer/ICE)
         if signal_type in ['offer', 'answer', 'ice_candidate']:
-            # Sinyali sadece ilgili alıcıya değil, gruba gönderiyoruz.
+            # Log for debugging
+            logger.info(f"WebRTC Signal: {signal_type} from {self.user_id} to {recipient_id}")
+            
+            # Sinyali gruba gönderiyoruz.
             # İstemci (JS) bu sinyalin kendisi için olup olmadığını kontrol edecek.
             await self.channel_layer.group_send(
                 self.channel_group_name,
@@ -389,7 +395,7 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
                     "type": "webrtc.signal",
                     "sender_id": self.user_id,
                     "username": self.scope["user"].username,  # Add username
-                    "recipient_id": recipient_id,  # Kimin alması gerektiğini belirt
+                    "recipient_id": recipient_id,  # Kimin alması gerektiğini belirt (root level)
                     "signal_type": signal_type,
                     "data": data,
                 }

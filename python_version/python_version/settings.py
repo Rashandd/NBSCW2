@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 import os
+import json
 from pathlib import Path
 from dotenv import load_dotenv
 
@@ -177,34 +178,53 @@ CHANNEL_LAYERS = {
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# COTURN/WebRTC Configuration (Backend settings - one server handles all voice channels)
-# SECURITY: Load credentials from environment variables
-COTURN_HOST = os.getenv('COTURN_HOST', 'localhost')
-COTURN_PORT = os.getenv('COTURN_PORT', '3478')
-COTURN_USERNAME = os.getenv('COTURN_USERNAME', '')
-COTURN_PASSWORD = os.getenv('COTURN_PASSWORD', '')
+# COTURN/WebRTC Configuration
+# Load ICE servers from JSON file (webrtc_servers.json)
+# This file contains all STUN/TURN servers including your personal server and free public servers
 
+WEBRTC_CONFIG_FILE = BASE_DIR / 'webrtc_servers.json'
+
+# Initialize with empty config
 COTURN_CONFIG = {
     'ice_servers': []
 }
 
-# Add COTURN server if credentials are provided
-if COTURN_HOST and COTURN_USERNAME and COTURN_PASSWORD:
-    COTURN_CONFIG['ice_servers'].append({
-        'urls': [
-            f'stun:{COTURN_HOST}:{COTURN_PORT}',
-            f'turn:{COTURN_HOST}:{COTURN_PORT}'
-        ],
-        'username': COTURN_USERNAME,
-        'credential': COTURN_PASSWORD,
-    })
+# Load ICE servers from JSON file
+try:
+    if WEBRTC_CONFIG_FILE.exists():
+        with open(WEBRTC_CONFIG_FILE, 'r', encoding='utf-8') as f:
+            webrtc_config = json.load(f)
+            # Extract ice_servers array (remove 'comment' fields for WebRTC)
+            ice_servers = []
+            for server in webrtc_config.get('ice_servers', []):
+                # Create clean server config (remove comment field)
+                clean_server = {}
+                if 'urls' in server:
+                    clean_server['urls'] = server['urls']
+                if 'username' in server:
+                    clean_server['username'] = server['username']
+                if 'credential' in server:
+                    clean_server['credential'] = server['credential']
+                if clean_server:  # Only add if not empty
+                    ice_servers.append(clean_server)
+            
+            COTURN_CONFIG['ice_servers'] = ice_servers
+            print(f"[WebRTC] Loaded {len(ice_servers)} ICE servers from {WEBRTC_CONFIG_FILE}")
+    else:
+        print(f"[WebRTC] Warning: {WEBRTC_CONFIG_FILE} not found. Using fallback servers.")
+        # Fallback to basic STUN servers if JSON file doesn't exist
+        COTURN_CONFIG['ice_servers'] = [
+            {'urls': 'stun:stun.l.google.com:19302'},
+            {'urls': 'stun:stun1.l.google.com:19302'},
+        ]
+except Exception as e:
+    print(f"[WebRTC] Error loading {WEBRTC_CONFIG_FILE}: {e}")
+    # Fallback to basic STUN servers on error
+    COTURN_CONFIG['ice_servers'] = [
+        {'urls': 'stun:stun.l.google.com:19302'},
+        {'urls': 'stun:stun1.l.google.com:19302'},
+    ]
 
-# Add public STUN servers (always available)
-COTURN_CONFIG['ice_servers'].extend([
-    {'urls': ['stun:stun.l.google.com:19302']},
-    {'urls': ['stun:stun1.l.google.com:19302']},
-    {'urls': ['stun:stun2.l.google.com:19302']},
-    {'urls': ['stun:stun3.l.google.com:19302']},
-    {'urls': ['stun:stun.stunprotocol.org:3478']},
-    {'urls': ['stun:stun.ekiga.net:3478']},
-])
+# Export as JSON string for frontend (used in views.py)
+# This will be serialized and passed to JavaScript via template context
+COTURN_CONFIG_JSON = json.dumps(COTURN_CONFIG['ice_servers'])

@@ -1,0 +1,85 @@
+{
+  "ice_servers": [
+    {
+      "comment": "Your Personal TURN Server - Replace with your server details",
+      "urls": "stun:YOUR_SERVER_IP:3478"
+    },
+    {
+      "comment": "Your Personal TURN Server (UDP) - Replace with your credentials",
+      "urls": "turn:YOUR_SERVER_IP:3478",
+      "username": "YOUR_USERNAME",
+      "credential": "YOUR_PASSWORD"
+    },
+    {
+      "comment": "Your Personal TURN Server (TCP) - Replace with your credentials",
+      "urls": "turn:YOUR_SERVER_IP:3478?transport=tcp",
+      "username": "YOUR_USERNAME",
+      "credential": "YOUR_PASSWORD"
+    },
+    {
+      "comment": "Google STUN 1",
+      "urls": "stun:stun.l.google.com:19302"
+    },
+    {
+      "comment": "Google STUN 2",
+      "urls": "stun:stun1.l.google.com:19302"
+    },
+    {
+      "comment": "Google STUN 3",
+      "urls": "stun:stun2.l.google.com:19302"
+    },
+    {
+      "comment": "Google STUN 4",
+      "urls": "stun:stun3.l.google.com:19302"
+    },
+    {
+      "comment": "Google STUN 5",
+      "urls": "stun:stun4.l.google.com:19302"
+    },
+    {
+      "comment": "STUN Protocol",
+      "urls": "stun:stun.stunprotocol.org:3478"
+    },
+    {
+      "comment": "Ekiga STUN",
+      "urls": "stun:stun.ekiga.net:3478"
+    },
+    {
+      "comment": "OpenRelay TURN (Free Public)",
+      "urls": "turn:openrelay.metered.ca:80",
+      "username": "openrelayproject",
+      "credential": "openrelayproject"
+    },
+    {
+      "comment": "OpenRelay TURN HTTPS (Free Public)",
+      "urls": "turn:openrelay.metered.ca:443",
+      "username": "openrelayproject",
+      "credential": "openrelayproject"
+    },
+    {
+      "comment": "OpenRelay TURN TCP (Free Public)",
+      "urls": "turn:openrelay.metered.ca:443?transport=tcp",
+      "username": "openrelayproject",
+      "credential": "openrelayproject"
+    },
+    {
+      "comment": "Metered TURN (Free Tier)",
+      "urls": "turn:a.relay.metered.ca:80",
+      "username": "free",
+      "credential": "free"
+    },
+    {
+      "comment": "Metered TURN HTTPS (Free Tier)",
+      "urls": "turn:a.relay.metered.ca:443",
+      "username": "free",
+      "credential": "free"
+    },
+    {
+      "comment": "Metered TURN TCP (Free Tier)",
+      "urls": "turn:a.relay.metered.ca:443?transport=tcp",
+      "username": "free",
+      "credential": "free"
+    }
+  ]
+}
+
