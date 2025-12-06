@@ -3240,15 +3240,24 @@
     }
     
     function addVoiceParticipant(username, isLocal, isMuted, isDeafened) {
-        if (voiceParticipants.has(username)) return;
         if (!currentVoiceChannelSlug) return;
+        
+        // Use a unified ID system based on username to prevent duplicates
+        const oderlySafeUsername = username.replace(/[^a-zA-Z0-9]/g, '_');
+        const uniqueId = `voice-user-${oderlySafeUsername}`;
+        
+        // Check if already exists (prevent duplicates)
+        if (document.getElementById(uniqueId) || voiceParticipants.has(username)) {
+            console.log(`[Voice] User ${username} already in participant list, skipping duplicate`);
+            return;
+        }
         
         const list = ensureParticipantsListInSidebar(currentVoiceChannelSlug);
         if (!list) return;
         
         const item = document.createElement('li');
         item.className = 'voice-participant-mini';
-        item.id = `participant-${username}`;
+        item.id = uniqueId;
         item.dataset.username = username;
         
         const avatarLetter = username.charAt(0).toUpperCase();
@@ -3271,14 +3280,31 @@
             avatarElement: item.querySelector('.voice-participant-mini-avatar'),
             statusElement: item.querySelector('.voice-participant-mini-status')
         });
+        
+        console.log(`[Voice] Added participant: ${username} (${uniqueId})`);
     }
     
     function removeVoiceParticipant(username) {
+        // Remove from voiceParticipants Map
         const participant = voiceParticipants.get(username);
         if (participant) {
             participant.element.remove();
             voiceParticipants.delete(username);
         }
+        
+        // Also try to remove by all possible ID formats
+        const safeUsername = username.replace(/[^a-zA-Z0-9]/g, '_');
+        const possibleIds = [
+            `voice-user-${safeUsername}`,
+            `participant-${username}`,
+        ];
+        
+        possibleIds.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        });
+        
+        console.log(`[Voice] Removed participant: ${username}`);
     }
     
     function clearVoiceParticipantsFromSidebar() {
@@ -3322,6 +3348,10 @@
     function clearVoiceState() {
         sessionStorage.removeItem('voiceState');
         console.log('[Voice] State cleared');
+        
+        // Also hide the mini box if visible
+        const miniBox = document.getElementById('voice-mini-box');
+        if (miniBox) miniBox.style.display = 'none';
     }
     
     // Save voice state before leaving page (no confirmation popup)
@@ -3489,10 +3519,15 @@
             return;
         }
         
-        // CRITICAL: Check if user already exists using user_id (prevents duplicates)
-        const existingElement = document.getElementById(`user-avatar-${userId}`);
-        if (existingElement) {
-            console.log(`[Presence] User ${username} (${userId}) already in sidebar, skipping duplicate`);
+        // CRITICAL: Check ALL possible ID formats to prevent duplicates
+        const safeUsername = username.replace(/[^a-zA-Z0-9]/g, '_');
+        const existingById = document.getElementById(`user-avatar-${userId}`);
+        const existingByUsername = document.getElementById(`voice-user-${safeUsername}`);
+        const existingByParticipant = document.getElementById(`participant-${username}`);
+        const inVoiceParticipants = voiceParticipants.has(username);
+        
+        if (existingById || existingByUsername || existingByParticipant || inVoiceParticipants) {
+            console.log(`[Presence] User ${username} already in sidebar, skipping duplicate`);
             return;
         }
         
@@ -3690,7 +3725,42 @@
         
         // Connect presence socket for global voice presence
         connectPresenceSocket();
+        
+        // AUTO-RECONNECT: Check if we were in voice and should reconnect
+        checkAndAutoReconnect();
     });
+    
+    function checkAndAutoReconnect() {
+        try {
+            const savedState = sessionStorage.getItem('voiceState');
+            if (!savedState) return;
+            
+            const state = JSON.parse(savedState);
+            
+            // Check if this is the same server and voice was connected
+            if (state.connected && state.serverSlug === serverSlug && state.channelSlug) {
+                // Check if recently disconnected (within 30 seconds)
+                const timeSinceDisconnect = Date.now() - (state.timestamp || 0);
+                if (timeSinceDisconnect < 30000) {
+                    console.log('[Voice] Auto-reconnecting to:', state.channelName);
+                    
+                    // Apply saved mute/deafen state
+                    isMuted = state.muted || false;
+                    isDeafened = state.deafened || false;
+                    
+                    // Auto-reconnect to the voice channel
+                    setTimeout(() => {
+                        openVoiceChannel(state.channelSlug, state.channelName);
+                    }, 500);
+                } else {
+                    console.log('[Voice] Session expired, not auto-reconnecting');
+                    sessionStorage.removeItem('voiceState');
+                }
+            }
+        } catch (e) {
+            console.error('[Voice] Error checking auto-reconnect:', e);
+        }
+    }
     
     // Expose functions globally
     window.toggleMute = toggleMute;

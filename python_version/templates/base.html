@@ -425,24 +425,25 @@
     <!-- Voice Chat Mini Box (Global) -->
     <div id="voice-mini-box" class="voice-mini-box" style="display: none;">
         <div class="voice-mini-header">
-            <span class="voice-mini-status">
+            <span class="voice-mini-status disconnected">
                 <span class="voice-mini-dot"></span>
-                <span id="voice-mini-channel">Voice Connected</span>
+                <span id="voice-mini-channel">Voice Paused</span>
             </span>
         </div>
         <div class="voice-mini-server" id="voice-mini-server"></div>
+        <div class="voice-mini-info">Click "Return" to reconnect</div>
         <div class="voice-mini-controls">
-            <button class="voice-mini-btn" id="voice-mini-mute" onclick="toggleMiniMute()" title="{% trans 'Mute' %}">
+            <button class="voice-mini-btn" id="voice-mini-mute" onclick="toggleMiniMute()" title="{% trans 'Mute (for when reconnected)' %}">
                 <i class="fas fa-microphone"></i>
             </button>
-            <button class="voice-mini-btn" id="voice-mini-deafen" onclick="toggleMiniDeafen()" title="{% trans 'Deafen' %}">
+            <button class="voice-mini-btn" id="voice-mini-deafen" onclick="toggleMiniDeafen()" title="{% trans 'Deafen (for when reconnected)' %}">
                 <i class="fas fa-headphones"></i>
             </button>
-            <button class="voice-mini-btn return" onclick="returnToVoice()" title="{% trans 'Return to Voice' %}">
-                <i class="fas fa-arrow-right"></i>
+            <button class="voice-mini-btn return" onclick="returnToVoice()" title="{% trans 'Return & Reconnect' %}">
+                <i class="fas fa-redo"></i>
             </button>
-            <button class="voice-mini-btn disconnect" onclick="disconnectMiniVoice()" title="{% trans 'Leave Voice' %}">
-                <i class="fas fa-phone-slash"></i>
+            <button class="voice-mini-btn disconnect" onclick="disconnectMiniVoice()" title="{% trans 'Cancel' %}">
+                <i class="fas fa-times"></i>
             </button>
         </div>
     </div>
@@ -522,7 +523,28 @@
             color: #6B7280;
             text-transform: uppercase;
             letter-spacing: 1px;
+            margin-bottom: 4px;
+        }
+        
+        .voice-mini-info {
+            font-size: 10px;
+            color: #FFA500;
             margin-bottom: 10px;
+            padding: 4px 8px;
+            background: rgba(255, 165, 0, 0.1);
+            border-radius: 4px;
+            text-align: center;
+        }
+        
+        .voice-mini-status.disconnected .voice-mini-dot {
+            background: #FFA500;
+            box-shadow: 0 0 8px rgba(255, 165, 0, 0.6);
+            animation: pulse-orange 2s infinite;
+        }
+        
+        @keyframes pulse-orange {
+            0%, 100% { box-shadow: 0 0 8px rgba(255, 165, 0, 0.6); }
+            50% { box-shadow: 0 0 16px rgba(255, 165, 0, 0.9); }
         }
         
         .voice-mini-controls {
