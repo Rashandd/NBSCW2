@@ -241,81 +241,6 @@
         margin-bottom: 32px;
     }
     
-    /* Global Activity Feed Styles */
-    .activity-section {
-        margin-top: 16px;
-        border-top: 1px solid rgba(0, 255, 255, 0.1);
-        padding-top: 16px;
-    }
-    
-    .activity-feed {
-        max-height: 200px;
-        overflow-y: auto;
-        display: flex;
-        flex-direction: column;
-        gap: 4px;
-    }
-    
-    .activity-empty {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 8px;
-        padding: 20px;
-        color: #6B7280;
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-    
-    .activity-empty i {
-        font-size: 24px;
-        opacity: 0.4;
-        color: #00FFFF;
-    }
-    
-    .activity-item {
-        padding: 8px 10px;
-        background: rgba(0, 255, 128, 0.05);
-        border-left: 2px solid #00FF80;
-        border-radius: 0 4px 4px 0;
-        font-size: 11px;
-        color: #8B9DC3;
-        animation: activity-slide 0.3s ease-out;
-    }
-    
-    @keyframes activity-slide {
-        from {
-            opacity: 0;
-            transform: translateX(-10px);
-        }
-        to {
-            opacity: 1;
-            transform: translateX(0);
-        }
-    }
-    
-    .activity-item-user {
-        color: #00FFFF;
-        font-weight: 600;
-        margin-right: 4px;
-    }
-    
-    .activity-item-channel {
-        color: #6B7280;
-        font-size: 9px;
-        margin-top: 2px;
-    }
-    
-    .activity-item-text {
-        color: #B8C4D0;
-        word-break: break-word;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
-    }
-    
     .channel-section-header {
         display: flex;
         align-items: center;
@@ -1158,61 +1083,48 @@
     .message-item {
         display: flex;
         gap: 16px;
-        padding: 12px 16px;
-        margin: 8px 0;
-        transition: all 0.3s ease;
-        max-width: 75%;
+        padding: 8px 16px;
+        margin: 2px 0;
+        transition: all 0.2s ease;
+        width: 100%;
+        max-width: 100%;
     }
     
     .message-item:hover {
-        transform: translateX(4px);
+        background: rgba(0, 255, 255, 0.03);
     }
     
-    /* Own Messages - Right Aligned, Gradient Background */
-    .message-item.own-message {
-        margin-left: auto;
-        flex-direction: row-reverse;
+    /* All messages - Same column, left aligned */
+    .message-item.own-message,
+    .message-item.other-message {
+        margin-left: 0;
+        margin-right: 0;
+        flex-direction: row;
     }
     
-    .message-item.own-message .message-content {
-        text-align: right;
+    .message-item.own-message .message-content,
+    .message-item.other-message .message-content {
+        text-align: left;
     }
     
-    .message-item.own-message .message-bubble {
-        background: linear-gradient(135deg, #0066FF 0%, #8B00FF 100%);
-        border: 1px solid rgba(0, 255, 255, 0.3);
-        border-radius: 12px 12px 4px 12px; /* Sharp corner on left */
-        box-shadow: 
-            0 0 20px rgba(102, 0, 255, 0.4),
-            inset 0 0 20px rgba(0, 255, 255, 0.1);
-        position: relative;
+    .message-bubble {
+        background: transparent;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        padding: 4px 0;
+    }
+    
+    .message-item.own-message .message-bubble,
+    .message-item.other-message .message-bubble {
+        background: transparent;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
     }
     
     .message-item.own-message .message-bubble::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(135deg, rgba(0, 255, 255, 0.1) 0%, rgba(139, 0, 255, 0.1) 100%);
-        border-radius: inherit;
-        pointer-events: none;
-    }
-    
-    /* Other Messages - Left Aligned, Glass Background */
-    .message-item.other-message {
-        margin-right: auto;
-    }
-    
-    .message-item.other-message .message-bubble {
-        background: rgba(10, 14, 39, 0.6);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(0, 255, 255, 0.2);
-        border-radius: 12px 12px 12px 4px; /* Sharp corner on right */
-        box-shadow: 
-            0 0 15px rgba(0, 0, 0, 0.3),
-            inset 0 0 20px rgba(0, 255, 255, 0.05);
+        display: none;
     }
     
     .message-avatar {
@@ -1772,21 +1684,6 @@
                 {% endfor %}
             </div>
             
-            <!-- Global Activity Stream -->
-            <div class="channel-section activity-section">
-                <div class="channel-section-header">
-                    <div class="channel-section-title">
-                        <i class="fas fa-stream"></i>
-                        <span>{% trans "ACTIVITY" %}</span>
-                    </div>
-                </div>
-                <div id="global-activity-feed" class="activity-feed">
-                    <div class="activity-empty">
-                        <i class="fas fa-comment-dots"></i>
-                        <span>{% trans "No recent activity" %}</span>
-                    </div>
-                </div>
-            </div>
         </div>
         
         <!-- User Control Panel - Sticky Bottom -->
@@ -3048,14 +2945,6 @@
                         }
                     }
                     
-                    // Also add to global activity feed
-                    if (data.messages && data.messages.length > 0) {
-                        // Only show last few in activity feed (not entire history)
-                        const recentMessages = data.messages.slice(-3);
-                        recentMessages.forEach(msg => {
-                            addToGlobalActivityFeed(msg.username, msg.content, currentChannelSlug);
-                        });
-                    }
                 }
                 // Handle new chat message
                 else if (data.type === 'chat_message' || data.message_type === 'chat_message') {
@@ -3082,9 +2971,6 @@
                         data.timestamp || data.created_at,
                         data.user_id || data.sender_id
                     );
-                    
-                    // Add to global activity feed
-                    addToGlobalActivityFeed(username, messageContent, currentChannelSlug);
                 }
             } catch (err) {
                 console.error('Error parsing WebSocket message:', err, e.data);
@@ -3150,7 +3036,7 @@
         // CRITICAL FIX: Ensure content is always a string, not an object
         let messageText = '';
         if (typeof content === 'string') {
-            messageText = content.content;
+            messageText = content;  // Already a string, use it directly
         } else if (content && typeof content === 'object') {
             // If content is an object, extract the actual text
             messageText = content.content || content.message || content.text || JSON.stringify(content);
@@ -3164,28 +3050,19 @@
         const div = document.createElement('div');
         div.className = 'message-item';
         
-        // Check if message is from current user
-        const isOwnMessage = (userId && userId === currentUserId) || (usernameStr === currentUsername);
-        if (isOwnMessage) {
-            div.classList.add('own-message');
-        } else {
-            div.classList.add('other-message');
-        }
-        
         const avatarLetter = usernameStr.charAt(0).toUpperCase();
+        const avatarColor = `hsl(${usernameStr.charCodeAt(0) * 137.508 % 360}, 70%, 50%)`;
         const date = timestamp ? new Date(timestamp) : new Date();
         const timeStr = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
         
         div.innerHTML = `
-            <div class="message-avatar">${avatarLetter}</div>
+            <div class="message-avatar" style="background: linear-gradient(135deg, ${avatarColor} 0%, #00FF80 100%);">${avatarLetter}</div>
             <div class="message-content">
-                <div class="message-bubble">
-                    <div class="message-header">
-                        <span class="message-author">${escapeHtml(usernameStr).toUpperCase()}</span>
-                        <span class="message-time">${timeStr}</span>
-                    </div>
-                    <div class="message-text">${escapeHtml(messageText)}</div>
+                <div class="message-header">
+                    <span class="message-author">${escapeHtml(usernameStr).toUpperCase()}</span>
+                    <span class="message-time">${timeStr}</span>
                 </div>
+                <div class="message-text">${escapeHtml(messageText)}</div>
             </div>
         `;
         container.appendChild(div);
@@ -3223,54 +3100,6 @@
         const div = document.createElement('div');
         div.textContent = text;
         return div.innerHTML;
-    }
-    
-    // ============================================
-    // GLOBAL ACTIVITY FEED
-    // ============================================
-    
-    const MAX_ACTIVITY_ITEMS = 15;
-    
-    function addToGlobalActivityFeed(username, message, channelSlug) {
-        const feed = document.getElementById('global-activity-feed');
-        if (!feed) return;
-        
-        // DEFENSIVE: Ensure message is a string
-        if (!message || typeof message !== 'string') {
-            if (message && typeof message === 'object') {
-                message = message.content || message.message || String(message);
-            } else {
-                message = String(message || '');
-            }
-        }
-        
-        // Truncate long messages
-        const truncatedMessage = message.length > 60 ? message.substring(0, 60) + '...' : message;
-        
-        // Remove empty state if present
-        const emptyState = feed.querySelector('.activity-empty');
-        if (emptyState) {
-            emptyState.remove();
-        }
-        
-        // Create activity item
-        const item = document.createElement('div');
-        item.className = 'activity-item';
-        item.innerHTML = `
-            <div>
-                <span class="activity-item-user">${escapeHtml(username)}:</span>
-                <span class="activity-item-text">${escapeHtml(truncatedMessage)}</span>
-            </div>
-            <div class="activity-item-channel">#${escapeHtml(channelSlug || 'unknown')}</div>
-        `;
-        
-        // Prepend to keep newest at top
-        feed.insertBefore(item, feed.firstChild);
-        
-        // Limit number of items
-        while (feed.children.length > MAX_ACTIVITY_ITEMS) {
-            feed.removeChild(feed.lastChild);
-        }
     }
     
     // ============================================
