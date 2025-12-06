@@ -429,10 +429,8 @@
                 <span class="voice-mini-dot"></span>
                 <span id="voice-mini-channel">Voice Connected</span>
             </span>
-            <button class="voice-mini-close" onclick="returnToVoice()" title="{% trans 'Return to Voice' %}">
-                <i class="fas fa-external-link-alt"></i>
-            </button>
         </div>
+        <div class="voice-mini-server" id="voice-mini-server"></div>
         <div class="voice-mini-controls">
             <button class="voice-mini-btn" id="voice-mini-mute" onclick="toggleMiniMute()" title="{% trans 'Mute' %}">
                 <i class="fas fa-microphone"></i>
@@ -440,7 +438,10 @@
             <button class="voice-mini-btn" id="voice-mini-deafen" onclick="toggleMiniDeafen()" title="{% trans 'Deafen' %}">
                 <i class="fas fa-headphones"></i>
             </button>
-            <button class="voice-mini-btn disconnect" onclick="disconnectMiniVoice()" title="{% trans 'Disconnect' %}">
+            <button class="voice-mini-btn return" onclick="returnToVoice()" title="{% trans 'Return to Voice' %}">
+                <i class="fas fa-arrow-right"></i>
+            </button>
+            <button class="voice-mini-btn disconnect" onclick="disconnectMiniVoice()" title="{% trans 'Leave Voice' %}">
                 <i class="fas fa-phone-slash"></i>
             </button>
         </div>
@@ -516,6 +517,14 @@
             background: rgba(0, 255, 255, 0.1);
         }
         
+        .voice-mini-server {
+            font-size: 10px;
+            color: #6B7280;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+        
         .voice-mini-controls {
             display: flex;
             gap: 8px;
@@ -533,6 +542,17 @@
             display: flex;
             align-items: center;
             justify-content: center;
+        }
+        
+        .voice-mini-btn.return {
+            background: rgba(0, 255, 128, 0.2);
+            border-color: rgba(0, 255, 128, 0.3);
+            color: #00FF80;
+        }
+        
+        .voice-mini-btn.return:hover {
+            background: rgba(0, 255, 128, 0.3);
+            box-shadow: 0 0 15px rgba(0, 255, 128, 0.3);
         }
         
         .voice-mini-btn:hover {
@@ -588,10 +608,14 @@
         function showVoiceMiniBox(state) {
             const miniBox = document.getElementById('voice-mini-box');
             const channelLabel = document.getElementById('voice-mini-channel');
+            const serverLabel = document.getElementById('voice-mini-server');
             
             if (miniBox && channelLabel) {
                 window.voiceState = state;
                 channelLabel.textContent = state.channelName || 'Voice Connected';
+                if (serverLabel) {
+                    serverLabel.textContent = state.serverName ? `🖥️ ${state.serverName}` : (state.serverSlug || '');
+                }
                 miniBox.style.display = 'block';
                 
                 // Update button states

@@ -521,15 +521,18 @@ class VoiceChatConsumer(AsyncJsonWebsocketConsumer):
 
         # 2. Normal Sohbet Mesajı
         elif signal_type == 'chat_message':
+            # Extract the actual message content from data
+            message_content = data.get('content', '') if isinstance(data, dict) else str(data)
+            
             # Save message to database
-            message_obj = await self.save_chat_message(data)
+            message_obj = await self.save_chat_message(message_content)
             await self.channel_layer.group_send(
                 self.channel_group_name,
                 {
                     "type": "chat.message",
                     "sender_id": self.user_id,
                     "username": self.scope["user"].username,
-                    "message": data,
+                    "message": message_content,  # Send only the text content, not the whole object
                     "message_id": message_obj.id if message_obj else None,
                     "timestamp": message_obj.created_at.isoformat() if message_obj else None,
                 }

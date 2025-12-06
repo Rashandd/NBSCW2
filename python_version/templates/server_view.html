@@ -3036,7 +3036,22 @@
         // CRITICAL FIX: Ensure content is always a string, not an object
         let messageText = '';
         if (typeof content === 'string') {
-            messageText = content;  // Already a string, use it directly
+            // Check if it's a stringified Python dict (old malformed data)
+            // Pattern: {'content': 'actual message', 'channel_slug': '...'}
+            if (content.startsWith("{'content':") || content.startsWith('{"content":')) {
+                try {
+                    // Try to parse as JSON first (replace single quotes with double for Python dicts)
+                    const jsonStr = content.replace(/'/g, '"');
+                    const parsed = JSON.parse(jsonStr);
+                    messageText = parsed.content || content;
+                } catch (e) {
+                    // Regex fallback: extract content between quotes after 'content':
+                    const match = content.match(/'content':\s*'([^']*)'/) || content.match(/"content":\s*"([^"]*)"/);
+                    messageText = match ? match[1] : content;
+                }
+            } else {
+                messageText = content;  // Already a clean string
+            }
         } else if (content && typeof content === 'object') {
             // If content is an object, extract the actual text
             messageText = content.content || content.message || content.text || JSON.stringify(content);
@@ -3293,9 +3308,12 @@
             connected: connected,
             channelName: currentVoiceChannelName || 'Voice Channel',
             serverSlug: '{{ server.slug }}',
+            serverName: '{{ server.name }}',
+            serverId: '{{ server.id }}',
             channelSlug: currentVoiceChannelSlug,
             muted: isMuted,
-            deafened: isDeafened
+            deafened: isDeafened,
+            timestamp: Date.now()
         };
         sessionStorage.setItem('voiceState', JSON.stringify(state));
         console.log('[Voice] State saved:', state);
@@ -3306,19 +3324,12 @@
         console.log('[Voice] State cleared');
     }
     
-    // Warn before leaving page if in voice (only for external navigation)
+    // Save voice state before leaving page (no confirmation popup)
     window.addEventListener('beforeunload', (event) => {
-        // Don't warn if navigating internally
-        if (isNavigatingInternally) {
-            return;
-        }
-        
         if (currentVoiceChannelSlug && voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
-            // Save current state before leaving
+            // Save current state before leaving - mini box will show on new page
             saveVoiceState(true);
-            // Note: Most browsers ignore custom messages now
-            event.preventDefault();
-            event.returnValue = '';
+            // NO confirmation - just save state and let the mini box appear
         }
     });
     
@@ -3338,14 +3349,11 @@
                 
                 // Check if user is in voice chat
                 if (currentVoiceChannelSlug && voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
-                    e.preventDefault();
-                    
-                    // Show custom confirmation
-                    if (confirm('{% trans "You are in a voice chat. Leaving this page will disconnect you. Continue?" %}')) {
-                        isNavigatingInternally = true;
-                        saveVoiceState(true);
-                        window.location.href = href;
-                    }
+                    // NO CONFIRMATION - Just save state and navigate
+                    // The mini box will show on the new page
+                    isNavigatingInternally = true;
+                    saveVoiceState(true);
+                    // Let the navigation continue normally
                 } else {
                     // Not in voice, allow normal navigation
                     isNavigatingInternally = true;
