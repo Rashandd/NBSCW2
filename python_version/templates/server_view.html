@@ -1284,7 +1284,7 @@
         flex: 1;
         display: flex;
         flex-direction: column;
-        background: linear-gradient(180deg, #0A0E27 0%, #050816 100%);
+        background: radial-gradient(ellipse at center, #0d1230 0%, #050816 100%);
         min-height: 0;
         overflow: hidden;
     }
@@ -1293,8 +1293,8 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 12px 20px;
-        background: rgba(0, 0, 0, 0.3);
+        padding: 14px 24px;
+        background: rgba(0, 0, 0, 0.4);
         border-bottom: 1px solid rgba(0, 255, 255, 0.15);
         flex-shrink: 0;
     }
@@ -1302,48 +1302,49 @@
     .voice-room-title {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 14px;
     }
     
     .voice-room-icon {
-        font-size: 18px;
+        font-size: 20px;
         color: #00FF80;
         animation: voice-pulse 2s ease-in-out infinite;
     }
     
     @keyframes voice-pulse {
         0%, 100% { filter: drop-shadow(0 0 4px rgba(0, 255, 128, 0.4)); opacity: 1; }
-        50% { filter: drop-shadow(0 0 12px rgba(0, 255, 128, 0.7)); opacity: 0.8; }
+        50% { filter: drop-shadow(0 0 14px rgba(0, 255, 128, 0.8)); opacity: 0.85; }
     }
     
     .voice-room-channel-name {
-        font-size: 16px;
-        font-weight: 600;
+        font-size: 18px;
+        font-weight: 700;
         color: #00FFFF;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 2px;
     }
     
     .voice-room-status {
-        font-size: 10px;
-        padding: 3px 8px;
+        font-size: 11px;
+        padding: 4px 12px;
         background: rgba(0, 255, 128, 0.15);
         color: #00FF80;
-        border-radius: 10px;
-        border: 1px solid rgba(0, 255, 128, 0.25);
+        border-radius: 12px;
+        border: 1px solid rgba(0, 255, 128, 0.3);
         text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: 1px;
+        font-weight: 500;
     }
     
     .voice-room-actions {
         display: flex;
-        gap: 6px;
+        gap: 8px;
     }
     
     .voice-room-btn {
-        width: 36px;
-        height: 36px;
-        border-radius: 8px;
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
         border: 1px solid rgba(0, 255, 255, 0.25);
         background: rgba(0, 255, 255, 0.08);
         color: #00FFFF;
@@ -1352,13 +1353,14 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 14px;
+        font-size: 16px;
     }
     
     .voice-room-btn:hover {
-        background: rgba(0, 255, 255, 0.15);
+        background: rgba(0, 255, 255, 0.18);
         border-color: #00FFFF;
-        transform: translateY(-1px);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 255, 255, 0.2);
     }
     
     .voice-room-btn.active {
@@ -1367,62 +1369,159 @@
         color: #00FF80;
     }
     
-    /* Voice Room Content - Main Stage + Grid */
+    /* ============================================
+       VOICE ROOM CONTENT - Two Layout Modes
+       ============================================ */
     .voice-room-content {
         flex: 1;
         display: flex;
         flex-direction: column;
         min-height: 0;
         overflow: hidden;
+        padding: 20px;
     }
     
-    /* Main Stage - For pinned user */
+    /* ============================================
+       MODE A: DEFAULT GRID (No one pinned)
+       Tiles fill available space, large and readable
+       ============================================ */
+    .voice-room-grid {
+        flex: 1;
+        display: grid;
+        /* CRITICAL: Large tiles that fill space - minimum 300px */
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 20px;
+        overflow-y: auto;
+        align-content: start;
+        padding: 4px;
+    }
+    
+    /* Single user: center and make large */
+    .voice-room-grid[data-count="1"] {
+        grid-template-columns: 1fr;
+        max-width: 700px;
+        margin: 0 auto;
+        align-content: center;
+    }
+    
+    .voice-room-grid[data-count="1"] .voice-room-card {
+        aspect-ratio: 16/9;
+        min-height: 400px;
+    }
+    
+    /* Two users: side by side */
+    .voice-room-grid[data-count="2"] {
+        grid-template-columns: repeat(2, 1fr);
+        max-width: 1100px;
+        margin: 0 auto;
+        align-content: center;
+    }
+    
+    /* 3-4 users: 2x2 grid */
+    .voice-room-grid[data-count="3"],
+    .voice-room-grid[data-count="4"] {
+        grid-template-columns: repeat(2, 1fr);
+        max-width: 1100px;
+        margin: 0 auto;
+    }
+    
+    /* 5-6 users: 3 columns */
+    .voice-room-grid[data-count="5"],
+    .voice-room-grid[data-count="6"] {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .voice-room-empty {
+        grid-column: 1 / -1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 100px 40px;
+        color: #6B7280;
+    }
+    
+    .voice-room-empty i {
+        font-size: 72px;
+        margin-bottom: 24px;
+        color: #00FFFF;
+        opacity: 0.15;
+        filter: drop-shadow(0 0 20px rgba(0, 255, 255, 0.3));
+    }
+    
+    .voice-room-empty p {
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 4px;
+        color: rgba(255, 255, 255, 0.4);
+    }
+    
+    /* ============================================
+       MODE B: PINNED LAYOUT (Stage + Filmstrip)
+       Pinned user takes 80% of screen
+       ============================================ */
     .voice-room-stage {
         display: none;
         flex: 1;
-        min-height: 300px;
-        padding: 16px;
+        min-height: 0;
+    }
+    
+    .voice-room-content.has-pinned {
+        flex-direction: row;
+        gap: 16px;
     }
     
     .voice-room-content.has-pinned .voice-room-stage {
         display: flex;
+        flex: 4; /* Takes ~80% of width */
     }
     
     .voice-room-content.has-pinned .voice-room-grid {
-        flex: 0 0 auto;
-        max-height: 180px;
-        overflow-x: auto;
-        overflow-y: hidden;
-        grid-template-columns: repeat(auto-fill, minmax(140px, 160px));
-        grid-template-rows: 1fr;
-        grid-auto-flow: column;
-        align-content: center;
-        padding: 12px;
-        border-top: 1px solid rgba(0, 255, 255, 0.1);
-        background: rgba(0, 0, 0, 0.2);
+        flex: 1; /* Takes ~20% as filmstrip */
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 0;
+        max-width: 200px;
+        min-width: 160px;
     }
     
     .voice-room-content.has-pinned .voice-room-card {
         aspect-ratio: 1;
-        min-width: 140px;
+        min-height: 140px;
+        flex-shrink: 0;
     }
     
+    .voice-room-content.has-pinned .voice-room-card .voice-room-card-avatar {
+        width: 50px;
+        height: 50px;
+        font-size: 20px;
+    }
+    
+    .voice-room-content.has-pinned .voice-room-card .voice-room-card-name {
+        font-size: 11px;
+    }
+    
+    /* Stage Card - The main focus */
     .voice-room-stage-card {
         flex: 1;
         position: relative;
-        background: rgba(20, 25, 50, 0.6);
-        border: 2px solid rgba(0, 255, 255, 0.2);
-        border-radius: 16px;
+        background: linear-gradient(135deg, rgba(15, 20, 45, 0.9), rgba(10, 15, 35, 0.95));
+        border: 2px solid rgba(0, 255, 255, 0.25);
+        border-radius: 20px;
         overflow: hidden;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
+        box-shadow: 0 8px 40px rgba(0, 0, 0, 0.4);
     }
     
     .voice-room-stage-card.speaking {
         border-color: #00FF80;
-        box-shadow: 0 0 30px rgba(0, 255, 128, 0.3);
+        box-shadow: 0 0 50px rgba(0, 255, 128, 0.25);
     }
     
     .voice-room-stage-card video {
@@ -1436,16 +1535,17 @@
     }
     
     .voice-room-stage-avatar {
-        width: 150px;
-        height: 150px;
+        width: 180px;
+        height: 180px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 60px;
+        font-size: 72px;
         font-weight: 700;
         color: #0A0E27;
-        border: 4px solid rgba(0, 255, 255, 0.3);
+        border: 5px solid rgba(0, 255, 255, 0.3);
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
     }
     
     .voice-room-stage-info {
@@ -1453,143 +1553,148 @@
         bottom: 0;
         left: 0;
         right: 0;
-        padding: 20px;
-        background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+        padding: 24px 28px;
+        background: linear-gradient(transparent, rgba(0, 0, 0, 0.9));
         display: flex;
         align-items: center;
         justify-content: space-between;
     }
     
     .voice-room-stage-name {
-        font-size: 18px;
-        font-weight: 600;
+        font-size: 22px;
+        font-weight: 700;
         color: #fff;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
     }
     
     .voice-room-stage-controls {
         display: flex;
-        gap: 8px;
+        gap: 12px;
         align-items: center;
+    }
+    
+    .voice-room-stage-controls input[type="range"] {
+        width: 120px;
+        height: 6px;
+        cursor: pointer;
+        -webkit-appearance: none;
+        appearance: none;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 3px;
+    }
+    
+    .voice-room-stage-controls input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #00FFFF;
+        cursor: pointer;
+        box-shadow: 0 0 8px rgba(0, 255, 255, 0.5);
     }
     
     .voice-room-stage-unpin {
-        padding: 8px 16px;
+        padding: 10px 20px;
         background: rgba(255, 0, 100, 0.2);
         border: 1px solid rgba(255, 0, 100, 0.4);
         color: #FF0064;
-        border-radius: 8px;
+        border-radius: 10px;
         cursor: pointer;
-        font-size: 12px;
+        font-size: 13px;
+        font-weight: 600;
         transition: all 0.15s;
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
     
     .voice-room-stage-unpin:hover {
-        background: rgba(255, 0, 100, 0.3);
+        background: rgba(255, 0, 100, 0.35);
+        transform: translateY(-2px);
     }
     
-    /* Voice Room Grid */
-    .voice-room-grid {
-        flex: 1;
-        display: grid;
-        gap: 12px;
-        padding: 16px;
-        overflow-y: auto;
-        align-content: start;
-    }
-    
-    /* Dynamic grid based on participant count */
-    .voice-room-grid[data-count="1"] {
-        grid-template-columns: 1fr;
-        max-width: 800px;
-        margin: 0 auto;
-    }
-    
-    .voice-room-grid[data-count="2"] {
-        grid-template-columns: repeat(2, 1fr);
-        max-width: 1000px;
-        margin: 0 auto;
-    }
-    
-    .voice-room-grid[data-count="3"],
-    .voice-room-grid[data-count="4"] {
-        grid-template-columns: repeat(2, 1fr);
-    }
-    
-    .voice-room-grid[data-count="5"],
-    .voice-room-grid[data-count="6"] {
-        grid-template-columns: repeat(3, 1fr);
-    }
-    
-    .voice-room-grid:not([data-count]) {
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-    }
-    
-    .voice-room-empty {
-        grid-column: 1 / -1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 80px 40px;
-        color: #6B7280;
-    }
-    
-    .voice-room-empty i {
-        font-size: 56px;
-        margin-bottom: 20px;
-        color: #00FFFF;
-        opacity: 0.2;
-    }
-    
-    .voice-room-empty p {
-        font-size: 13px;
-        text-transform: uppercase;
-        letter-spacing: 3px;
-    }
-    
-    /* Participant Card */
+    /* ============================================
+       PARTICIPANT CARD - Large, Clear, Interactive
+       ============================================ */
     .voice-room-card {
         position: relative;
-        background: linear-gradient(135deg, rgba(20, 25, 50, 0.8), rgba(15, 20, 40, 0.9));
-        border: 2px solid rgba(0, 255, 255, 0.15);
-        border-radius: 12px;
+        background: linear-gradient(145deg, rgba(20, 28, 58, 0.85), rgba(12, 18, 40, 0.92));
+        border: 2px solid rgba(0, 255, 255, 0.18);
+        border-radius: 16px;
         overflow: hidden;
         aspect-ratio: 16/10;
+        min-height: 200px;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        transition: all 0.2s ease;
+        transition: all 0.25s ease;
         cursor: pointer;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
     }
     
     .voice-room-card:hover {
-        border-color: rgba(0, 255, 255, 0.4);
-        box-shadow: 0 4px 20px rgba(0, 255, 255, 0.1);
+        border-color: rgba(0, 255, 255, 0.45);
+        box-shadow: 0 8px 35px rgba(0, 255, 255, 0.12);
+        transform: translateY(-3px);
     }
     
-    .voice-room-card:hover .voice-room-card-actions {
+    .voice-room-card:hover .voice-room-card-actions,
+    .voice-room-card:hover .voice-room-card-volume {
         opacity: 1;
     }
     
+    /* Speaking state - green glow */
     .voice-room-card.speaking {
         border-color: #00FF80;
-        box-shadow: 0 0 25px rgba(0, 255, 128, 0.35);
+        box-shadow: 
+            0 0 30px rgba(0, 255, 128, 0.3),
+            0 0 60px rgba(0, 255, 128, 0.15);
     }
     
     .voice-room-card.speaking .voice-room-card-avatar {
         border-color: #00FF80;
-        animation: avatar-speaking 0.6s ease-in-out infinite alternate;
+        animation: avatar-speaking 0.5s ease-in-out infinite alternate;
+        box-shadow: 0 0 30px rgba(0, 255, 128, 0.4);
     }
     
     @keyframes avatar-speaking {
-        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 255, 128, 0.4); }
-        100% { transform: scale(1.02); box-shadow: 0 0 20px 5px rgba(0, 255, 128, 0.2); }
+        0% { transform: scale(1); }
+        100% { transform: scale(1.03); }
     }
     
+    /* Pinned state - gold */
     .voice-room-card.pinned {
         border-color: #FFD700;
-        box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+        box-shadow: 0 0 25px rgba(255, 215, 0, 0.25);
+    }
+    
+    /* Avatar - Large and centered */
+    .voice-room-card-avatar {
+        width: 90px;
+        height: 90px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 36px;
+        font-weight: 700;
+        color: #0A0E27;
+        border: 4px solid rgba(0, 255, 255, 0.3);
+        transition: all 0.25s;
+        box-shadow: 0 6px 25px rgba(0, 0, 0, 0.3);
+    }
+    
+    /* Video element */
+    .voice-room-card video {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: contain; /* CRITICAL: Never overflow */
+        display: none;
+        background: #000;
     }
     
     .voice-room-card.has-video .voice-room-card-avatar,
@@ -1597,121 +1702,103 @@
         display: none;
     }
     
-    .voice-room-card-avatar {
-        width: 72px;
-        height: 72px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 28px;
-        font-weight: 700;
-        color: #0A0E27;
-        border: 3px solid rgba(0, 255, 255, 0.25);
-        transition: all 0.2s;
-    }
-    
-    .voice-room-card video {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: none;
-        background: #000;
-    }
-    
     .voice-room-card.has-video video,
     .voice-room-card.has-screen video {
         display: block;
     }
     
-    /* Card Actions (Pin, Volume) - Shown on hover */
+    /* Screen share uses contain to prevent overflow */
+    .voice-room-card.has-screen video {
+        object-fit: contain;
+    }
+    
+    /* Card Actions (Pin button) */
     .voice-room-card-actions {
         position: absolute;
-        top: 8px;
-        right: 8px;
+        top: 12px;
+        right: 12px;
         display: flex;
-        gap: 4px;
+        gap: 6px;
         opacity: 0;
-        transition: opacity 0.15s;
+        transition: opacity 0.2s;
         z-index: 10;
     }
     
     .voice-room-card-action-btn {
-        width: 28px;
-        height: 28px;
-        border-radius: 6px;
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
         border: none;
-        background: rgba(0, 0, 0, 0.6);
+        background: rgba(0, 0, 0, 0.65);
         color: #fff;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 11px;
+        font-size: 13px;
         transition: all 0.15s;
+        backdrop-filter: blur(4px);
     }
     
     .voice-room-card-action-btn:hover {
-        background: rgba(0, 255, 255, 0.3);
+        background: rgba(0, 255, 255, 0.35);
         color: #00FFFF;
+        transform: scale(1.1);
     }
     
     .voice-room-card-action-btn.pin-btn.active {
-        background: rgba(255, 215, 0, 0.3);
+        background: rgba(255, 215, 0, 0.4);
         color: #FFD700;
     }
     
-    /* Volume Slider in Card */
+    /* Volume Slider */
     .voice-room-card-volume {
         position: absolute;
-        top: 8px;
-        left: 8px;
-        right: 44px;
+        top: 12px;
+        left: 12px;
+        right: 56px;
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 8px;
         opacity: 0;
-        transition: opacity 0.15s;
+        transition: opacity 0.2s;
         z-index: 10;
-    }
-    
-    .voice-room-card:hover .voice-room-card-volume {
-        opacity: 1;
+        background: rgba(0, 0, 0, 0.5);
+        padding: 6px 10px;
+        border-radius: 8px;
+        backdrop-filter: blur(4px);
     }
     
     .voice-room-card-volume i {
         color: #fff;
-        font-size: 11px;
-        opacity: 0.8;
+        font-size: 12px;
+        opacity: 0.9;
     }
     
     .voice-room-card-volume input[type="range"] {
         flex: 1;
-        height: 4px;
+        height: 5px;
         cursor: pointer;
         -webkit-appearance: none;
         appearance: none;
-        background: rgba(255, 255, 255, 0.2);
-        border-radius: 2px;
+        background: rgba(255, 255, 255, 0.25);
+        border-radius: 3px;
     }
     
     .voice-room-card-volume input[type="range"]::-webkit-slider-thumb {
         -webkit-appearance: none;
         appearance: none;
-        width: 12px;
-        height: 12px;
+        width: 14px;
+        height: 14px;
         border-radius: 50%;
         background: #00FFFF;
         cursor: pointer;
-        box-shadow: 0 0 6px rgba(0, 255, 255, 0.5);
+        box-shadow: 0 0 8px rgba(0, 255, 255, 0.6);
     }
     
     .voice-room-card-volume input[type="range"]::-moz-range-thumb {
-        width: 12px;
-        height: 12px;
+        width: 14px;
+        height: 14px;
         border-radius: 50%;
         background: #00FFFF;
         cursor: pointer;
@@ -1724,86 +1811,142 @@
         bottom: 0;
         left: 0;
         right: 0;
-        padding: 10px 12px;
-        background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+        padding: 14px 16px;
+        background: linear-gradient(transparent, rgba(0, 0, 0, 0.88));
         display: flex;
         align-items: center;
         justify-content: space-between;
     }
     
     .voice-room-card-name {
-        font-size: 12px;
+        font-size: 14px;
         font-weight: 600;
         color: #fff;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 8px;
     }
     
     .voice-room-card-name .you-badge {
-        font-size: 9px;
-        padding: 2px 5px;
-        background: rgba(0, 255, 255, 0.2);
-        border-radius: 4px;
+        font-size: 10px;
+        padding: 3px 7px;
+        background: rgba(0, 255, 255, 0.25);
+        border-radius: 5px;
         color: #00FFFF;
+        font-weight: 700;
+        letter-spacing: 0.5px;
     }
     
     .voice-room-card-badges {
         display: flex;
-        gap: 4px;
+        gap: 5px;
     }
     
     .voice-room-card-badge {
-        width: 22px;
-        height: 22px;
-        border-radius: 5px;
-        background: rgba(0, 0, 0, 0.5);
+        width: 26px;
+        height: 26px;
+        border-radius: 6px;
+        background: rgba(0, 0, 0, 0.55);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 10px;
-        color: #999;
+        font-size: 11px;
+        color: #888;
     }
     
     .voice-room-card-badge.muted {
         color: #FF0064;
+        background: rgba(255, 0, 100, 0.2);
     }
     
     .voice-room-card-badge.deafened {
         color: #FFA500;
+        background: rgba(255, 165, 0, 0.2);
     }
     
     .voice-room-card-badge.screen {
         color: #00FF80;
+        background: rgba(0, 255, 128, 0.2);
     }
     
     .voice-room-card-badge.camera {
         color: #00BFFF;
+        background: rgba(0, 191, 255, 0.2);
     }
     
-    /* Screen Share Card - Takes more space */
+    /* Screen Share Card - Takes more space but contained */
     .voice-room-card.has-screen {
         grid-column: span 2;
         aspect-ratio: 16/9;
     }
     
-    .voice-room-card.has-screen video {
-        object-fit: contain;
+    /* ============================================
+       RESPONSIVE - Mobile adjustments
+       ============================================ */
+    @media (max-width: 900px) {
+        .voice-room-grid {
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 14px;
+        }
+        
+        .voice-room-card {
+            min-height: 160px;
+        }
+        
+        .voice-room-card-avatar {
+            width: 70px;
+            height: 70px;
+            font-size: 28px;
+        }
+        
+        .voice-room-content.has-pinned {
+            flex-direction: column;
+        }
+        
+        .voice-room-content.has-pinned .voice-room-stage {
+            flex: none;
+            height: 50vh;
+        }
+        
+        .voice-room-content.has-pinned .voice-room-grid {
+            flex-direction: row;
+            max-width: none;
+            max-height: 130px;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+        
+        .voice-room-content.has-pinned .voice-room-card {
+            min-width: 120px;
+            min-height: 100px;
+        }
     }
     
-    @media (max-width: 768px) {
+    @media (max-width: 600px) {
+        .voice-room-grid {
+            grid-template-columns: 1fr !important;
+            gap: 12px;
+        }
+        
         .voice-room-card.has-screen {
             grid-column: span 1;
         }
         
-        .voice-room-grid {
-            grid-template-columns: 1fr !important;
+        .voice-room-header {
+            padding: 10px 16px;
+            flex-wrap: wrap;
+            gap: 10px;
         }
         
-        .voice-room-content.has-pinned .voice-room-grid {
-            grid-template-columns: repeat(auto-fill, minmax(100px, 120px));
-            max-height: 140px;
+        .voice-room-channel-name {
+            font-size: 14px;
+        }
+        
+        .voice-room-btn {
+            width: 36px;
+            height: 36px;
+            font-size: 14px;
         }
     }
     
@@ -2266,6 +2409,7 @@
         
         <!-- Voice Room View (replaces messages when in voice channel) -->
         <div id="voice-room-view" class="voice-room-view" style="display: none;">
+            <!-- Header with channel info and controls -->
             <div class="voice-room-header">
                 <div class="voice-room-title">
                     <i class="fas fa-volume-up voice-room-icon"></i>
@@ -2285,27 +2429,24 @@
                     <button class="voice-room-btn" onclick="toggleDeafen()" id="voice-room-deafen-btn" title="Toggle Deafen">
                         <i class="fas fa-headphones"></i>
                     </button>
-                    <button class="voice-room-btn" onclick="disconnectVoice()" title="Disconnect" style="background: rgba(255, 0, 100, 0.2); border-color: rgba(255, 0, 100, 0.4); color: #FF0064;">
+                    <button class="voice-room-btn" onclick="disconnectVoice()" title="Disconnect" style="background: rgba(255, 0, 100, 0.15); border-color: rgba(255, 0, 100, 0.35); color: #FF0064;">
                         <i class="fas fa-phone-slash"></i>
                     </button>
                 </div>
             </div>
             
-            <!-- Voice Room Content (Stage + Grid) -->
+            <!-- Voice Room Content - Two Layout Modes -->
             <div class="voice-room-content" id="voice-room-content">
-                <!-- Main Stage - Shown when user is pinned -->
+                <!-- STAGE: Main focus area for pinned user -->
                 <div class="voice-room-stage" id="voice-room-stage">
                     <div class="voice-room-stage-card" id="voice-room-stage-card">
                         <video id="voice-room-stage-video" autoplay playsinline></video>
-                        <div class="voice-room-stage-avatar" id="voice-room-stage-avatar">
-                            A
-                        </div>
+                        <div class="voice-room-stage-avatar" id="voice-room-stage-avatar">A</div>
                         <div class="voice-room-stage-info">
                             <span class="voice-room-stage-name" id="voice-room-stage-name">User</span>
                             <div class="voice-room-stage-controls">
-                                <input type="range" min="0" max="1" step="0.05" value="1" 
-                                       id="voice-room-stage-volume" title="Volume" 
-                                       style="width: 100px; cursor: pointer;">
+                                <i class="fas fa-volume-up" style="color: #fff; opacity: 0.7; font-size: 14px;"></i>
+                                <input type="range" min="0" max="1" step="0.05" value="1" id="voice-room-stage-volume" title="Volume">
                                 <button class="voice-room-stage-unpin" onclick="unpinUser()">
                                     <i class="fas fa-thumbtack"></i> Unpin
                                 </button>
@@ -2314,12 +2455,12 @@
                     </div>
                 </div>
                 
-                <!-- Voice Participants Grid -->
+                <!-- GRID: Participant tiles (or FILMSTRIP when someone is pinned) -->
                 <div class="voice-room-grid" id="voice-room-grid" data-count="0">
                     <!-- Participant cards added dynamically -->
                     <div class="voice-room-empty" id="voice-room-empty">
                         <i class="fas fa-users"></i>
-                        <p>Connecting to voice channel...</p>
+                        <p>Connecting to voice...</p>
                     </div>
                 </div>
             </div>
