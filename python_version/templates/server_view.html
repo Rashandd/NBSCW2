@@ -3660,33 +3660,59 @@
             return;
         }
         
+        let microphoneAvailable = false;
+        
         try {
             // Check if getUserMedia is available
             if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                throw new Error('getUserMedia not supported in this browser');
+                console.warn('[Voice] getUserMedia not supported - connecting without microphone');
+            } else {
+                // Try to get local audio stream
+                const constraints = {
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true,
+                        sampleRate: 48000
+                    },
+                    video: false
+                };
+                
+                console.log('[Voice] Requesting microphone access...');
+                try {
+                    localStream = await navigator.mediaDevices.getUserMedia(constraints);
+                    microphoneAvailable = true;
+                    
+                    console.log('[Voice] ✅ Microphone access granted');
+                    console.log('[Voice] Audio tracks:', localStream.getAudioTracks().map(t => ({
+                        label: t.label,
+                        enabled: t.enabled,
+                        muted: t.muted,
+                        readyState: t.readyState
+                    })));
+                    
+                    // Apply initial mute state
+                    if (isMuted && localStream) {
+                        localStream.getAudioTracks().forEach(track => {
+                            track.enabled = false;
+                        });
+                        console.log('[Voice] Microphone muted on start');
+                    }
+                } catch (micError) {
+                    console.warn('[Voice] ⚠️ Microphone not available:', micError.message);
+                    console.log('[Voice] Connecting without microphone (listen-only mode)');
+                    
+                    // Auto-mute since no microphone
+                    isMuted = true;
+                    const muteBtn = document.getElementById('mute-btn');
+                    if (muteBtn) {
+                        muteBtn.classList.add('muted');
+                        muteBtn.innerHTML = '<i class="fas fa-microphone-slash"></i>';
+                        muteBtn.title = '{% trans "No microphone available" %}';
+                    }
+                    updateVoiceRoomButtons();
+                }
             }
-            
-            // Get local audio stream with specific constraints
-            const constraints = {
-                audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true,
-                    sampleRate: 48000
-                },
-                video: false
-            };
-            
-            console.log('[Voice] Requesting microphone access...');
-            localStream = await navigator.mediaDevices.getUserMedia(constraints);
-            
-            console.log('[Voice] ✅ Microphone access granted');
-            console.log('[Voice] Audio tracks:', localStream.getAudioTracks().map(t => ({
-                label: t.label,
-                enabled: t.enabled,
-                muted: t.muted,
-                readyState: t.readyState
-            })));
             
             // Show screen share button when connected to voice
             const screenShareBtn = document.getElementById('screen-share-btn');
@@ -3694,35 +3720,20 @@
                 screenShareBtn.style.display = 'flex';
             }
             
-            // Add self to participants list (pass userId explicitly)
+            // Add self to participants list (pass currentUserId explicitly)
             addVoiceParticipant(currentUsername, true, isMuted, isDeafened, currentUserId);
             
-            // Apply initial mute state
-            if (isMuted && localStream) {
-                localStream.getAudioTracks().forEach(track => {
-                    track.enabled = false;
-                });
-                console.log('[Voice] Microphone muted on start');
-            }
-            
-            // Connect to voice WebSocket for signaling
+            // Connect to voice WebSocket for signaling (even without mic)
             connectVoiceChannel();
             
-            console.log('[Voice] ✅ Voice initialized successfully');
-        } catch (error) {
-            console.error('[Voice] ❌ Error accessing microphone:', error);
-            
-            let errorMessage = '{% trans "Could not access microphone." %}';
-            
-            if (error.name === 'NotAllowedError') {
-                errorMessage = '{% trans "Microphone permission denied. Please allow microphone access in your browser settings." %}';
-            } else if (error.name === 'NotFoundError') {
-                errorMessage = '{% trans "No microphone found. Please connect a microphone and try again." %}';
-            } else if (error.name === 'NotReadableError') {
-                errorMessage = '{% trans "Microphone is being used by another application." %}';
+            if (microphoneAvailable) {
+                console.log('[Voice] ✅ Voice initialized with microphone');
+            } else {
+                console.log('[Voice] ✅ Voice initialized in listen-only mode (no microphone)');
             }
-            
-            alert(errorMessage);
+        } catch (error) {
+            console.error('[Voice] ❌ Error initializing voice:', error);
+            alert('{% trans "Could not initialize voice chat. Please try again." %}');
         }
     }
     
@@ -5045,17 +5056,17 @@
             // Don't open if clicking on the slider itself
             if (e.target.classList.contains('volume-slider')) return;
             e.preventDefault();
-            showVolumeControl(item, userId, username);
+            showVolumeControl(item, oderId, username);  // FIX: use oderId
         });
         
         // Also keep right-click handler for users who prefer context menu
         item.addEventListener('contextmenu', (e) => {
             e.preventDefault();
-            showVolumeControl(item, userId, username);
+            showVolumeControl(item, oderId, username);  // FIX: use oderId
         });
         
         list.appendChild(item);
-        console.log(`[Presence] Added ${username} (${userId}) to channel ${channelSlug}`);
+        console.log(`[Presence] Added ${username} (${oderId}) to channel ${channelSlug}`);
     }
     
     function removeVoiceParticipantFromSidebar(channelSlug, userId) {
