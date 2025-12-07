@@ -3561,14 +3561,16 @@
         frameParticipants.forEach(p => {
             const key = p.username.toLowerCase();
             if (!voiceParticipants.has(p.username) && !Array.from(voiceParticipants.keys()).some(k => k.toLowerCase() === key)) {
-                addVoiceParticipant(p.username, p.userId === currentUserId, p.muted, false);
+                // Pass userId from frame data
+                addVoiceParticipant(p.username, p.userId === currentUserId, p.muted, false, p.userId);
             }
         });
     }
     
     function handleSystemNotificationFromFrame(data) {
         if (data.event === 'member_joined' && data.username !== currentUsername) {
-            addVoiceParticipant(data.username, false, false, false);
+            // Pass sender_id as userId for proper identification
+            addVoiceParticipant(data.username, false, false, false, data.sender_id);
         } else if (data.event === 'member_left') {
             removeVoiceParticipant(data.username);
         }
@@ -3684,8 +3686,8 @@
                 screenShareBtn.style.display = 'flex';
             }
             
-            // Add self to participants list
-            addVoiceParticipant(currentUsername, true, isMuted, isDeafened);
+            // Add self to participants list (pass userId explicitly)
+            addVoiceParticipant(currentUsername, true, isMuted, isDeafened, currentUserId);
             
             // Apply initial mute state
             if (isMuted && localStream) {
@@ -3811,7 +3813,8 @@
                     // Another user joined the voice channel
                     if (data.username !== currentUsername && data.sender_id !== currentUserId) {
                         console.log(`[Voice] User ${data.username} joined, adding to participants`);
-                        addVoiceParticipant(data.username, false, false, false);
+                        // Pass sender_id as userId for proper identification
+                        addVoiceParticipant(data.username, false, false, false, data.sender_id);
                         // Initiate WebRTC connection as the existing user
                         createPeerConnection(data.sender_id, data.username, true);
                     }
@@ -3830,7 +3833,8 @@
                 if (data.signal_type === 'offer' && data.username && data.username !== currentUsername) {
                     if (!voiceParticipants.has(data.username)) {
                         console.log(`[Voice] Adding ${data.username} from WebRTC offer`);
-                        addVoiceParticipant(data.username, false, false, false);
+                        // Pass sender_id as userId
+                        addVoiceParticipant(data.username, false, false, false, data.sender_id);
                     }
                 }
                 handleWebRTCSignal(data);
@@ -4635,8 +4639,11 @@
         return list;
     }
     
-    function addVoiceParticipant(username, isLocal, pMuted, pDeafened, oderId = null) {
+    function addVoiceParticipant(username, isLocal, pMuted, pDeafened, passedUserId = null) {
         if (!currentVoiceChannelSlug) return;
+        
+        // Use currentUserId for local user if userId not provided
+        const oderId = passedUserId || (isLocal ? currentUserId : null);
         
         // NORMALIZE: Use lowercase for ALL keys to prevent case-sensitivity duplicates
         const normalizedUsername = username.toLowerCase();
@@ -4649,13 +4656,13 @@
         // IDEMPOTENT CHECK: Prevent duplicates using normalized key
         if (document.getElementById(uniqueId) || voiceParticipants.has(normalizedUsername)) {
             console.log(`[Voice] User ${username} already in participant list, skipping duplicate`);
-            // Update existing participant state if needed
+            // Update existing participant state if needed (FIX: use pMuted/pDeafened parameters)
             const existing = voiceParticipants.get(normalizedUsername);
             if (existing) {
-                existing.isMuted = isMuted;
-                existing.isDeafened = isDeafened;
+                existing.isMuted = pMuted;
+                existing.isDeafened = pDeafened;
                 if (existing.avatarElement) {
-                    existing.avatarElement.classList.toggle('muted', isMuted);
+                    existing.avatarElement.classList.toggle('muted', pMuted);
                 }
             }
             return;
