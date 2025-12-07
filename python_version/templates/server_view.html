@@ -1278,6 +1278,263 @@
     }
     
     /* ============================================
+       VOICE ROOM VIEW - Full-screen voice layout
+       ============================================ */
+    .voice-room-view {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        background: linear-gradient(180deg, rgba(10, 14, 39, 0.95) 0%, rgba(5, 8, 22, 0.98) 100%);
+        min-height: 0;
+        overflow: hidden;
+    }
+    
+    .voice-room-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 24px;
+        background: linear-gradient(90deg, rgba(0, 255, 255, 0.1), transparent);
+        border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+        flex-shrink: 0;
+    }
+    
+    .voice-room-title {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+    
+    .voice-room-icon {
+        font-size: 20px;
+        color: #00FF80;
+        animation: pulse-glow 2s infinite;
+    }
+    
+    @keyframes pulse-glow {
+        0%, 100% { filter: drop-shadow(0 0 5px rgba(0, 255, 128, 0.5)); }
+        50% { filter: drop-shadow(0 0 15px rgba(0, 255, 128, 0.8)); }
+    }
+    
+    .voice-room-title span:first-of-type {
+        font-size: 18px;
+        font-weight: 700;
+        color: #00FFFF;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    
+    .voice-room-status {
+        font-size: 11px;
+        padding: 4px 10px;
+        background: rgba(0, 255, 128, 0.2);
+        color: #00FF80;
+        border-radius: 12px;
+        border: 1px solid rgba(0, 255, 128, 0.3);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .voice-room-actions {
+        display: flex;
+        gap: 8px;
+    }
+    
+    .voice-room-btn {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        border: 1px solid rgba(0, 255, 255, 0.3);
+        background: rgba(0, 255, 255, 0.1);
+        color: #00FFFF;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .voice-room-btn:hover {
+        background: rgba(0, 255, 255, 0.2);
+        border-color: #00FFFF;
+        transform: translateY(-2px);
+    }
+    
+    .voice-room-btn.active {
+        background: rgba(0, 255, 128, 0.3);
+        border-color: #00FF80;
+        color: #00FF80;
+    }
+    
+    .voice-room-grid {
+        flex: 1;
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 16px;
+        padding: 24px;
+        overflow-y: auto;
+        align-content: start;
+    }
+    
+    .voice-room-empty {
+        grid-column: 1 / -1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 60px;
+        color: #6B7280;
+    }
+    
+    .voice-room-empty i {
+        font-size: 48px;
+        margin-bottom: 16px;
+        color: #00FFFF;
+        opacity: 0.3;
+    }
+    
+    .voice-room-empty p {
+        font-size: 14px;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+    }
+    
+    /* Voice Room Participant Card */
+    .voice-room-card {
+        position: relative;
+        background: rgba(20, 25, 50, 0.8);
+        border: 2px solid rgba(0, 255, 255, 0.2);
+        border-radius: 16px;
+        overflow: hidden;
+        aspect-ratio: 16/10;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+    }
+    
+    .voice-room-card:hover {
+        border-color: rgba(0, 255, 255, 0.5);
+        box-shadow: 0 8px 32px rgba(0, 255, 255, 0.15);
+    }
+    
+    .voice-room-card.speaking {
+        border-color: #00FF80;
+        box-shadow: 0 0 20px rgba(0, 255, 128, 0.4);
+        animation: speaking-pulse 0.5s ease-in-out infinite;
+    }
+    
+    @keyframes speaking-pulse {
+        0%, 100% { box-shadow: 0 0 20px rgba(0, 255, 128, 0.4); }
+        50% { box-shadow: 0 0 30px rgba(0, 255, 128, 0.6); }
+    }
+    
+    .voice-room-card.screen-share {
+        grid-column: span 2;
+        grid-row: span 2;
+        aspect-ratio: 16/9;
+    }
+    
+    .voice-room-card-avatar {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 32px;
+        font-weight: 700;
+        color: #0A0E27;
+        margin-bottom: 12px;
+        border: 3px solid rgba(0, 255, 255, 0.3);
+    }
+    
+    .voice-room-card.has-video .voice-room-card-avatar {
+        display: none;
+    }
+    
+    .voice-room-card video {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: none;
+    }
+    
+    .voice-room-card.has-video video {
+        display: block;
+    }
+    
+    .voice-room-card-info {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 12px 16px;
+        background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .voice-room-card-name {
+        font-size: 13px;
+        font-weight: 600;
+        color: #FFFFFF;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+    }
+    
+    .voice-room-card-badges {
+        display: flex;
+        gap: 6px;
+    }
+    
+    .voice-room-card-badge {
+        width: 24px;
+        height: 24px;
+        border-radius: 6px;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+    }
+    
+    .voice-room-card-badge.muted {
+        color: #FF0064;
+    }
+    
+    .voice-room-card-badge.deafened {
+        color: #FFA500;
+    }
+    
+    .voice-room-card-badge.screen {
+        color: #00FF80;
+    }
+    
+    /* Volume control in voice room card */
+    .voice-room-card-volume {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+    
+    .voice-room-card:hover .voice-room-card-volume {
+        opacity: 1;
+    }
+    
+    .voice-room-card-volume input[type="range"] {
+        width: 80px;
+        height: 4px;
+        cursor: pointer;
+    }
+    
+    /* ============================================
        RIGHT SIDEBAR - MEMBER LIST
        ============================================ */
     
@@ -1734,7 +1991,35 @@
             </div>
         </div>
         
-        <!-- Video Grid Container -->
+        <!-- Voice Room View (replaces messages when in voice channel) -->
+        <div id="voice-room-view" class="voice-room-view" style="display: none;">
+            <div class="voice-room-header">
+                <div class="voice-room-title">
+                    <i class="fas fa-volume-up voice-room-icon"></i>
+                    <span id="voice-room-channel-name">Voice Channel</span>
+                    <span class="voice-room-status" id="voice-room-status">Connected</span>
+                </div>
+                <div class="voice-room-actions">
+                    <button class="voice-room-btn" onclick="toggleCamera()" id="voice-room-camera-btn" title="Toggle Camera">
+                        <i class="fas fa-video"></i>
+                    </button>
+                    <button class="voice-room-btn" onclick="toggleScreenShare()" id="voice-room-screen-btn" title="Share Screen">
+                        <i class="fas fa-desktop"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Voice Participants Grid -->
+            <div class="voice-room-grid" id="voice-room-grid">
+                <!-- Participant cards added dynamically -->
+                <div class="voice-room-empty" id="voice-room-empty">
+                    <i class="fas fa-users"></i>
+                    <p>Connecting to voice...</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Video Grid Container (for backwards compatibility) -->
         <div id="video-grid" class="video-grid-container">
             <!-- Video streams added dynamically -->
         </div>
@@ -2022,6 +2307,25 @@
     
     window.openVoiceChannel = function(slug, name) {
         console.log('[Voice] Opening voice channel:', slug, name);
+        
+        // ==========================================
+        // FIX #1: PREVENT RE-JOINING SAME CHANNEL
+        // ==========================================
+        const isAlreadyInThisChannel = currentVoiceChannelSlug === slug && voiceSocket && voiceSocket.readyState === WebSocket.OPEN;
+        
+        if (isAlreadyInThisChannel) {
+            console.log('[Voice] Already in this channel, just switching view');
+            // Don't reinitialize - just show the voice room view
+            showVoiceRoomView(slug, name);
+            return;
+        }
+        
+        // If in a different voice channel, disconnect first
+        if (currentVoiceChannelSlug && currentVoiceChannelSlug !== slug) {
+            console.log('[Voice] Switching from', currentVoiceChannelSlug, 'to', slug);
+            leaveVoiceChannel(); // Clean disconnect from old channel
+        }
+        
         currentVoiceChannelSlug = slug;
         currentVoiceChannelName = name;
         
@@ -2034,7 +2338,7 @@
             channelElement.classList.add('active');
         }
         
-        // Show voice participants list
+        // Show voice participants list in sidebar
         const participantsList = document.getElementById(`voice-participants-${slug}`);
         if (participantsList) {
             participantsList.style.display = 'flex';
@@ -2049,6 +2353,11 @@
         document.getElementById('screen-share-btn').style.display = 'flex';
         const cameraBtn = document.getElementById('camera-btn');
         if (cameraBtn) cameraBtn.style.display = 'flex';
+        
+        // ==========================================
+        // FIX #3: SHOW VOICE ROOM VIEW IN MAIN AREA
+        // ==========================================
+        showVoiceRoomView(slug, name);
         
         // Close mobile sidebar if open
         if (sidebarOpen) {
@@ -2217,6 +2526,216 @@
         });
         
         // TODO: Cleanup voice connections
+        
+        // Hide voice room view
+        hideVoiceRoomView();
+    }
+    
+    // Alias for disconnectVoice - used when switching channels
+    function leaveVoiceChannel() {
+        console.log('[Voice] Leaving voice channel (clean)');
+        disconnectVoice();
+    }
+    
+    // ============================================
+    // VOICE ROOM VIEW MANAGEMENT
+    // ============================================
+    
+    function showVoiceRoomView(channelSlug, channelName) {
+        console.log('[VoiceRoom] Showing voice room view for:', channelName);
+        
+        const voiceRoomView = document.getElementById('voice-room-view');
+        const messagesContainer = document.getElementById('messages-container');
+        const inputArea = document.querySelector('.input-area');
+        
+        if (voiceRoomView) {
+            voiceRoomView.style.display = 'flex';
+            
+            // Update channel name
+            const nameEl = document.getElementById('voice-room-channel-name');
+            if (nameEl) nameEl.textContent = channelName;
+            
+            // Update status
+            const statusEl = document.getElementById('voice-room-status');
+            if (statusEl) statusEl.textContent = 'Connecting...';
+        }
+        
+        // Hide messages container and input
+        if (messagesContainer) messagesContainer.style.display = 'none';
+        if (inputArea) inputArea.style.display = 'none';
+        
+        // Add self to voice room grid
+        addUserToVoiceRoomGrid(currentUserId, currentUsername, true, isMuted, isDeafened);
+    }
+    
+    function hideVoiceRoomView() {
+        console.log('[VoiceRoom] Hiding voice room view');
+        
+        const voiceRoomView = document.getElementById('voice-room-view');
+        const messagesContainer = document.getElementById('messages-container');
+        const inputArea = document.querySelector('.input-area');
+        
+        if (voiceRoomView) voiceRoomView.style.display = 'none';
+        if (messagesContainer) messagesContainer.style.display = 'flex';
+        if (inputArea) inputArea.style.display = 'block';
+        
+        // Clear voice room grid
+        clearVoiceRoomGrid();
+    }
+    
+    function updateVoiceRoomStatus(status) {
+        const statusEl = document.getElementById('voice-room-status');
+        if (statusEl) statusEl.textContent = status;
+    }
+    
+    // Voice Room Grid Participant Map
+    const voiceRoomParticipants = new Map();
+    
+    function addUserToVoiceRoomGrid(oderId, username, isLocal = false, pMuted = false, pDeafened = false, hasVideo = false, hasScreen = false) {
+        const grid = document.getElementById('voice-room-grid');
+        if (!grid) return;
+        
+        // IDEMPOTENT: Use normalized key
+        const normalizedUsername = username.toLowerCase();
+        const cardId = `voice-room-card-${normalizedUsername}`;
+        
+        // Check if already exists
+        if (voiceRoomParticipants.has(normalizedUsername) || document.getElementById(cardId)) {
+            console.log('[VoiceRoom] User already in grid:', username);
+            // Update existing card state
+            updateVoiceRoomCard(normalizedUsername, { muted: pMuted, deafened: pDeafened, video: hasVideo, screen: hasScreen });
+            return;
+        }
+        
+        // Hide empty state
+        const emptyState = document.getElementById('voice-room-empty');
+        if (emptyState) emptyState.style.display = 'none';
+        
+        const avatarColor = `hsl(${username.charCodeAt(0) * 137.508 % 360}, 70%, 50%)`;
+        const avatarLetter = username.charAt(0).toUpperCase();
+        
+        const card = document.createElement('div');
+        card.className = 'voice-room-card' + (hasVideo ? ' has-video' : '') + (hasScreen ? ' screen-share' : '');
+        card.id = cardId;
+        card.dataset.oderId = oderId;
+        card.dataset.username = username;
+        card.dataset.normalizedUsername = normalizedUsername;
+        card.dataset.isLocal = isLocal;
+        
+        card.innerHTML = `
+            <video autoplay playsinline ${isLocal ? 'muted' : ''}></video>
+            <div class="voice-room-card-avatar" style="background: linear-gradient(135deg, ${avatarColor} 0%, #00FF80 100%);">
+                ${avatarLetter}
+            </div>
+            <div class="voice-room-card-info">
+                <span class="voice-room-card-name">${escapeHtml(username)}${isLocal ? ' (You)' : ''}</span>
+                <div class="voice-room-card-badges">
+                    ${pMuted ? '<span class="voice-room-card-badge muted" title="Muted"><i class="fas fa-microphone-slash"></i></span>' : ''}
+                    ${pDeafened ? '<span class="voice-room-card-badge deafened" title="Deafened"><i class="fas fa-volume-mute"></i></span>' : ''}
+                    ${hasScreen ? '<span class="voice-room-card-badge screen" title="Screen Share"><i class="fas fa-desktop"></i></span>' : ''}
+                </div>
+            </div>
+            ${!isLocal ? `
+            <div class="voice-room-card-volume">
+                <input type="range" min="0" max="1" step="0.1" value="1" 
+                       data-target-user="${oderId}" title="Volume">
+            </div>
+            ` : ''}
+        `;
+        
+        // Add volume slider event
+        const volumeSlider = card.querySelector('input[type="range"]');
+        if (volumeSlider) {
+            volumeSlider.addEventListener('input', function() {
+                const targetUserId = this.dataset.targetUser;
+                const volume = parseFloat(this.value);
+                userVolumes.set(targetUserId, volume);
+                
+                const audioEl = document.getElementById(`remote-audio-${targetUserId}`);
+                if (audioEl) audioEl.volume = volume;
+                
+                // Also tell voice frame
+                if (window.sendToVoiceFrame) {
+                    window.sendToVoiceFrame('setVolume', { peerId: targetUserId, volume });
+                }
+            });
+        }
+        
+        grid.appendChild(card);
+        voiceRoomParticipants.set(normalizedUsername, { card, oderId, username, isLocal, muted: pMuted, deafened: pDeafened, video: hasVideo, screen: hasScreen });
+        
+        console.log('[VoiceRoom] Added user to grid:', username);
+    }
+    
+    function removeUserFromVoiceRoomGrid(username) {
+        const normalizedUsername = username.toLowerCase();
+        const data = voiceRoomParticipants.get(normalizedUsername);
+        
+        if (data) {
+            data.card.remove();
+            voiceRoomParticipants.delete(normalizedUsername);
+            console.log('[VoiceRoom] Removed user from grid:', username);
+        }
+        
+        // Also try by ID
+        const cardId = `voice-room-card-${normalizedUsername}`;
+        const card = document.getElementById(cardId);
+        if (card) card.remove();
+        
+        // Show empty state if no participants
+        if (voiceRoomParticipants.size === 0) {
+            const emptyState = document.getElementById('voice-room-empty');
+            if (emptyState) emptyState.style.display = 'flex';
+        }
+    }
+    
+    function updateVoiceRoomCard(normalizedUsername, updates) {
+        const data = voiceRoomParticipants.get(normalizedUsername);
+        if (!data) return;
+        
+        const card = data.card;
+        if (!card) return;
+        
+        // Update state
+        Object.assign(data, updates);
+        
+        // Update visual state
+        card.classList.toggle('has-video', !!updates.video);
+        card.classList.toggle('screen-share', !!updates.screen);
+        card.classList.toggle('speaking', !!updates.speaking);
+        
+        // Update badges
+        const badgesContainer = card.querySelector('.voice-room-card-badges');
+        if (badgesContainer) {
+            badgesContainer.innerHTML = `
+                ${updates.muted ? '<span class="voice-room-card-badge muted" title="Muted"><i class="fas fa-microphone-slash"></i></span>' : ''}
+                ${updates.deafened ? '<span class="voice-room-card-badge deafened" title="Deafened"><i class="fas fa-volume-mute"></i></span>' : ''}
+                ${updates.screen ? '<span class="voice-room-card-badge screen" title="Screen Share"><i class="fas fa-desktop"></i></span>' : ''}
+            `;
+        }
+        
+        voiceRoomParticipants.set(normalizedUsername, data);
+    }
+    
+    function setVoiceRoomCardVideo(normalizedUsername, stream) {
+        const data = voiceRoomParticipants.get(normalizedUsername);
+        if (!data) return;
+        
+        const video = data.card.querySelector('video');
+        if (video && stream) {
+            video.srcObject = stream;
+            data.card.classList.add('has-video');
+        }
+    }
+    
+    function clearVoiceRoomGrid() {
+        voiceRoomParticipants.forEach((data, key) => {
+            if (data.card) data.card.remove();
+        });
+        voiceRoomParticipants.clear();
+        
+        const emptyState = document.getElementById('voice-room-empty');
+        if (emptyState) emptyState.style.display = 'flex';
     }
     
     let isScreenSharing = false;
@@ -2492,6 +3011,9 @@
         voiceSocket.onopen = () => {
             console.log('[Voice] ✅ WebSocket connected');
             console.log('[Voice] Current user:', currentUsername, 'ID:', currentUserId);
+            
+            // Update voice room status
+            updateVoiceRoomStatus('Connected');
             
             // Save voice state for mini box on other pages
             saveVoiceState(true);
@@ -3383,13 +3905,16 @@
         return list;
     }
     
-    function addVoiceParticipant(username, isLocal, isMuted, isDeafened, userId = null) {
+    function addVoiceParticipant(username, isLocal, pMuted, pDeafened, oderId = null) {
         if (!currentVoiceChannelSlug) return;
         
         // NORMALIZE: Use lowercase for ALL keys to prevent case-sensitivity duplicates
         const normalizedUsername = username.toLowerCase();
         const safeUsername = normalizedUsername.replace(/[^a-z0-9]/g, '_');
         const uniqueId = `voice-user-${safeUsername}`;
+        
+        // ALSO ADD TO VOICE ROOM GRID (idempotent)
+        addUserToVoiceRoomGrid(oderId || uniqueId, username, isLocal, pMuted, pDeafened);
         
         // IDEMPOTENT CHECK: Prevent duplicates using normalized key
         if (document.getElementById(uniqueId) || voiceParticipants.has(normalizedUsername)) {
@@ -3447,6 +3972,9 @@
     function removeVoiceParticipant(username) {
         // NORMALIZE: Use lowercase key
         const normalizedUsername = username.toLowerCase();
+        
+        // ALSO REMOVE FROM VOICE ROOM GRID
+        removeUserFromVoiceRoomGrid(username);
         
         // Remove from voiceParticipants Map using normalized key
         const participant = voiceParticipants.get(normalizedUsername);
@@ -3954,6 +4482,7 @@
     window.toggleDeafen = toggleDeafen;
     window.toggleScreenShare = toggleScreenShare;
     window.disconnectVoice = disconnectVoice;
+    window.leaveVoiceChannel = leaveVoiceChannel;
     window.openSettings = openSettings;
     window.sendMessage = sendMessage;
     window.openTextChannel = openTextChannel;
@@ -3965,5 +4494,13 @@
     window.removeVideoFromGrid = removeVideoFromGrid;
     window.clearVideoGrid = clearVideoGrid;
     window.setVideoSpeaking = setVideoSpeaking;
+    
+    // Voice Room View functions
+    window.showVoiceRoomView = showVoiceRoomView;
+    window.hideVoiceRoomView = hideVoiceRoomView;
+    window.addUserToVoiceRoomGrid = addUserToVoiceRoomGrid;
+    window.removeUserFromVoiceRoomGrid = removeUserFromVoiceRoomGrid;
+    window.updateVoiceRoomCard = updateVoiceRoomCard;
+    window.setVoiceRoomCardVideo = setVoiceRoomCardVideo;
 </script>
 {% endblock %}
