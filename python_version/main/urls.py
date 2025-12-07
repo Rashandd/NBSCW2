@@ -1,9 +1,11 @@
 from django.urls import path
+from django.views.generic import TemplateView
 from . import views
 from django.contrib.auth import views as auth_views # auth_views'i import edin
 
 urlpatterns = [
     path('', views.index, name='index'),
+    path('voice-frame/', TemplateView.as_view(template_name='voice_frame.html'), name='voice_frame'),
     path('register/', views.register, name='register'),
     path('verify/phone/', views.request_phone_verification, name='request_phone_verification'),
     path('login/', auth_views.LoginView.as_view(template_name='login.html'), name='login'),

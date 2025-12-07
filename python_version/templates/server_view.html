@@ -3242,12 +3242,14 @@
     function addVoiceParticipant(username, isLocal, isMuted, isDeafened) {
         if (!currentVoiceChannelSlug) return;
         
-        // Use a unified ID system based on username to prevent duplicates
-        const oderlySafeUsername = username.replace(/[^a-zA-Z0-9]/g, '_');
-        const uniqueId = `voice-user-${oderlySafeUsername}`;
+        // NORMALIZE: Use lowercase for comparison to prevent case-sensitivity duplicates
+        const normalizedUsername = username.toLowerCase();
+        const safeUsername = normalizedUsername.replace(/[^a-z0-9]/g, '_');
+        const uniqueId = `voice-user-${safeUsername}`;
         
-        // Check if already exists (prevent duplicates)
-        if (document.getElementById(uniqueId) || voiceParticipants.has(username)) {
+        // Check if already exists (prevent duplicates) - case insensitive
+        const existsInMap = Array.from(voiceParticipants.keys()).some(k => k.toLowerCase() === normalizedUsername);
+        if (document.getElementById(uniqueId) || existsInMap) {
             console.log(`[Voice] User ${username} already in participant list, skipping duplicate`);
             return;
         }
@@ -3337,17 +3339,29 @@
             serverName: '{{ server.name }}',
             serverId: '{{ server.id }}',
             channelSlug: currentVoiceChannelSlug,
+            userId: currentUserId,
+            username: currentUsername,
             muted: isMuted,
             deafened: isDeafened,
             timestamp: Date.now()
         };
         sessionStorage.setItem('voiceState', JSON.stringify(state));
         console.log('[Voice] State saved:', state);
+        
+        // Also connect via the persistent voice frame (in base.html)
+        if (connected && window.connectVoiceViaFrame) {
+            window.connectVoiceViaFrame(state);
+        }
     }
     
     function clearVoiceState() {
         sessionStorage.removeItem('voiceState');
         console.log('[Voice] State cleared');
+        
+        // Also disconnect via the persistent voice frame
+        if (window.disconnectVoiceViaFrame) {
+            window.disconnectVoiceViaFrame();
+        }
         
         // Also hide the mini box if visible
         const miniBox = document.getElementById('voice-mini-box');
@@ -3519,14 +3533,21 @@
             return;
         }
         
-        // CRITICAL: Check ALL possible ID formats to prevent duplicates
-        const safeUsername = username.replace(/[^a-zA-Z0-9]/g, '_');
+        // NORMALIZE: Use lowercase for comparison to prevent case-sensitivity duplicates
+        const normalizedUsername = username.toLowerCase();
+        const safeUsername = normalizedUsername.replace(/[^a-z0-9]/g, '_');
+        
+        // Check ALL possible ID formats (case-insensitive)
         const existingById = document.getElementById(`user-avatar-${userId}`);
         const existingByUsername = document.getElementById(`voice-user-${safeUsername}`);
-        const existingByParticipant = document.getElementById(`participant-${username}`);
-        const inVoiceParticipants = voiceParticipants.has(username);
+        const existsInMap = Array.from(voiceParticipants.keys()).some(k => k.toLowerCase() === normalizedUsername);
         
-        if (existingById || existingByUsername || existingByParticipant || inVoiceParticipants) {
+        // Also check if any element with this username already exists in the list
+        const existingInList = list.querySelector(`[data-username="${username}"]`) || 
+                              list.querySelector(`[data-username="${username.toUpperCase()}"]`) ||
+                              list.querySelector(`[data-username="${username.toLowerCase()}"]`);
+        
+        if (existingById || existingByUsername || existsInMap || existingInList) {
             console.log(`[Presence] User ${username} already in sidebar, skipping duplicate`);
             return;
         }

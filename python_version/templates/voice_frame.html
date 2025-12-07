@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Voice Connection</title>
+    <style>
+        body { margin: 0; padding: 10px; background: #0A0E27; color: #00FFFF; font-family: sans-serif; font-size: 12px; }
+        .status { display: flex; align-items: center; gap: 8px; }
+        .dot { width: 8px; height: 8px; border-radius: 50%; background: #00FF80; }
+        .dot.disconnected { background: #FF0064; }
+    </style>
+</head>
+<body>
+    <div class="status">
+        <span class="dot" id="status-dot"></span>
+        <span id="status-text">Initializing...</span>
+    </div>
+    
+    <script>
+        // Voice Frame - Maintains WebSocket connection across page navigations
+        let voiceSocket = null;
+        let localStream = null;
+        let peerConnections = {};
+        let isMuted = false;
+        let isDeafened = false;
+        let channelSlug = null;
+        let channelName = null;
+        let userId = null;
+        let username = null;
+        
+        const iceCandidateQueues = {};
+        
+        // ICE Servers
+        const iceServers = [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' },
+        ];
+        
+        function updateStatus(text, connected) {
+            document.getElementById('status-text').textContent = text;
+            document.getElementById('status-dot').classList.toggle('disconnected', !connected);
+        }
+        
+        // Listen for messages from parent window
+        window.addEventListener('message', async (event) => {
+            const { type, data } = event.data;
+            console.log('[VoiceFrame] Received:', type, data);
+            
+            switch (type) {
+                case 'connect':
+                    channelSlug = data.channelSlug;
+                    channelName = data.channelName;
+                    userId = data.userId;
+                    username = data.username;
+                    isMuted = data.muted || false;
+                    isDeafened = data.deafened || false;
+                    await initVoice(data.wsUrl);
+                    break;
+                    
+                case 'disconnect':
+                    disconnect();
+                    break;
+                    
+                case 'toggleMute':
+                    toggleMute();
+                    break;
+                    
+                case 'toggleDeafen':
+                    toggleDeafen();
+                    break;
+                    
+                case 'getState':
+                    sendToParent('state', {
+                        connected: voiceSocket && voiceSocket.readyState === WebSocket.OPEN,
+                        channelSlug,
+                        channelName,
+                        muted: isMuted,
+                        deafened: isDeafened
+                    });
+                    break;
+            }
+        });
+        
+        function sendToParent(type, data) {
+            if (window.parent !== window) {
+                window.parent.postMessage({ type, data }, '*');
+            }
+        }
+        
+        async function initVoice(wsUrl) {
+            try {
+                updateStatus('Getting microphone...', false);
+                
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    audio: { echoCancellation: true, noiseSuppression: true },
+                    video: false
+                });
+                
+                if (isMuted) {
+                    localStream.getAudioTracks().forEach(t => t.enabled = false);
+                }
+                
+                updateStatus('Connecting...', false);
+                connectWebSocket(wsUrl);
+                
+            } catch (err) {
+                console.error('[VoiceFrame] Mic error:', err);
+                updateStatus('Mic error: ' + err.message, false);
+                sendToParent('error', { message: err.message });
+            }
+        }
+        
+        function connectWebSocket(wsUrl) {
+            if (voiceSocket) {
+                voiceSocket.close();
+            }
+            
+            voiceSocket = new WebSocket(wsUrl);
+            
+            voiceSocket.onopen = () => {
+                console.log('[VoiceFrame] Connected');
+                updateStatus('Connected: ' + channelName, true);
+                sendToParent('connected', { channelSlug, channelName });
+                
+                voiceSocket.send(JSON.stringify({
+                    signal_type: 'join',
+                    data: { channel_slug: channelSlug, username }
+                }));
+            };
+            
+            voiceSocket.onmessage = (e) => {
+                try {
+                    const data = JSON.parse(e.data);
+                    handleVoiceMessage(data);
+                } catch (err) {
+                    console.error('[VoiceFrame] Parse error:', err);
+                }
+            };
+            
+            voiceSocket.onclose = () => {
+                console.log('[VoiceFrame] Disconnected');
+                updateStatus('Disconnected', false);
+                sendToParent('disconnected', {});
+            };
+            
+            voiceSocket.onerror = (err) => {
+                console.error('[VoiceFrame] Error:', err);
+                updateStatus('Connection error', false);
+            };
+        }
+        
+        function handleVoiceMessage(data) {
+            // Forward relevant events to parent
+            sendToParent('voiceEvent', data);
+            
+            switch (data.type) {
+                case 'system_notification':
+                    if (data.event === 'member_joined' && data.sender_id !== userId) {
+                        createPeerConnection(data.sender_id, data.username, true);
+                    } else if (data.event === 'member_left') {
+                        closePeerConnection(data.sender_id);
+                    }
+                    break;
+                    
+                case 'webrtc_signal':
+                    handleWebRTCSignal(data);
+                    break;
+            }
+        }
+        
+        function createPeerConnection(peerId, peerUsername, isInitiator) {
+            if (peerConnections[peerId]) {
+                closePeerConnection(peerId);
+            }
+            
+            iceCandidateQueues[peerId] = [];
+            
+            const pc = new RTCPeerConnection({ iceServers });
+            peerConnections[peerId] = { pc, username: peerUsername, remoteDescriptionSet: false };
+            
+            if (localStream) {
+                localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+            }
+            
+            pc.onicecandidate = (event) => {
+                if (event.candidate && voiceSocket?.readyState === WebSocket.OPEN) {
+                    voiceSocket.send(JSON.stringify({
+                        signal_type: 'ice_candidate',
+                        recipient_id: peerId,
+                        data: { candidate: event.candidate }
+                    }));
+                }
+            };
+            
+            pc.ontrack = (event) => {
+                const audioId = `audio-${peerId}`;
+                let audio = document.getElementById(audioId);
+                if (!audio) {
+                    audio = document.createElement('audio');
+                    audio.id = audioId;
+                    audio.autoplay = true;
+                    document.body.appendChild(audio);
+                }
+                audio.srcObject = event.streams[0];
+                if (isDeafened) audio.muted = true;
+                
+                sendToParent('peerAudio', { peerId, username: peerUsername });
+            };
+            
+            pc.onconnectionstatechange = () => {
+                if (pc.connectionState === 'connected') {
+                    sendToParent('peerConnected', { peerId, username: peerUsername });
+                }
+            };
+            
+            if (isInitiator) {
+                createAndSendOffer(peerId);
+            }
+        }
+        
+        async function createAndSendOffer(peerId) {
+            const peerData = peerConnections[peerId];
+            if (!peerData) return;
+            
+            try {
+                const offer = await peerData.pc.createOffer({ offerToReceiveAudio: true });
+                await peerData.pc.setLocalDescription(offer);
+                
+                if (voiceSocket?.readyState === WebSocket.OPEN) {
+                    voiceSocket.send(JSON.stringify({
+                        signal_type: 'offer',
+                        recipient_id: peerId,
+                        data: { sdp: offer }
+                    }));
+                }
+            } catch (err) {
+                console.error('[VoiceFrame] Offer error:', err);
+            }
+        }
+        
+        async function handleWebRTCSignal(data) {
+            const senderId = data.sender_id;
+            if (senderId === userId) return;
+            
+            const recipientId = data.recipient_id || data.data?.recipient_id;
+            if (recipientId && recipientId !== userId) return;
+            
+            switch (data.signal_type) {
+                case 'offer':
+                    let pc = peerConnections[senderId]?.pc;
+                    if (!pc) {
+                        createPeerConnection(senderId, data.username, false);
+                        pc = peerConnections[senderId]?.pc;
+                    }
+                    if (pc) {
+                        await pc.setRemoteDescription(new RTCSessionDescription(data.data.sdp));
+                        peerConnections[senderId].remoteDescriptionSet = true;
+                        await processIceCandidateQueue(senderId);
+                        
+                        const answer = await pc.createAnswer();
+                        await pc.setLocalDescription(answer);
+                        
+                        if (voiceSocket?.readyState === WebSocket.OPEN) {
+                            voiceSocket.send(JSON.stringify({
+                                signal_type: 'answer',
+                                recipient_id: senderId,
+                                data: { sdp: answer }
+                            }));
+                        }
+                    }
+                    break;
+                    
+                case 'answer':
+                    const peerData = peerConnections[senderId];
+                    if (peerData?.pc) {
+                        await peerData.pc.setRemoteDescription(new RTCSessionDescription(data.data.sdp));
+                        peerData.remoteDescriptionSet = true;
+                        await processIceCandidateQueue(senderId);
+                    }
+                    break;
+                    
+                case 'ice_candidate':
+                    const peer = peerConnections[senderId];
+                    const candidate = data.data?.candidate;
+                    if (candidate) {
+                        if (peer?.remoteDescriptionSet) {
+                            await peer.pc.addIceCandidate(new RTCIceCandidate(candidate));
+                        } else {
+                            if (!iceCandidateQueues[senderId]) iceCandidateQueues[senderId] = [];
+                            iceCandidateQueues[senderId].push(candidate);
+                        }
+                    }
+                    break;
+            }
+        }
+        
+        async function processIceCandidateQueue(peerId) {
+            const queue = iceCandidateQueues[peerId];
+            const peerData = peerConnections[peerId];
+            if (!queue || !peerData?.pc) return;
+            
+            while (queue.length > 0) {
+                const candidate = queue.shift();
+                try {
+                    await peerData.pc.addIceCandidate(new RTCIceCandidate(candidate));
+                } catch (e) {}
+            }
+        }
+        
+        function closePeerConnection(peerId) {
+            const peerData = peerConnections[peerId];
+            if (peerData?.pc) {
+                peerData.pc.close();
+            }
+            delete peerConnections[peerId];
+            delete iceCandidateQueues[peerId];
+            
+            const audio = document.getElementById(`audio-${peerId}`);
+            if (audio) audio.remove();
+        }
+        
+        function toggleMute() {
+            isMuted = !isMuted;
+            if (localStream) {
+                localStream.getAudioTracks().forEach(t => t.enabled = !isMuted);
+            }
+            if (voiceSocket?.readyState === WebSocket.OPEN) {
+                voiceSocket.send(JSON.stringify({
+                    signal_type: 'mic_state_change',
+                    data: { muted: isMuted }
+                }));
+            }
+            sendToParent('muteChanged', { muted: isMuted });
+        }
+        
+        function toggleDeafen() {
+            isDeafened = !isDeafened;
+            document.querySelectorAll('audio').forEach(a => a.muted = isDeafened);
+            if (isDeafened && !isMuted) toggleMute();
+            sendToParent('deafenChanged', { deafened: isDeafened });
+        }
+        
+        function disconnect() {
+            if (voiceSocket) {
+                voiceSocket.close();
+                voiceSocket = null;
+            }
+            
+            Object.keys(peerConnections).forEach(closePeerConnection);
+            
+            if (localStream) {
+                localStream.getTracks().forEach(t => t.stop());
+                localStream = null;
+            }
+            
+            channelSlug = null;
+            channelName = null;
+            updateStatus('Disconnected', false);
+            sendToParent('disconnected', {});
+        }
+        
+        // Notify parent that frame is ready
+        sendToParent('ready', {});
+    </script>
+</body>
+</html>
+

@@ -422,28 +422,30 @@
         document.documentElement.setAttribute('data-theme', 'dark');
     </script>
 
+    <!-- Hidden Voice Frame - Maintains connection across pages -->
+    <iframe id="voice-frame" src="/voice-frame/" style="display:none; width:0; height:0; border:0;"></iframe>
+    
     <!-- Voice Chat Mini Box (Global) -->
     <div id="voice-mini-box" class="voice-mini-box" style="display: none;">
         <div class="voice-mini-header">
-            <span class="voice-mini-status disconnected">
-                <span class="voice-mini-dot"></span>
-                <span id="voice-mini-channel">Voice Paused</span>
+            <span class="voice-mini-status" id="voice-mini-status-wrap">
+                <span class="voice-mini-dot" id="voice-mini-dot"></span>
+                <span id="voice-mini-channel">Voice Connected</span>
             </span>
         </div>
         <div class="voice-mini-server" id="voice-mini-server"></div>
-        <div class="voice-mini-info">Click "Return" to reconnect</div>
         <div class="voice-mini-controls">
-            <button class="voice-mini-btn" id="voice-mini-mute" onclick="toggleMiniMute()" title="{% trans 'Mute (for when reconnected)' %}">
+            <button class="voice-mini-btn" id="voice-mini-mute" onclick="toggleMiniMute()" title="{% trans 'Mute' %}">
                 <i class="fas fa-microphone"></i>
             </button>
-            <button class="voice-mini-btn" id="voice-mini-deafen" onclick="toggleMiniDeafen()" title="{% trans 'Deafen (for when reconnected)' %}">
+            <button class="voice-mini-btn" id="voice-mini-deafen" onclick="toggleMiniDeafen()" title="{% trans 'Deafen' %}">
                 <i class="fas fa-headphones"></i>
             </button>
-            <button class="voice-mini-btn return" onclick="returnToVoice()" title="{% trans 'Return & Reconnect' %}">
-                <i class="fas fa-redo"></i>
+            <button class="voice-mini-btn return" onclick="returnToVoice()" title="{% trans 'Return to Channel' %}">
+                <i class="fas fa-arrow-right"></i>
             </button>
-            <button class="voice-mini-btn disconnect" onclick="disconnectMiniVoice()" title="{% trans 'Cancel' %}">
-                <i class="fas fa-times"></i>
+            <button class="voice-mini-btn disconnect" onclick="disconnectMiniVoice()" title="{% trans 'Leave Voice' %}">
+                <i class="fas fa-phone-slash"></i>
             </button>
         </div>
     </div>
@@ -526,18 +528,8 @@
             margin-bottom: 4px;
         }
         
-        .voice-mini-info {
-            font-size: 10px;
-            color: #FFA500;
-            margin-bottom: 10px;
-            padding: 4px 8px;
-            background: rgba(255, 165, 0, 0.1);
-            border-radius: 4px;
-            text-align: center;
-        }
-        
         .voice-mini-status.disconnected .voice-mini-dot {
-            background: #FFA500;
+            background: #FFA500 !important;
             box-shadow: 0 0 8px rgba(255, 165, 0, 0.6);
             animation: pulse-orange 2s infinite;
         }
@@ -600,30 +592,135 @@
     </style>
     
     <script>
-        // Global voice state management
+        // ============================================
+        // PERSISTENT VOICE - Uses hidden iframe for connection
+        // ============================================
+        
         window.voiceState = {
             connected: false,
             channelName: '',
             serverSlug: '',
+            serverName: '',
             channelSlug: '',
             muted: false,
             deafened: false
         };
         
-        // Check if there's an active voice session on page load
+        let voiceFrameReady = false;
+        
+        // Get voice frame
+        function getVoiceFrame() {
+            return document.getElementById('voice-frame');
+        }
+        
+        // Send message to voice frame
+        function sendToVoiceFrame(type, data = {}) {
+            const frame = getVoiceFrame();
+            if (frame && frame.contentWindow) {
+                frame.contentWindow.postMessage({ type, data }, '*');
+            }
+        }
+        
+        // Listen for messages from voice frame
+        window.addEventListener('message', (event) => {
+            if (event.source !== getVoiceFrame()?.contentWindow) return;
+            
+            const { type, data } = event.data;
+            console.log('[Voice] Frame message:', type, data);
+            
+            switch (type) {
+                case 'ready':
+                    voiceFrameReady = true;
+                    checkVoiceSession();
+                    break;
+                    
+                case 'connected':
+                    window.voiceState.connected = true;
+                    updateVoiceUI(true);
+                    saveVoiceStateToSession();
+                    break;
+                    
+                case 'disconnected':
+                    window.voiceState.connected = false;
+                    updateVoiceUI(false);
+                    break;
+                    
+                case 'muteChanged':
+                    window.voiceState.muted = data.muted;
+                    updateMiniButtonStates();
+                    saveVoiceStateToSession();
+                    break;
+                    
+                case 'deafenChanged':
+                    window.voiceState.deafened = data.deafened;
+                    updateMiniButtonStates();
+                    saveVoiceStateToSession();
+                    break;
+                    
+                case 'voiceEvent':
+                    // Forward to server_view if it's listening
+                    window.dispatchEvent(new CustomEvent('voiceFrameEvent', { detail: data }));
+                    break;
+                    
+                case 'peerConnected':
+                case 'peerAudio':
+                    window.dispatchEvent(new CustomEvent('voiceFrameEvent', { detail: { type, ...data } }));
+                    break;
+            }
+        });
+        
+        function saveVoiceStateToSession() {
+            sessionStorage.setItem('voiceState', JSON.stringify(window.voiceState));
+        }
+        
         function checkVoiceSession() {
             const savedState = sessionStorage.getItem('voiceState');
             if (savedState) {
                 try {
                     const state = JSON.parse(savedState);
+                    window.voiceState = { ...window.voiceState, ...state };
+                    
                     // Only show mini box if we're NOT on the server view page
                     const isServerView = document.querySelector('.gaming-hud-container');
+                    
                     if (state.connected && !isServerView) {
                         showVoiceMiniBox(state);
+                        
+                        // If frame is ready and we have connection info, reconnect
+                        if (voiceFrameReady && state.channelSlug) {
+                            reconnectVoice(state);
+                        }
                     }
                 } catch (e) {
                     console.error('Error parsing voice state:', e);
                 }
+            }
+        }
+        
+        function reconnectVoice(state) {
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${wsProtocol}//${window.location.host}/ws/voice/?channel_slug=${state.channelSlug}&channel_type=voice`;
+            
+            sendToVoiceFrame('connect', {
+                wsUrl,
+                channelSlug: state.channelSlug,
+                channelName: state.channelName,
+                userId: state.userId,
+                username: state.username,
+                muted: state.muted,
+                deafened: state.deafened
+            });
+        }
+        
+        function updateVoiceUI(connected) {
+            const statusWrap = document.getElementById('voice-mini-status-wrap');
+            const dot = document.getElementById('voice-mini-dot');
+            
+            if (statusWrap) {
+                statusWrap.classList.toggle('disconnected', !connected);
+            }
+            if (dot) {
+                dot.style.background = connected ? '#00FF80' : '#FFA500';
             }
         }
         
@@ -633,15 +730,14 @@
             const serverLabel = document.getElementById('voice-mini-server');
             
             if (miniBox && channelLabel) {
-                window.voiceState = state;
+                window.voiceState = { ...window.voiceState, ...state };
                 channelLabel.textContent = state.channelName || 'Voice Connected';
                 if (serverLabel) {
                     serverLabel.textContent = state.serverName ? `🖥️ ${state.serverName}` : (state.serverSlug || '');
                 }
                 miniBox.style.display = 'block';
-                
-                // Update button states
                 updateMiniButtonStates();
+                updateVoiceUI(state.connected);
             }
         }
         
@@ -678,29 +774,56 @@
         }
         
         function toggleMiniMute() {
-            window.voiceState.muted = !window.voiceState.muted;
-            sessionStorage.setItem('voiceState', JSON.stringify(window.voiceState));
-            updateMiniButtonStates();
-            // Note: Actual audio muting would need to be handled via postMessage to server_view iframe or reconnection
+            sendToVoiceFrame('toggleMute');
         }
         
         function toggleMiniDeafen() {
-            window.voiceState.deafened = !window.voiceState.deafened;
-            if (window.voiceState.deafened && !window.voiceState.muted) {
-                window.voiceState.muted = true;
-            }
-            sessionStorage.setItem('voiceState', JSON.stringify(window.voiceState));
-            updateMiniButtonStates();
+            sendToVoiceFrame('toggleDeafen');
         }
         
         function disconnectMiniVoice() {
+            sendToVoiceFrame('disconnect');
             window.voiceState = { connected: false };
             sessionStorage.removeItem('voiceState');
             hideVoiceMiniBox();
         }
         
+        // Global function to connect voice from server_view
+        window.connectVoiceViaFrame = function(config) {
+            window.voiceState = {
+                connected: true,
+                channelName: config.channelName,
+                channelSlug: config.channelSlug,
+                serverSlug: config.serverSlug,
+                serverName: config.serverName,
+                userId: config.userId,
+                username: config.username,
+                muted: config.muted || false,
+                deafened: config.deafened || false
+            };
+            saveVoiceStateToSession();
+            
+            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${wsProtocol}//${window.location.host}/ws/voice/?channel_slug=${config.channelSlug}&channel_type=voice`;
+            
+            sendToVoiceFrame('connect', {
+                wsUrl,
+                ...config
+            });
+        };
+        
+        window.disconnectVoiceViaFrame = function() {
+            sendToVoiceFrame('disconnect');
+            window.voiceState = { connected: false };
+            sessionStorage.removeItem('voiceState');
+            hideVoiceMiniBox();
+        };
+        
         // Run on page load
-        document.addEventListener('DOMContentLoaded', checkVoiceSession);
+        document.addEventListener('DOMContentLoaded', () => {
+            // Wait a bit for iframe to load
+            setTimeout(checkVoiceSession, 500);
+        });
     </script>
 
     {% block extra_js %}{% endblock %}
