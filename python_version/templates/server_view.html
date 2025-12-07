@@ -2466,10 +2466,7 @@
             </div>
         </div>
         
-        <!-- Video Grid Container (for backwards compatibility) -->
-        <div id="video-grid" class="video-grid-container">
-            <!-- Video streams added dynamically -->
-        </div>
+        <!-- Video grid removed - using voice-room-view instead -->
         
         <!-- Messages Area -->
         <div class="messages-container" id="messages-container">
@@ -3444,7 +3441,7 @@
             window.sendToVoiceFrame('toggleCamera');
         }
         
-        // Handle camera locally (whether using frame or not)
+        // Handle camera locally
         if (!isCameraOn) {
             try {
                 localVideoStream = await navigator.mediaDevices.getUserMedia({
@@ -3466,18 +3463,48 @@
                 updateVoiceRoomCard(normalizedUsername, { video: true });
                 setVoiceRoomCardVideo(normalizedUsername, localVideoStream, false);
                 
-                // Also add to old video grid for compatibility
-                addVideoToGrid(currentUsername, localVideoStream, false, currentUserId);
+                // ADD VIDEO TRACK TO ALL PEER CONNECTIONS
+                Object.entries(peerConnections).forEach(([peerId, peerData]) => {
+                    if (peerData.pc && localVideoStream) {
+                        localVideoStream.getVideoTracks().forEach(track => {
+                            console.log(`[WebRTC] Adding video track to peer ${peerId}`);
+                            peerData.pc.addTrack(track, localVideoStream);
+                        });
+                        // Renegotiate to send the new track
+                        createAndSendOffer(peerId);
+                    }
+                });
                 
-                // TODO: Add video track to peer connections
+                // Notify others via WebSocket
+                if (voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
+                    voiceSocket.send(JSON.stringify({
+                        signal_type: 'media_state',
+                        data: { has_video: true, has_screen: isScreenSharing, muted: isMuted }
+                    }));
+                }
+                
+                console.log('[Camera] ✅ Camera started and shared with peers');
             } catch (error) {
-                console.error('Error starting camera:', error);
+                console.error('[Camera] Error starting camera:', error);
                 alert('{% trans "Could not start camera. Please check permissions." %}');
             }
         } else {
             // Stop camera
             if (localVideoStream) {
-                localVideoStream.getTracks().forEach(track => track.stop());
+                localVideoStream.getTracks().forEach(track => {
+                    track.stop();
+                    // Remove track from all peer connections
+                    Object.values(peerConnections).forEach(peerData => {
+                        if (peerData.pc) {
+                            const senders = peerData.pc.getSenders();
+                            senders.forEach(sender => {
+                                if (sender.track && sender.track.kind === 'video' && sender.track.id === track.id) {
+                                    peerData.pc.removeTrack(sender);
+                                }
+                            });
+                        }
+                    });
+                });
                 localVideoStream = null;
             }
             isCameraOn = false;
@@ -3495,8 +3522,15 @@
             const normalizedUsername = currentUsername.toLowerCase();
             updateVoiceRoomCard(normalizedUsername, { video: false });
             
-            // Remove from old video grid
-            removeVideoFromGrid(currentUsername);
+            // Notify others via WebSocket
+            if (voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
+                voiceSocket.send(JSON.stringify({
+                    signal_type: 'media_state',
+                    data: { has_video: false, has_screen: isScreenSharing, muted: isMuted }
+                }));
+            }
+            
+            console.log('[Camera] Camera stopped');
         }
     }
     
@@ -3599,17 +3633,34 @@
                 updateVoiceRoomCard(normalizedUsername, { screen: true });
                 setVoiceRoomCardVideo(normalizedUsername, screenStream, true);
                 
-                // Also add to old video grid for compatibility
-                addVideoToGrid(currentUsername, screenStream, true);
+                // ADD SCREEN TRACK TO ALL PEER CONNECTIONS
+                Object.entries(peerConnections).forEach(([peerId, peerData]) => {
+                    if (peerData.pc && screenStream) {
+                        screenStream.getTracks().forEach(track => {
+                            console.log(`[WebRTC] Adding screen track (${track.kind}) to peer ${peerId}`);
+                            peerData.pc.addTrack(track, screenStream);
+                        });
+                        // Renegotiate to send the new track
+                        createAndSendOffer(peerId);
+                    }
+                });
+                
+                // Notify others via WebSocket
+                if (voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
+                    voiceSocket.send(JSON.stringify({
+                        signal_type: 'media_state',
+                        data: { has_video: isCameraOn, has_screen: true, muted: isMuted }
+                    }));
+                }
                 
                 // Handle screen share end (browser stop button)
                 screenStream.getVideoTracks()[0].onended = () => {
                     toggleScreenShare();
                 };
                 
-                // TODO: Send screen share stream via WebRTC
+                console.log('[Screen] ✅ Screen share started and shared with peers');
             } catch (error) {
-                console.error('Error starting screen share:', error);
+                console.error('[Screen] Error starting screen share:', error);
                 // User cancelled - not an error
                 if (error.name !== 'AbortError') {
                     alert('{% trans "Could not start screen share. Please check permissions." %}');
@@ -3618,7 +3669,20 @@
         } else {
             // Stop screen sharing
             if (screenStream) {
-                screenStream.getTracks().forEach(track => track.stop());
+                screenStream.getTracks().forEach(track => {
+                    track.stop();
+                    // Remove track from all peer connections
+                    Object.values(peerConnections).forEach(peerData => {
+                        if (peerData.pc) {
+                            const senders = peerData.pc.getSenders();
+                            senders.forEach(sender => {
+                                if (sender.track && sender.track.id === track.id) {
+                                    peerData.pc.removeTrack(sender);
+                                }
+                            });
+                        }
+                    });
+                });
                 screenStream = null;
             }
             isScreenSharing = false;
@@ -3636,10 +3700,15 @@
             const normalizedUsername = currentUsername.toLowerCase();
             updateVoiceRoomCard(normalizedUsername, { screen: false });
             
-            // Remove from old video grid
-            removeVideoFromGrid(currentUsername);
+            // Notify others via WebSocket
+            if (voiceSocket && voiceSocket.readyState === WebSocket.OPEN) {
+                voiceSocket.send(JSON.stringify({
+                    signal_type: 'media_state',
+                    data: { has_video: isCameraOn, has_screen: false, muted: isMuted }
+                }));
+            }
             
-            // TODO: Stop screen share via WebRTC
+            console.log('[Screen] Screen share stopped');
         }
     }
     
@@ -3864,10 +3933,24 @@
                 updateParticipantMuteState(data.username, data.muted);
                 break;
                 
+            case 'media_state':
+                // Handle camera/screen share state from other users
+                if (data.username && data.username !== currentUsername) {
+                    const normalizedName = data.username.toLowerCase();
+                    console.log(`[Voice] ${data.username} media state:`, data.data || data);
+                    updateVoiceRoomCard(normalizedName, {
+                        muted: data.data?.muted ?? data.muted,
+                        video: data.data?.has_video ?? data.has_video,
+                        screen: data.data?.has_screen ?? data.has_screen
+                    });
+                }
+                break;
+                
             case 'camera_state_change':
                 // Handle camera enable/disable
-                if (!data.enabled) {
-                    removeVideoFromGrid(data.username);
+                if (data.username && data.username !== currentUsername) {
+                    const normalizedName = data.username.toLowerCase();
+                    updateVoiceRoomCard(normalizedName, { video: data.enabled });
                 }
                 break;
                 
@@ -4000,8 +4083,11 @@
             const stream = event.streams[0];
             
             if (event.track.kind === 'video') {
-                // Add video to the grid (with user ID for volume control)
-                addVideoToGrid(peerUsername, stream, false, peerId);
+                // Show video in the voice room card (not old video grid)
+                const normalizedUsername = peerUsername.toLowerCase();
+                setVoiceRoomCardVideo(normalizedUsername, stream, false);
+                updateVoiceRoomCard(normalizedUsername, { video: true });
+                console.log(`[WebRTC] 📹 Video stream set for ${peerUsername} in voice room`);
             } else if (event.track.kind === 'audio') {
                 // Create audio element for remote audio with strict ID pattern: remote-audio-{USER_ID}
                 const audioElementId = `remote-audio-${peerId}`;
@@ -4009,7 +4095,7 @@
                 if (!audioEl) {
                     audioEl = document.createElement('audio');
                     audioEl.id = audioElementId;  // Strict ID: remote-audio-{USER_ID}
-                    audioEl.dataset.userId = peerId;
+                    audioEl.dataset.oderId = peerId;
                     audioEl.dataset.username = peerUsername;
                     audioEl.autoplay = true;
                     audioEl.playsInline = true;
@@ -4294,17 +4380,24 @@
         console.log(`[WebRTC] Peer connection closed for ${peerId}`);
     }
     
-    function updateParticipantMuteState(username, isMuted) {
-        const participant = voiceParticipants.get(username);
+    function updateParticipantMuteState(username, muted) {
+        const normalizedUsername = username.toLowerCase();
+        
+        // Update sidebar participant
+        const participant = voiceParticipants.get(normalizedUsername);
         if (participant) {
-            participant.isMuted = isMuted;
+            participant.isMuted = muted;
             if (participant.avatarElement) {
-                participant.avatarElement.classList.toggle('muted', isMuted);
+                participant.avatarElement.classList.toggle('muted', muted);
             }
             if (participant.statusElement) {
-                participant.statusElement.innerHTML = isMuted ? '<span class="muted-icon">🔇</span>' : '';
+                participant.statusElement.innerHTML = muted ? '<span class="muted-icon">🔇</span>' : '';
             }
         }
+        
+        // Also update voice room card
+        updateVoiceRoomCard(normalizedUsername, { muted: muted });
+        console.log(`[Voice] Updated mute state for ${username}: ${muted ? 'muted' : 'unmuted'}`);
     }
     
     // ============================================
@@ -4902,9 +4995,12 @@
         // data = { channel_slug: [{user_id, username}, ...], ... }
         console.log('[Presence] Received initial_state:', data);
         
-        // Clear existing global presence and sidebar
+        // CRITICAL: Clear ALL existing presence data to prevent duplicates
         globalVoicePresence.clear();
         clearAllPresenceFromSidebar();
+        
+        // Also clear the processed users set
+        const processedUsers = new Set();
         
         if (!data || Object.keys(data).length === 0) {
             console.log('[Presence] No active voice users on this server');
@@ -4920,10 +5016,19 @@
             for (const user of users) {
                 if (!user.user_id || !user.username) continue;
                 
+                // PREVENT DUPLICATES: Check if already processed (case-insensitive)
+                const userKey = `${channelSlug}:${user.username.toLowerCase()}`;
+                if (processedUsers.has(userKey)) {
+                    console.log(`[Presence] Skipping duplicate user: ${user.username} in ${channelSlug}`);
+                    continue;
+                }
+                processedUsers.add(userKey);
+                
                 globalVoicePresence.get(channelSlug).add(user.username);
                 
                 // Add to sidebar (except self - self is added when joining)
-                if (user.user_id !== currentUserId && user.username !== currentUsername) {
+                if (String(user.user_id) !== String(currentUserId) && 
+                    user.username.toLowerCase() !== currentUsername.toLowerCase()) {
                     addVoiceParticipantToSidebar(channelSlug, user.user_id, user.username);
                 }
             }
@@ -4953,22 +5058,37 @@
         console.log('[Presence] Voice presence update:', data);
         const { action, channel_slug, username, user_id } = data;
         
+        // Skip if it's our own update
+        if (String(user_id) === String(currentUserId) || 
+            username.toLowerCase() === currentUsername.toLowerCase()) {
+            console.log('[Presence] Skipping own presence update');
+            return;
+        }
+        
         // Update global presence map
         if (!globalVoicePresence.has(channel_slug)) {
             globalVoicePresence.set(channel_slug, new Set());
         }
         
         const channelUsers = globalVoicePresence.get(channel_slug);
+        const normalizedUsername = username.toLowerCase();
         
         if (action === 'joined') {
-            channelUsers.add(username);
-            // Add to sidebar if not already there (use user_id as unique key)
-            if (user_id !== currentUserId) {
+            // Check if already in the set (case-insensitive)
+            const alreadyExists = Array.from(channelUsers).some(u => u.toLowerCase() === normalizedUsername);
+            if (!alreadyExists) {
+                channelUsers.add(username);
                 addVoiceParticipantToSidebar(channel_slug, user_id, username);
+            } else {
+                console.log(`[Presence] User ${username} already in channel, skipping duplicate`);
             }
         } else if (action === 'left') {
-            channelUsers.delete(username);
-            // Remove from sidebar using user_id
+            // Remove case-insensitively
+            channelUsers.forEach(u => {
+                if (u.toLowerCase() === normalizedUsername) {
+                    channelUsers.delete(u);
+                }
+            });
             removeVoiceParticipantFromSidebar(channel_slug, user_id);
         }
     }
