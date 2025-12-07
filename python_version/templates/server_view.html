@@ -1278,13 +1278,13 @@
     }
     
     /* ============================================
-       VOICE ROOM VIEW - Full-screen voice layout
+       VOICE ROOM VIEW - Discord-style Interface
        ============================================ */
     .voice-room-view {
         flex: 1;
         display: flex;
         flex-direction: column;
-        background: linear-gradient(180deg, rgba(10, 14, 39, 0.95) 0%, rgba(5, 8, 22, 0.98) 100%);
+        background: linear-gradient(180deg, #0A0E27 0%, #050816 100%);
         min-height: 0;
         overflow: hidden;
     }
@@ -1293,9 +1293,9 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 16px 24px;
-        background: linear-gradient(90deg, rgba(0, 255, 255, 0.1), transparent);
-        border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+        padding: 12px 20px;
+        background: rgba(0, 0, 0, 0.3);
+        border-bottom: 1px solid rgba(0, 255, 255, 0.15);
         flex-shrink: 0;
     }
     
@@ -1306,74 +1306,222 @@
     }
     
     .voice-room-icon {
-        font-size: 20px;
-        color: #00FF80;
-        animation: pulse-glow 2s infinite;
-    }
-    
-    @keyframes pulse-glow {
-        0%, 100% { filter: drop-shadow(0 0 5px rgba(0, 255, 128, 0.5)); }
-        50% { filter: drop-shadow(0 0 15px rgba(0, 255, 128, 0.8)); }
-    }
-    
-    .voice-room-title span:first-of-type {
         font-size: 18px;
-        font-weight: 700;
+        color: #00FF80;
+        animation: voice-pulse 2s ease-in-out infinite;
+    }
+    
+    @keyframes voice-pulse {
+        0%, 100% { filter: drop-shadow(0 0 4px rgba(0, 255, 128, 0.4)); opacity: 1; }
+        50% { filter: drop-shadow(0 0 12px rgba(0, 255, 128, 0.7)); opacity: 0.8; }
+    }
+    
+    .voice-room-channel-name {
+        font-size: 16px;
+        font-weight: 600;
         color: #00FFFF;
         text-transform: uppercase;
         letter-spacing: 1px;
     }
     
     .voice-room-status {
-        font-size: 11px;
-        padding: 4px 10px;
-        background: rgba(0, 255, 128, 0.2);
+        font-size: 10px;
+        padding: 3px 8px;
+        background: rgba(0, 255, 128, 0.15);
         color: #00FF80;
-        border-radius: 12px;
-        border: 1px solid rgba(0, 255, 128, 0.3);
+        border-radius: 10px;
+        border: 1px solid rgba(0, 255, 128, 0.25);
         text-transform: uppercase;
         letter-spacing: 0.5px;
     }
     
     .voice-room-actions {
         display: flex;
-        gap: 8px;
+        gap: 6px;
     }
     
     .voice-room-btn {
-        width: 40px;
-        height: 40px;
-        border-radius: 10px;
-        border: 1px solid rgba(0, 255, 255, 0.3);
-        background: rgba(0, 255, 255, 0.1);
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        border: 1px solid rgba(0, 255, 255, 0.25);
+        background: rgba(0, 255, 255, 0.08);
         color: #00FFFF;
         cursor: pointer;
-        transition: all 0.2s ease;
+        transition: all 0.15s ease;
         display: flex;
         align-items: center;
         justify-content: center;
+        font-size: 14px;
     }
     
     .voice-room-btn:hover {
-        background: rgba(0, 255, 255, 0.2);
+        background: rgba(0, 255, 255, 0.15);
         border-color: #00FFFF;
-        transform: translateY(-2px);
+        transform: translateY(-1px);
     }
     
     .voice-room-btn.active {
-        background: rgba(0, 255, 128, 0.3);
+        background: rgba(0, 255, 128, 0.25);
         border-color: #00FF80;
         color: #00FF80;
     }
     
+    /* Voice Room Content - Main Stage + Grid */
+    .voice-room-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        overflow: hidden;
+    }
+    
+    /* Main Stage - For pinned user */
+    .voice-room-stage {
+        display: none;
+        flex: 1;
+        min-height: 300px;
+        padding: 16px;
+    }
+    
+    .voice-room-content.has-pinned .voice-room-stage {
+        display: flex;
+    }
+    
+    .voice-room-content.has-pinned .voice-room-grid {
+        flex: 0 0 auto;
+        max-height: 180px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 160px));
+        grid-template-rows: 1fr;
+        grid-auto-flow: column;
+        align-content: center;
+        padding: 12px;
+        border-top: 1px solid rgba(0, 255, 255, 0.1);
+        background: rgba(0, 0, 0, 0.2);
+    }
+    
+    .voice-room-content.has-pinned .voice-room-card {
+        aspect-ratio: 1;
+        min-width: 140px;
+    }
+    
+    .voice-room-stage-card {
+        flex: 1;
+        position: relative;
+        background: rgba(20, 25, 50, 0.6);
+        border: 2px solid rgba(0, 255, 255, 0.2);
+        border-radius: 16px;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .voice-room-stage-card.speaking {
+        border-color: #00FF80;
+        box-shadow: 0 0 30px rgba(0, 255, 128, 0.3);
+    }
+    
+    .voice-room-stage-card video {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        background: #000;
+    }
+    
+    .voice-room-stage-avatar {
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 60px;
+        font-weight: 700;
+        color: #0A0E27;
+        border: 4px solid rgba(0, 255, 255, 0.3);
+    }
+    
+    .voice-room-stage-info {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 20px;
+        background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    
+    .voice-room-stage-name {
+        font-size: 18px;
+        font-weight: 600;
+        color: #fff;
+    }
+    
+    .voice-room-stage-controls {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+    
+    .voice-room-stage-unpin {
+        padding: 8px 16px;
+        background: rgba(255, 0, 100, 0.2);
+        border: 1px solid rgba(255, 0, 100, 0.4);
+        color: #FF0064;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 12px;
+        transition: all 0.15s;
+    }
+    
+    .voice-room-stage-unpin:hover {
+        background: rgba(255, 0, 100, 0.3);
+    }
+    
+    /* Voice Room Grid */
     .voice-room-grid {
         flex: 1;
         display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 16px;
-        padding: 24px;
+        gap: 12px;
+        padding: 16px;
         overflow-y: auto;
         align-content: start;
+    }
+    
+    /* Dynamic grid based on participant count */
+    .voice-room-grid[data-count="1"] {
+        grid-template-columns: 1fr;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    
+    .voice-room-grid[data-count="2"] {
+        grid-template-columns: repeat(2, 1fr);
+        max-width: 1000px;
+        margin: 0 auto;
+    }
+    
+    .voice-room-grid[data-count="3"],
+    .voice-room-grid[data-count="4"] {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .voice-room-grid[data-count="5"],
+    .voice-room-grid[data-count="6"] {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .voice-room-grid:not([data-count]) {
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     }
     
     .voice-room-empty {
@@ -1382,76 +1530,85 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding: 60px;
+        padding: 80px 40px;
         color: #6B7280;
     }
     
     .voice-room-empty i {
-        font-size: 48px;
-        margin-bottom: 16px;
+        font-size: 56px;
+        margin-bottom: 20px;
         color: #00FFFF;
-        opacity: 0.3;
+        opacity: 0.2;
     }
     
     .voice-room-empty p {
-        font-size: 14px;
+        font-size: 13px;
         text-transform: uppercase;
-        letter-spacing: 2px;
+        letter-spacing: 3px;
     }
     
-    /* Voice Room Participant Card */
+    /* Participant Card */
     .voice-room-card {
         position: relative;
-        background: rgba(20, 25, 50, 0.8);
-        border: 2px solid rgba(0, 255, 255, 0.2);
-        border-radius: 16px;
+        background: linear-gradient(135deg, rgba(20, 25, 50, 0.8), rgba(15, 20, 40, 0.9));
+        border: 2px solid rgba(0, 255, 255, 0.15);
+        border-radius: 12px;
         overflow: hidden;
         aspect-ratio: 16/10;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        transition: all 0.3s ease;
+        transition: all 0.2s ease;
+        cursor: pointer;
     }
     
     .voice-room-card:hover {
-        border-color: rgba(0, 255, 255, 0.5);
-        box-shadow: 0 8px 32px rgba(0, 255, 255, 0.15);
+        border-color: rgba(0, 255, 255, 0.4);
+        box-shadow: 0 4px 20px rgba(0, 255, 255, 0.1);
+    }
+    
+    .voice-room-card:hover .voice-room-card-actions {
+        opacity: 1;
     }
     
     .voice-room-card.speaking {
         border-color: #00FF80;
-        box-shadow: 0 0 20px rgba(0, 255, 128, 0.4);
-        animation: speaking-pulse 0.5s ease-in-out infinite;
+        box-shadow: 0 0 25px rgba(0, 255, 128, 0.35);
     }
     
-    @keyframes speaking-pulse {
-        0%, 100% { box-shadow: 0 0 20px rgba(0, 255, 128, 0.4); }
-        50% { box-shadow: 0 0 30px rgba(0, 255, 128, 0.6); }
+    .voice-room-card.speaking .voice-room-card-avatar {
+        border-color: #00FF80;
+        animation: avatar-speaking 0.6s ease-in-out infinite alternate;
     }
     
-    .voice-room-card.screen-share {
-        grid-column: span 2;
-        grid-row: span 2;
-        aspect-ratio: 16/9;
+    @keyframes avatar-speaking {
+        0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 255, 128, 0.4); }
+        100% { transform: scale(1.02); box-shadow: 0 0 20px 5px rgba(0, 255, 128, 0.2); }
+    }
+    
+    .voice-room-card.pinned {
+        border-color: #FFD700;
+        box-shadow: 0 0 20px rgba(255, 215, 0, 0.2);
+    }
+    
+    .voice-room-card.has-video .voice-room-card-avatar,
+    .voice-room-card.has-screen .voice-room-card-avatar {
+        display: none;
     }
     
     .voice-room-card-avatar {
-        width: 80px;
-        height: 80px;
+        width: 72px;
+        height: 72px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 32px;
+        font-size: 28px;
         font-weight: 700;
         color: #0A0E27;
-        margin-bottom: 12px;
-        border: 3px solid rgba(0, 255, 255, 0.3);
-    }
-    
-    .voice-room-card.has-video .voice-room-card-avatar {
-        display: none;
+        border: 3px solid rgba(0, 255, 255, 0.25);
+        transition: all 0.2s;
     }
     
     .voice-room-card video {
@@ -1462,45 +1619,151 @@
         height: 100%;
         object-fit: cover;
         display: none;
+        background: #000;
     }
     
-    .voice-room-card.has-video video {
+    .voice-room-card.has-video video,
+    .voice-room-card.has-screen video {
         display: block;
     }
     
+    /* Card Actions (Pin, Volume) - Shown on hover */
+    .voice-room-card-actions {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        display: flex;
+        gap: 4px;
+        opacity: 0;
+        transition: opacity 0.15s;
+        z-index: 10;
+    }
+    
+    .voice-room-card-action-btn {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        border: none;
+        background: rgba(0, 0, 0, 0.6);
+        color: #fff;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        transition: all 0.15s;
+    }
+    
+    .voice-room-card-action-btn:hover {
+        background: rgba(0, 255, 255, 0.3);
+        color: #00FFFF;
+    }
+    
+    .voice-room-card-action-btn.pin-btn.active {
+        background: rgba(255, 215, 0, 0.3);
+        color: #FFD700;
+    }
+    
+    /* Volume Slider in Card */
+    .voice-room-card-volume {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        right: 44px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        opacity: 0;
+        transition: opacity 0.15s;
+        z-index: 10;
+    }
+    
+    .voice-room-card:hover .voice-room-card-volume {
+        opacity: 1;
+    }
+    
+    .voice-room-card-volume i {
+        color: #fff;
+        font-size: 11px;
+        opacity: 0.8;
+    }
+    
+    .voice-room-card-volume input[type="range"] {
+        flex: 1;
+        height: 4px;
+        cursor: pointer;
+        -webkit-appearance: none;
+        appearance: none;
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 2px;
+    }
+    
+    .voice-room-card-volume input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #00FFFF;
+        cursor: pointer;
+        box-shadow: 0 0 6px rgba(0, 255, 255, 0.5);
+    }
+    
+    .voice-room-card-volume input[type="range"]::-moz-range-thumb {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #00FFFF;
+        cursor: pointer;
+        border: none;
+    }
+    
+    /* Card Info Bar */
     .voice-room-card-info {
         position: absolute;
         bottom: 0;
         left: 0;
         right: 0;
-        padding: 12px 16px;
-        background: linear-gradient(transparent, rgba(0, 0, 0, 0.8));
+        padding: 10px 12px;
+        background: linear-gradient(transparent, rgba(0, 0, 0, 0.85));
         display: flex;
         align-items: center;
         justify-content: space-between;
     }
     
     .voice-room-card-name {
-        font-size: 13px;
+        font-size: 12px;
         font-weight: 600;
-        color: #FFFFFF;
-        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+        color: #fff;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    
+    .voice-room-card-name .you-badge {
+        font-size: 9px;
+        padding: 2px 5px;
+        background: rgba(0, 255, 255, 0.2);
+        border-radius: 4px;
+        color: #00FFFF;
     }
     
     .voice-room-card-badges {
         display: flex;
-        gap: 6px;
+        gap: 4px;
     }
     
     .voice-room-card-badge {
-        width: 24px;
-        height: 24px;
-        border-radius: 6px;
+        width: 22px;
+        height: 22px;
+        border-radius: 5px;
         background: rgba(0, 0, 0, 0.5);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 11px;
+        font-size: 10px;
+        color: #999;
     }
     
     .voice-room-card-badge.muted {
@@ -1515,23 +1778,33 @@
         color: #00FF80;
     }
     
-    /* Volume control in voice room card */
-    .voice-room-card-volume {
-        position: absolute;
-        top: 8px;
-        right: 8px;
-        opacity: 0;
-        transition: opacity 0.2s;
+    .voice-room-card-badge.camera {
+        color: #00BFFF;
     }
     
-    .voice-room-card:hover .voice-room-card-volume {
-        opacity: 1;
+    /* Screen Share Card - Takes more space */
+    .voice-room-card.has-screen {
+        grid-column: span 2;
+        aspect-ratio: 16/9;
     }
     
-    .voice-room-card-volume input[type="range"] {
-        width: 80px;
-        height: 4px;
-        cursor: pointer;
+    .voice-room-card.has-screen video {
+        object-fit: contain;
+    }
+    
+    @media (max-width: 768px) {
+        .voice-room-card.has-screen {
+            grid-column: span 1;
+        }
+        
+        .voice-room-grid {
+            grid-template-columns: 1fr !important;
+        }
+        
+        .voice-room-content.has-pinned .voice-room-grid {
+            grid-template-columns: repeat(auto-fill, minmax(100px, 120px));
+            max-height: 140px;
+        }
     }
     
     /* ============================================
@@ -1996,8 +2269,8 @@
             <div class="voice-room-header">
                 <div class="voice-room-title">
                     <i class="fas fa-volume-up voice-room-icon"></i>
-                    <span id="voice-room-channel-name">Voice Channel</span>
-                    <span class="voice-room-status" id="voice-room-status">Connected</span>
+                    <span class="voice-room-channel-name" id="voice-room-channel-name">Voice Channel</span>
+                    <span class="voice-room-status" id="voice-room-status">Connecting...</span>
                 </div>
                 <div class="voice-room-actions">
                     <button class="voice-room-btn" onclick="toggleCamera()" id="voice-room-camera-btn" title="Toggle Camera">
@@ -2006,15 +2279,48 @@
                     <button class="voice-room-btn" onclick="toggleScreenShare()" id="voice-room-screen-btn" title="Share Screen">
                         <i class="fas fa-desktop"></i>
                     </button>
+                    <button class="voice-room-btn" onclick="toggleMute()" id="voice-room-mute-btn" title="Toggle Mute">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <button class="voice-room-btn" onclick="toggleDeafen()" id="voice-room-deafen-btn" title="Toggle Deafen">
+                        <i class="fas fa-headphones"></i>
+                    </button>
+                    <button class="voice-room-btn" onclick="disconnectVoice()" title="Disconnect" style="background: rgba(255, 0, 100, 0.2); border-color: rgba(255, 0, 100, 0.4); color: #FF0064;">
+                        <i class="fas fa-phone-slash"></i>
+                    </button>
                 </div>
             </div>
             
-            <!-- Voice Participants Grid -->
-            <div class="voice-room-grid" id="voice-room-grid">
-                <!-- Participant cards added dynamically -->
-                <div class="voice-room-empty" id="voice-room-empty">
-                    <i class="fas fa-users"></i>
-                    <p>Connecting to voice...</p>
+            <!-- Voice Room Content (Stage + Grid) -->
+            <div class="voice-room-content" id="voice-room-content">
+                <!-- Main Stage - Shown when user is pinned -->
+                <div class="voice-room-stage" id="voice-room-stage">
+                    <div class="voice-room-stage-card" id="voice-room-stage-card">
+                        <video id="voice-room-stage-video" autoplay playsinline></video>
+                        <div class="voice-room-stage-avatar" id="voice-room-stage-avatar">
+                            A
+                        </div>
+                        <div class="voice-room-stage-info">
+                            <span class="voice-room-stage-name" id="voice-room-stage-name">User</span>
+                            <div class="voice-room-stage-controls">
+                                <input type="range" min="0" max="1" step="0.05" value="1" 
+                                       id="voice-room-stage-volume" title="Volume" 
+                                       style="width: 100px; cursor: pointer;">
+                                <button class="voice-room-stage-unpin" onclick="unpinUser()">
+                                    <i class="fas fa-thumbtack"></i> Unpin
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Voice Participants Grid -->
+                <div class="voice-room-grid" id="voice-room-grid" data-count="0">
+                    <!-- Participant cards added dynamically -->
+                    <div class="voice-room-empty" id="voice-room-empty">
+                        <i class="fas fa-users"></i>
+                        <p>Connecting to voice channel...</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2398,12 +2704,20 @@
         isMuted = !isMuted;
         console.log('[Voice] New mute state:', isMuted);
         
+        // Update bottom panel button
         const btn = document.getElementById('mute-btn');
         if (btn) {
             btn.classList.toggle('muted', isMuted);
             btn.innerHTML = isMuted ? '<i class="fas fa-microphone-slash"></i>' : '<i class="fas fa-microphone"></i>';
             btn.title = isMuted ? '{% trans "Unmute" %}' : '{% trans "Mute" %}';
         }
+        
+        // Update voice room button
+        updateVoiceRoomButtons();
+        
+        // Update own card in voice room grid
+        const normalizedUsername = currentUsername.toLowerCase();
+        updateVoiceRoomCard(normalizedUsername, { muted: isMuted });
         
         // Mute/unmute local audio tracks
         if (localStream) {
@@ -2444,12 +2758,20 @@
         isDeafened = !isDeafened;
         console.log('[Voice] New deafen state:', isDeafened);
         
+        // Update bottom panel button
         const btn = document.getElementById('deafen-btn');
         if (btn) {
             btn.classList.toggle('deafened', isDeafened);
             btn.innerHTML = isDeafened ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-headphones"></i>';
             btn.title = isDeafened ? '{% trans "Undeafen" %}' : '{% trans "Deafen" %}';
         }
+        
+        // Update voice room button
+        updateVoiceRoomButtons();
+        
+        // Update own card in voice room grid
+        const normalizedUsername = currentUsername.toLowerCase();
+        updateVoiceRoomCard(normalizedUsername, { deafened: isDeafened });
         
         // Deafen: mute all remote audio elements (using strict ID pattern: remote-audio-{USER_ID})
         const audioElements = document.querySelectorAll('audio[id^="remote-audio-"]');
@@ -2541,8 +2863,14 @@
     // VOICE ROOM VIEW MANAGEMENT
     // ============================================
     
+    // Voice Room State
+    const voiceRoomParticipants = new Map();
+    let pinnedUser = null;
+    let currentViewMode = 'text'; // 'text' or 'voice'
+    
     function showVoiceRoomView(channelSlug, channelName) {
         console.log('[VoiceRoom] Showing voice room view for:', channelName);
+        currentViewMode = 'voice';
         
         const voiceRoomView = document.getElementById('voice-room-view');
         const messagesContainer = document.getElementById('messages-container');
@@ -2556,8 +2884,7 @@
             if (nameEl) nameEl.textContent = channelName;
             
             // Update status
-            const statusEl = document.getElementById('voice-room-status');
-            if (statusEl) statusEl.textContent = 'Connecting...';
+            updateVoiceRoomStatus('Connecting...');
         }
         
         // Hide messages container and input
@@ -2566,10 +2893,14 @@
         
         // Add self to voice room grid
         addUserToVoiceRoomGrid(currentUserId, currentUsername, true, isMuted, isDeafened);
+        
+        // Update button states
+        updateVoiceRoomButtons();
     }
     
     function hideVoiceRoomView() {
         console.log('[VoiceRoom] Hiding voice room view');
+        currentViewMode = 'text';
         
         const voiceRoomView = document.getElementById('voice-room-view');
         const messagesContainer = document.getElementById('messages-container');
@@ -2579,7 +2910,8 @@
         if (messagesContainer) messagesContainer.style.display = 'flex';
         if (inputArea) inputArea.style.display = 'block';
         
-        // Clear voice room grid
+        // Clear pinned user and voice room grid
+        unpinUser();
         clearVoiceRoomGrid();
     }
     
@@ -2588,8 +2920,39 @@
         if (statusEl) statusEl.textContent = status;
     }
     
-    // Voice Room Grid Participant Map
-    const voiceRoomParticipants = new Map();
+    function updateVoiceRoomButtons() {
+        const muteBtn = document.getElementById('voice-room-mute-btn');
+        const deafenBtn = document.getElementById('voice-room-deafen-btn');
+        const cameraBtn = document.getElementById('voice-room-camera-btn');
+        const screenBtn = document.getElementById('voice-room-screen-btn');
+        
+        if (muteBtn) {
+            muteBtn.classList.toggle('active', isMuted);
+            muteBtn.innerHTML = isMuted ? '<i class="fas fa-microphone-slash"></i>' : '<i class="fas fa-microphone"></i>';
+        }
+        if (deafenBtn) {
+            deafenBtn.classList.toggle('active', isDeafened);
+            deafenBtn.innerHTML = isDeafened ? '<i class="fas fa-volume-mute"></i>' : '<i class="fas fa-headphones"></i>';
+        }
+        if (cameraBtn) {
+            cameraBtn.classList.toggle('active', isCameraOn);
+        }
+        if (screenBtn) {
+            screenBtn.classList.toggle('active', isScreenSharing);
+        }
+    }
+    
+    function updateGridCount() {
+        const grid = document.getElementById('voice-room-grid');
+        if (grid) {
+            const count = voiceRoomParticipants.size;
+            grid.dataset.count = count;
+        }
+    }
+    
+    // ============================================
+    // VOICE ROOM GRID - Add/Remove/Update Users
+    // ============================================
     
     function addUserToVoiceRoomGrid(oderId, username, isLocal = false, pMuted = false, pDeafened = false, hasVideo = false, hasScreen = false) {
         const grid = document.getElementById('voice-room-grid');
@@ -2601,8 +2964,7 @@
         
         // Check if already exists
         if (voiceRoomParticipants.has(normalizedUsername) || document.getElementById(cardId)) {
-            console.log('[VoiceRoom] User already in grid:', username);
-            // Update existing card state
+            console.log('[VoiceRoom] User already in grid, updating:', username);
             updateVoiceRoomCard(normalizedUsername, { muted: pMuted, deafened: pDeafened, video: hasVideo, screen: hasScreen });
             return;
         }
@@ -2613,34 +2975,53 @@
         
         const avatarColor = `hsl(${username.charCodeAt(0) * 137.508 % 360}, 70%, 50%)`;
         const avatarLetter = username.charAt(0).toUpperCase();
+        const currentVolume = userVolumes.get(oderId) || 1;
         
         const card = document.createElement('div');
-        card.className = 'voice-room-card' + (hasVideo ? ' has-video' : '') + (hasScreen ? ' screen-share' : '');
+        card.className = 'voice-room-card';
+        if (hasVideo) card.classList.add('has-video');
+        if (hasScreen) card.classList.add('has-screen');
         card.id = cardId;
-        card.dataset.oderId = oderId;
+        card.dataset.oderId = oderId || '';
         card.dataset.username = username;
         card.dataset.normalizedUsername = normalizedUsername;
-        card.dataset.isLocal = isLocal;
+        card.dataset.isLocal = isLocal ? 'true' : 'false';
         
         card.innerHTML = `
             <video autoplay playsinline ${isLocal ? 'muted' : ''}></video>
             <div class="voice-room-card-avatar" style="background: linear-gradient(135deg, ${avatarColor} 0%, #00FF80 100%);">
                 ${avatarLetter}
             </div>
+            
+            <!-- Actions (Pin button) - Shown on hover -->
+            <div class="voice-room-card-actions">
+                <button class="voice-room-card-action-btn pin-btn" onclick="pinUser('${normalizedUsername}')" title="Pin to Stage">
+                    <i class="fas fa-thumbtack"></i>
+                </button>
+            </div>
+            
+            <!-- Volume Slider (for remote users) -->
+            ${!isLocal ? `
+            <div class="voice-room-card-volume">
+                <i class="fas fa-volume-up"></i>
+                <input type="range" min="0" max="1" step="0.05" value="${currentVolume}" 
+                       data-target-user="${oderId}" title="Volume: ${Math.round(currentVolume * 100)}%">
+            </div>
+            ` : ''}
+            
+            <!-- Info Bar -->
             <div class="voice-room-card-info">
-                <span class="voice-room-card-name">${escapeHtml(username)}${isLocal ? ' (You)' : ''}</span>
+                <span class="voice-room-card-name">
+                    ${escapeHtml(username)}
+                    ${isLocal ? '<span class="you-badge">YOU</span>' : ''}
+                </span>
                 <div class="voice-room-card-badges">
                     ${pMuted ? '<span class="voice-room-card-badge muted" title="Muted"><i class="fas fa-microphone-slash"></i></span>' : ''}
                     ${pDeafened ? '<span class="voice-room-card-badge deafened" title="Deafened"><i class="fas fa-volume-mute"></i></span>' : ''}
+                    ${hasVideo ? '<span class="voice-room-card-badge camera" title="Camera On"><i class="fas fa-video"></i></span>' : ''}
                     ${hasScreen ? '<span class="voice-room-card-badge screen" title="Screen Share"><i class="fas fa-desktop"></i></span>' : ''}
                 </div>
             </div>
-            ${!isLocal ? `
-            <div class="voice-room-card-volume">
-                <input type="range" min="0" max="1" step="0.1" value="1" 
-                       data-target-user="${oderId}" title="Volume">
-            </div>
-            ` : ''}
         `;
         
         // Add volume slider event
@@ -2649,8 +3030,11 @@
             volumeSlider.addEventListener('input', function() {
                 const targetUserId = this.dataset.targetUser;
                 const volume = parseFloat(this.value);
+                this.title = `Volume: ${Math.round(volume * 100)}%`;
+                
                 userVolumes.set(targetUserId, volume);
                 
+                // Apply to audio element
                 const audioEl = document.getElementById(`remote-audio-${targetUserId}`);
                 if (audioEl) audioEl.volume = volume;
                 
@@ -2661,16 +3045,35 @@
             });
         }
         
-        grid.appendChild(card);
-        voiceRoomParticipants.set(normalizedUsername, { card, oderId, username, isLocal, muted: pMuted, deafened: pDeafened, video: hasVideo, screen: hasScreen });
+        // Double-click to pin
+        card.addEventListener('dblclick', () => pinUser(normalizedUsername));
         
+        grid.appendChild(card);
+        voiceRoomParticipants.set(normalizedUsername, { 
+            card, 
+            oderId, 
+            username, 
+            isLocal, 
+            muted: pMuted, 
+            deafened: pDeafened, 
+            video: hasVideo, 
+            screen: hasScreen,
+            speaking: false
+        });
+        
+        updateGridCount();
         console.log('[VoiceRoom] Added user to grid:', username);
     }
     
     function removeUserFromVoiceRoomGrid(username) {
         const normalizedUsername = username.toLowerCase();
-        const data = voiceRoomParticipants.get(normalizedUsername);
         
+        // If pinned user is removed, unpin first
+        if (pinnedUser === normalizedUsername) {
+            unpinUser();
+        }
+        
+        const data = voiceRoomParticipants.get(normalizedUsername);
         if (data) {
             data.card.remove();
             voiceRoomParticipants.delete(normalizedUsername);
@@ -2681,6 +3084,8 @@
         const cardId = `voice-room-card-${normalizedUsername}`;
         const card = document.getElementById(cardId);
         if (card) card.remove();
+        
+        updateGridCount();
         
         // Show empty state if no participants
         if (voiceRoomParticipants.size === 0) {
@@ -2700,31 +3105,66 @@
         Object.assign(data, updates);
         
         // Update visual state
-        card.classList.toggle('has-video', !!updates.video);
-        card.classList.toggle('screen-share', !!updates.screen);
-        card.classList.toggle('speaking', !!updates.speaking);
+        card.classList.toggle('has-video', !!data.video);
+        card.classList.toggle('has-screen', !!data.screen);
+        card.classList.toggle('speaking', !!data.speaking);
         
         // Update badges
         const badgesContainer = card.querySelector('.voice-room-card-badges');
         if (badgesContainer) {
             badgesContainer.innerHTML = `
-                ${updates.muted ? '<span class="voice-room-card-badge muted" title="Muted"><i class="fas fa-microphone-slash"></i></span>' : ''}
-                ${updates.deafened ? '<span class="voice-room-card-badge deafened" title="Deafened"><i class="fas fa-volume-mute"></i></span>' : ''}
-                ${updates.screen ? '<span class="voice-room-card-badge screen" title="Screen Share"><i class="fas fa-desktop"></i></span>' : ''}
+                ${data.muted ? '<span class="voice-room-card-badge muted" title="Muted"><i class="fas fa-microphone-slash"></i></span>' : ''}
+                ${data.deafened ? '<span class="voice-room-card-badge deafened" title="Deafened"><i class="fas fa-volume-mute"></i></span>' : ''}
+                ${data.video ? '<span class="voice-room-card-badge camera" title="Camera On"><i class="fas fa-video"></i></span>' : ''}
+                ${data.screen ? '<span class="voice-room-card-badge screen" title="Screen Share"><i class="fas fa-desktop"></i></span>' : ''}
             `;
         }
         
         voiceRoomParticipants.set(normalizedUsername, data);
+        
+        // If this user is pinned, update the stage too
+        if (pinnedUser === normalizedUsername) {
+            updatePinnedStage(data);
+        }
     }
     
-    function setVoiceRoomCardVideo(normalizedUsername, stream) {
+    function setVoiceRoomCardVideo(normalizedUsername, stream, isScreen = false) {
         const data = voiceRoomParticipants.get(normalizedUsername);
         if (!data) return;
         
         const video = data.card.querySelector('video');
         if (video && stream) {
             video.srcObject = stream;
-            data.card.classList.add('has-video');
+            if (isScreen) {
+                data.card.classList.add('has-screen');
+                data.screen = true;
+            } else {
+                data.card.classList.add('has-video');
+                data.video = true;
+            }
+        }
+        
+        voiceRoomParticipants.set(normalizedUsername, data);
+        
+        // If pinned, update stage
+        if (pinnedUser === normalizedUsername) {
+            const stageVideo = document.getElementById('voice-room-stage-video');
+            if (stageVideo) stageVideo.srcObject = stream;
+        }
+    }
+    
+    function setVoiceRoomCardSpeaking(normalizedUsername, speaking) {
+        const data = voiceRoomParticipants.get(normalizedUsername);
+        if (!data) return;
+        
+        data.speaking = speaking;
+        data.card.classList.toggle('speaking', speaking);
+        voiceRoomParticipants.set(normalizedUsername, data);
+        
+        // If pinned, update stage
+        if (pinnedUser === normalizedUsername) {
+            const stageCard = document.getElementById('voice-room-stage-card');
+            if (stageCard) stageCard.classList.toggle('speaking', speaking);
         }
     }
     
@@ -2733,9 +3173,123 @@
             if (data.card) data.card.remove();
         });
         voiceRoomParticipants.clear();
+        pinnedUser = null;
+        
+        const content = document.getElementById('voice-room-content');
+        if (content) content.classList.remove('has-pinned');
         
         const emptyState = document.getElementById('voice-room-empty');
         if (emptyState) emptyState.style.display = 'flex';
+        
+        updateGridCount();
+    }
+    
+    // ============================================
+    // PINNING FUNCTIONALITY
+    // ============================================
+    
+    function pinUser(normalizedUsername) {
+        const data = voiceRoomParticipants.get(normalizedUsername);
+        if (!data) return;
+        
+        console.log('[VoiceRoom] Pinning user:', data.username);
+        
+        // Unpin previous if different
+        if (pinnedUser && pinnedUser !== normalizedUsername) {
+            const prevCard = document.querySelector(`#voice-room-card-${pinnedUser} .pin-btn`);
+            if (prevCard) prevCard.classList.remove('active');
+        }
+        
+        pinnedUser = normalizedUsername;
+        
+        // Update UI
+        const content = document.getElementById('voice-room-content');
+        const stageCard = document.getElementById('voice-room-stage-card');
+        const stageVideo = document.getElementById('voice-room-stage-video');
+        const stageAvatar = document.getElementById('voice-room-stage-avatar');
+        const stageName = document.getElementById('voice-room-stage-name');
+        const stageVolume = document.getElementById('voice-room-stage-volume');
+        
+        if (content) content.classList.add('has-pinned');
+        
+        // Update stage card
+        if (stageName) stageName.textContent = data.username + (data.isLocal ? ' (You)' : '');
+        
+        const avatarColor = `hsl(${data.username.charCodeAt(0) * 137.508 % 360}, 70%, 50%)`;
+        if (stageAvatar) {
+            stageAvatar.style.background = `linear-gradient(135deg, ${avatarColor} 0%, #00FF80 100%)`;
+            stageAvatar.textContent = data.username.charAt(0).toUpperCase();
+            stageAvatar.style.display = (data.video || data.screen) ? 'none' : 'flex';
+        }
+        
+        // Set video stream if available
+        const cardVideo = data.card.querySelector('video');
+        if (stageVideo && cardVideo && cardVideo.srcObject) {
+            stageVideo.srcObject = cardVideo.srcObject;
+            stageVideo.style.display = 'block';
+            if (stageAvatar) stageAvatar.style.display = 'none';
+        } else {
+            if (stageVideo) stageVideo.style.display = 'none';
+            if (stageAvatar) stageAvatar.style.display = 'flex';
+        }
+        
+        // Set speaking state
+        if (stageCard) stageCard.classList.toggle('speaking', data.speaking);
+        
+        // Volume slider for remote users
+        if (stageVolume) {
+            if (data.isLocal) {
+                stageVolume.style.display = 'none';
+            } else {
+                stageVolume.style.display = 'block';
+                stageVolume.value = userVolumes.get(data.oderId) || 1;
+                stageVolume.onchange = () => {
+                    const volume = parseFloat(stageVolume.value);
+                    userVolumes.set(data.oderId, volume);
+                    const audioEl = document.getElementById(`remote-audio-${data.oderId}`);
+                    if (audioEl) audioEl.volume = volume;
+                };
+            }
+        }
+        
+        // Mark card as pinned
+        const pinBtn = data.card.querySelector('.pin-btn');
+        if (pinBtn) pinBtn.classList.add('active');
+        data.card.classList.add('pinned');
+    }
+    
+    function unpinUser() {
+        if (!pinnedUser) return;
+        
+        console.log('[VoiceRoom] Unpinning user');
+        
+        const data = voiceRoomParticipants.get(pinnedUser);
+        if (data) {
+            const pinBtn = data.card.querySelector('.pin-btn');
+            if (pinBtn) pinBtn.classList.remove('active');
+            data.card.classList.remove('pinned');
+        }
+        
+        pinnedUser = null;
+        
+        const content = document.getElementById('voice-room-content');
+        if (content) content.classList.remove('has-pinned');
+        
+        // Clear stage
+        const stageVideo = document.getElementById('voice-room-stage-video');
+        if (stageVideo) stageVideo.srcObject = null;
+    }
+    
+    function updatePinnedStage(data) {
+        const stageCard = document.getElementById('voice-room-stage-card');
+        const stageVideo = document.getElementById('voice-room-stage-video');
+        const stageAvatar = document.getElementById('voice-room-stage-avatar');
+        
+        if (stageCard) stageCard.classList.toggle('speaking', data.speaking);
+        
+        const hasMedia = data.video || data.screen;
+        if (stageAvatar) stageAvatar.style.display = hasMedia ? 'none' : 'flex';
+        if (stageVideo) stageVideo.style.display = hasMedia ? 'block' : 'none';
     }
     
     let isScreenSharing = false;
@@ -2747,48 +3301,61 @@
     async function toggleCamera() {
         if (window.sendToVoiceFrame) {
             window.sendToVoiceFrame('toggleCamera');
-        } else {
-            // Fallback: handle camera locally
-            if (!isCameraOn) {
-                try {
-                    localVideoStream = await navigator.mediaDevices.getUserMedia({
-                        video: { width: 320, height: 240, frameRate: 15 }
-                    });
-                    isCameraOn = true;
-                    
-                    const btn = document.getElementById('camera-btn');
-                    if (btn) {
-                        btn.classList.add('muted');
-                        btn.innerHTML = '<i class="fas fa-video-slash"></i>';
-                        btn.title = '{% trans "Stop Camera" %}';
-                    }
-                    
-                    // Add local video to grid
-                    addVideoToGrid(currentUsername, localVideoStream, false, currentUserId);
-                    
-                    // TODO: Add video track to peer connections
-                } catch (error) {
-                    console.error('Error starting camera:', error);
-                    alert('{% trans "Could not start camera. Please check permissions." %}');
-                }
-            } else {
-                // Stop camera
-                if (localVideoStream) {
-                    localVideoStream.getTracks().forEach(track => track.stop());
-                    localVideoStream = null;
-                }
-                isCameraOn = false;
+        }
+        
+        // Handle camera locally (whether using frame or not)
+        if (!isCameraOn) {
+            try {
+                localVideoStream = await navigator.mediaDevices.getUserMedia({
+                    video: { width: 640, height: 480, frameRate: 24 }
+                });
+                isCameraOn = true;
                 
+                // Update bottom panel button
                 const btn = document.getElementById('camera-btn');
                 if (btn) {
-                    btn.classList.remove('muted');
-                    btn.innerHTML = '<i class="fas fa-video"></i>';
-                    btn.title = '{% trans "Camera" %}';
+                    btn.classList.add('muted');
+                    btn.innerHTML = '<i class="fas fa-video-slash"></i>';
+                    btn.title = '{% trans "Stop Camera" %}';
                 }
                 
-                // Remove local video from grid
-                removeVideoFromGrid(currentUsername);
+                // Update voice room buttons and card
+                updateVoiceRoomButtons();
+                const normalizedUsername = currentUsername.toLowerCase();
+                updateVoiceRoomCard(normalizedUsername, { video: true });
+                setVoiceRoomCardVideo(normalizedUsername, localVideoStream, false);
+                
+                // Also add to old video grid for compatibility
+                addVideoToGrid(currentUsername, localVideoStream, false, currentUserId);
+                
+                // TODO: Add video track to peer connections
+            } catch (error) {
+                console.error('Error starting camera:', error);
+                alert('{% trans "Could not start camera. Please check permissions." %}');
             }
+        } else {
+            // Stop camera
+            if (localVideoStream) {
+                localVideoStream.getTracks().forEach(track => track.stop());
+                localVideoStream = null;
+            }
+            isCameraOn = false;
+            
+            // Update bottom panel button
+            const btn = document.getElementById('camera-btn');
+            if (btn) {
+                btn.classList.remove('muted');
+                btn.innerHTML = '<i class="fas fa-video"></i>';
+                btn.title = '{% trans "Camera" %}';
+            }
+            
+            // Update voice room buttons and card
+            updateVoiceRoomButtons();
+            const normalizedUsername = currentUsername.toLowerCase();
+            updateVoiceRoomCard(normalizedUsername, { video: false });
+            
+            // Remove from old video grid
+            removeVideoFromGrid(currentUsername);
         }
     }
     
@@ -2870,19 +3437,29 @@
         if (!isScreenSharing) {
             try {
                 screenStream = await navigator.mediaDevices.getDisplayMedia({ 
-                    video: true, 
+                    video: { cursor: 'always' }, 
                     audio: true 
                 });
                 isScreenSharing = true;
-                const btn = document.getElementById('screen-share-btn');
-                btn.classList.add('muted');
-                btn.innerHTML = '<i class="fas fa-stop"></i>';
-                btn.title = '{% trans "Stop Sharing" %}';
                 
-                // Add screen share to video grid
+                // Update bottom panel button
+                const btn = document.getElementById('screen-share-btn');
+                if (btn) {
+                    btn.classList.add('muted');
+                    btn.innerHTML = '<i class="fas fa-stop"></i>';
+                    btn.title = '{% trans "Stop Sharing" %}';
+                }
+                
+                // Update voice room buttons and card
+                updateVoiceRoomButtons();
+                const normalizedUsername = currentUsername.toLowerCase();
+                updateVoiceRoomCard(normalizedUsername, { screen: true });
+                setVoiceRoomCardVideo(normalizedUsername, screenStream, true);
+                
+                // Also add to old video grid for compatibility
                 addVideoToGrid(currentUsername, screenStream, true);
                 
-                // Handle screen share end
+                // Handle screen share end (browser stop button)
                 screenStream.getVideoTracks()[0].onended = () => {
                     toggleScreenShare();
                 };
@@ -2890,7 +3467,10 @@
                 // TODO: Send screen share stream via WebRTC
             } catch (error) {
                 console.error('Error starting screen share:', error);
-                alert('{% trans "Could not start screen share. Please check permissions." %}');
+                // User cancelled - not an error
+                if (error.name !== 'AbortError') {
+                    alert('{% trans "Could not start screen share. Please check permissions." %}');
+                }
             }
         } else {
             // Stop screen sharing
@@ -2899,12 +3479,21 @@
                 screenStream = null;
             }
             isScreenSharing = false;
-            const btn = document.getElementById('screen-share-btn');
-            btn.classList.remove('muted');
-            btn.innerHTML = '<i class="fas fa-desktop"></i>';
-            btn.title = '{% trans "Share Screen" %}';
             
-            // Remove screen share from video grid
+            // Update bottom panel button
+            const btn = document.getElementById('screen-share-btn');
+            if (btn) {
+                btn.classList.remove('muted');
+                btn.innerHTML = '<i class="fas fa-desktop"></i>';
+                btn.title = '{% trans "Share Screen" %}';
+            }
+            
+            // Update voice room buttons and card
+            updateVoiceRoomButtons();
+            const normalizedUsername = currentUsername.toLowerCase();
+            updateVoiceRoomCard(normalizedUsername, { screen: false });
+            
+            // Remove from old video grid
             removeVideoFromGrid(currentUsername);
             
             // TODO: Stop screen share via WebRTC
@@ -4502,5 +5091,10 @@
     window.removeUserFromVoiceRoomGrid = removeUserFromVoiceRoomGrid;
     window.updateVoiceRoomCard = updateVoiceRoomCard;
     window.setVoiceRoomCardVideo = setVoiceRoomCardVideo;
+    window.setVoiceRoomCardSpeaking = setVoiceRoomCardSpeaking;
+    window.pinUser = pinUser;
+    window.unpinUser = unpinUser;
+    window.updateVoiceRoomButtons = updateVoiceRoomButtons;
+    window.updateGridCount = updateGridCount;
 </script>
 {% endblock %}
