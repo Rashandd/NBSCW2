@@ -1702,6 +1702,9 @@
                 <button class="control-btn" id="deafen-btn" onclick="toggleDeafen()" title="{% trans 'Deafen' %}">
                     <i class="fas fa-headphones"></i>
                 </button>
+                <button class="control-btn" id="camera-btn" onclick="toggleCamera()" title="{% trans 'Camera' %}" style="display: none;">
+                    <i class="fas fa-video"></i>
+                </button>
                 <button class="control-btn" id="screen-share-btn" onclick="toggleScreenShare()" title="{% trans 'Share Screen' %}" style="display: none;">
                     <i class="fas fa-desktop"></i>
                 </button>
@@ -2041,16 +2044,32 @@
         document.getElementById('voice-indicator').style.display = 'flex';
         document.getElementById('voice-indicator-name').textContent = name.toUpperCase();
         
-        // Show disconnect and screen share buttons
+        // Show disconnect, camera, and screen share buttons
         document.getElementById('disconnect-btn').style.display = 'flex';
         document.getElementById('screen-share-btn').style.display = 'flex';
+        const cameraBtn = document.getElementById('camera-btn');
+        if (cameraBtn) cameraBtn.style.display = 'flex';
         
         // Close mobile sidebar if open
         if (sidebarOpen) {
             toggleSidebar();
         }
         
-        // Initialize voice
+        // Connect via persistent voice frame (in base.html)
+        if (window.connectVoiceViaFrame) {
+            window.connectVoiceViaFrame({
+                channelSlug: slug,
+                channelName: name,
+                serverSlug: '{{ server.slug }}',
+                serverName: '{{ server.name }}',
+                userId: currentUserId,
+                username: currentUsername,
+                muted: isMuted,
+                deafened: isDeafened
+            });
+        }
+        
+        // Initialize local voice UI
         initializeVoice();
     };
     
@@ -2202,6 +2221,131 @@
     
     let isScreenSharing = false;
     let screenStream = null;
+    let localVideoStream = null;
+    let isCameraOn = false;
+    
+    // Toggle camera via voice frame
+    async function toggleCamera() {
+        if (window.sendToVoiceFrame) {
+            window.sendToVoiceFrame('toggleCamera');
+        } else {
+            // Fallback: handle camera locally
+            if (!isCameraOn) {
+                try {
+                    localVideoStream = await navigator.mediaDevices.getUserMedia({
+                        video: { width: 320, height: 240, frameRate: 15 }
+                    });
+                    isCameraOn = true;
+                    
+                    const btn = document.getElementById('camera-btn');
+                    if (btn) {
+                        btn.classList.add('muted');
+                        btn.innerHTML = '<i class="fas fa-video-slash"></i>';
+                        btn.title = '{% trans "Stop Camera" %}';
+                    }
+                    
+                    // Add local video to grid
+                    addVideoToGrid(currentUsername, localVideoStream, false, currentUserId);
+                    
+                    // TODO: Add video track to peer connections
+                } catch (error) {
+                    console.error('Error starting camera:', error);
+                    alert('{% trans "Could not start camera. Please check permissions." %}');
+                }
+            } else {
+                // Stop camera
+                if (localVideoStream) {
+                    localVideoStream.getTracks().forEach(track => track.stop());
+                    localVideoStream = null;
+                }
+                isCameraOn = false;
+                
+                const btn = document.getElementById('camera-btn');
+                if (btn) {
+                    btn.classList.remove('muted');
+                    btn.innerHTML = '<i class="fas fa-video"></i>';
+                    btn.title = '{% trans "Camera" %}';
+                }
+                
+                // Remove local video from grid
+                removeVideoFromGrid(currentUsername);
+            }
+        }
+    }
+    
+    // Listen for voice frame events
+    window.addEventListener('voiceFrameEvent', (event) => {
+        const data = event.detail;
+        if (!data) return;
+        
+        switch (data.type) {
+            case 'participantsChanged':
+                // Update local participant list based on frame's participant list
+                if (data.participants) {
+                    updateParticipantsFromFrame(data.participants);
+                }
+                break;
+                
+            case 'peerTrack':
+                // Handle video track from peer (video is handled in frame)
+                console.log('[Voice] Peer track:', data.kind, 'from', data.username);
+                break;
+                
+            case 'system_notification':
+                handleSystemNotificationFromFrame(data);
+                break;
+                
+            case 'cameraChanged':
+                // Sync camera state
+                isCameraOn = data.cameraOn;
+                updateCameraButtonUI();
+                break;
+                
+            case 'screenShareChanged':
+                // Sync screen share state
+                screenStream = data.screenSharing ? 'active' : null;
+                updateScreenShareButtonUI();
+                break;
+        }
+    });
+    
+    function updateCameraButtonUI() {
+        const btn = document.getElementById('camera-btn');
+        if (btn) {
+            btn.classList.toggle('active', isCameraOn);
+            btn.innerHTML = isCameraOn ? 
+                '<i class="fas fa-video"></i>' : 
+                '<i class="fas fa-video-slash"></i>';
+        }
+    }
+    
+    function updateScreenShareButtonUI() {
+        const btn = document.getElementById('screen-share-btn');
+        if (btn) {
+            btn.classList.toggle('active', !!screenStream);
+            btn.innerHTML = screenStream ? 
+                '<i class="fas fa-desktop" style="color: #00FF80;"></i>' : 
+                '<i class="fas fa-desktop"></i>';
+        }
+    }
+    
+    function updateParticipantsFromFrame(frameParticipants) {
+        // Sync local UI with frame's participant list
+        frameParticipants.forEach(p => {
+            const key = p.username.toLowerCase();
+            if (!voiceParticipants.has(p.username) && !Array.from(voiceParticipants.keys()).some(k => k.toLowerCase() === key)) {
+                addVoiceParticipant(p.username, p.userId === currentUserId, p.muted, false);
+            }
+        });
+    }
+    
+    function handleSystemNotificationFromFrame(data) {
+        if (data.event === 'member_joined' && data.username !== currentUsername) {
+            addVoiceParticipant(data.username, false, false, false);
+        } else if (data.event === 'member_left') {
+            removeVoiceParticipant(data.username);
+        }
+    }
     
     async function toggleScreenShare() {
         if (!isScreenSharing) {
@@ -3239,18 +3383,26 @@
         return list;
     }
     
-    function addVoiceParticipant(username, isLocal, isMuted, isDeafened) {
+    function addVoiceParticipant(username, isLocal, isMuted, isDeafened, userId = null) {
         if (!currentVoiceChannelSlug) return;
         
-        // NORMALIZE: Use lowercase for comparison to prevent case-sensitivity duplicates
+        // NORMALIZE: Use lowercase for ALL keys to prevent case-sensitivity duplicates
         const normalizedUsername = username.toLowerCase();
         const safeUsername = normalizedUsername.replace(/[^a-z0-9]/g, '_');
         const uniqueId = `voice-user-${safeUsername}`;
         
-        // Check if already exists (prevent duplicates) - case insensitive
-        const existsInMap = Array.from(voiceParticipants.keys()).some(k => k.toLowerCase() === normalizedUsername);
-        if (document.getElementById(uniqueId) || existsInMap) {
+        // IDEMPOTENT CHECK: Prevent duplicates using normalized key
+        if (document.getElementById(uniqueId) || voiceParticipants.has(normalizedUsername)) {
             console.log(`[Voice] User ${username} already in participant list, skipping duplicate`);
+            // Update existing participant state if needed
+            const existing = voiceParticipants.get(normalizedUsername);
+            if (existing) {
+                existing.isMuted = isMuted;
+                existing.isDeafened = isDeafened;
+                if (existing.avatarElement) {
+                    existing.avatarElement.classList.toggle('muted', isMuted);
+                }
+            }
             return;
         }
         
@@ -3261,6 +3413,8 @@
         item.className = 'voice-participant-mini';
         item.id = uniqueId;
         item.dataset.username = username;
+        item.dataset.normalizedUsername = normalizedUsername;
+        if (userId) item.dataset.userId = userId;
         
         const avatarLetter = username.charAt(0).toUpperCase();
         const avatarColor = `hsl(${username.charCodeAt(0) * 137.508 % 360}, 70%, 50%)`;
@@ -3274,11 +3428,15 @@
         `;
         
         list.appendChild(item);
-        voiceParticipants.set(username, { 
+        
+        // USE NORMALIZED KEY for Map storage
+        voiceParticipants.set(normalizedUsername, { 
             element: item, 
             isMuted, 
             isDeafened, 
             isLocal,
+            userId,
+            originalUsername: username,
             avatarElement: item.querySelector('.voice-participant-mini-avatar'),
             statusElement: item.querySelector('.voice-participant-mini-status')
         });
@@ -3287,18 +3445,23 @@
     }
     
     function removeVoiceParticipant(username) {
-        // Remove from voiceParticipants Map
-        const participant = voiceParticipants.get(username);
+        // NORMALIZE: Use lowercase key
+        const normalizedUsername = username.toLowerCase();
+        
+        // Remove from voiceParticipants Map using normalized key
+        const participant = voiceParticipants.get(normalizedUsername);
         if (participant) {
             participant.element.remove();
-            voiceParticipants.delete(username);
+            voiceParticipants.delete(normalizedUsername);
+            console.log(`[Voice] Removed participant: ${username} (normalized: ${normalizedUsername})`);
         }
         
         // Also try to remove by all possible ID formats
-        const safeUsername = username.replace(/[^a-zA-Z0-9]/g, '_');
+        const safeUsername = normalizedUsername.replace(/[^a-z0-9]/g, '_');
         const possibleIds = [
             `voice-user-${safeUsername}`,
             `participant-${username}`,
+            `participant-${normalizedUsername}`,
         ];
         
         possibleIds.forEach(id => {
@@ -3526,42 +3689,45 @@
         }
     }
     
-    function addVoiceParticipantToSidebar(channelSlug, userId, username) {
+    function addVoiceParticipantToSidebar(channelSlug, oderId, username) {
         const list = document.getElementById(`voice-participants-${channelSlug}`);
         if (!list) {
             console.warn(`[Presence] Participant list not found for channel: ${channelSlug}`);
             return;
         }
         
-        // NORMALIZE: Use lowercase for comparison to prevent case-sensitivity duplicates
+        // NORMALIZE: Use lowercase for ALL comparisons
         const normalizedUsername = username.toLowerCase();
         const safeUsername = normalizedUsername.replace(/[^a-z0-9]/g, '_');
+        const uniqueId = `user-avatar-${oderId || safeUsername}`;
         
-        // Check ALL possible ID formats (case-insensitive)
-        const existingById = document.getElementById(`user-avatar-${userId}`);
-        const existingByUsername = document.getElementById(`voice-user-${safeUsername}`);
-        const existsInMap = Array.from(voiceParticipants.keys()).some(k => k.toLowerCase() === normalizedUsername);
+        // IDEMPOTENT CHECK: Single unified check using normalized username
+        const existingElement = document.getElementById(uniqueId) || 
+                               document.getElementById(`voice-user-${safeUsername}`);
+        const existsInMap = voiceParticipants.has(normalizedUsername);
         
-        // Also check if any element with this username already exists in the list
-        const existingInList = list.querySelector(`[data-username="${username}"]`) || 
-                              list.querySelector(`[data-username="${username.toUpperCase()}"]`) ||
-                              list.querySelector(`[data-username="${username.toLowerCase()}"]`);
+        // Also check list directly
+        const existingInList = Array.from(list.children).some(el => 
+            el.dataset.normalizedUsername === normalizedUsername ||
+            (el.dataset.username || '').toLowerCase() === normalizedUsername
+        );
         
-        if (existingById || existingByUsername || existsInMap || existingInList) {
-            console.log(`[Presence] User ${username} already in sidebar, skipping duplicate`);
+        if (existingElement || existsInMap || existingInList) {
+            console.log(`[Presence] User ${username} already in sidebar (id: ${uniqueId}), skipping`);
             return;
         }
         
         list.style.display = 'flex';
         
         const avatarColor = `hsl(${username.charCodeAt(0) * 137.508 % 360}, 70%, 50%)`;
-        const currentVolume = userVolumes.get(userId) || 1;
+        const currentVolume = userVolumes.get(oderId) || 1;
         
         const item = document.createElement('li');
         item.className = 'voice-participant-mini';
-        item.id = `user-avatar-${userId}`;  // Use user_id for unique identification
-        item.dataset.userId = userId;
+        item.id = uniqueId;  // Use normalized ID for uniqueness
+        item.dataset.oderId = oderId;
         item.dataset.username = username;
+        item.dataset.normalizedUsername = normalizedUsername;
         item.dataset.channelSlug = channelSlug;
         
         item.innerHTML = `
@@ -3571,7 +3737,7 @@
             <span class="voice-participant-mini-name">${escapeHtml(username)}</span>
             <span class="voice-participant-mini-status"></span>
             <input type="range" min="0" max="1" step="0.1" value="${currentVolume}" 
-                   class="volume-slider" data-target-user="${userId}"
+                   class="volume-slider" data-target-user="${oderId}"
                    title="Volume: ${escapeHtml(username)}">
         `;
         

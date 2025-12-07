@@ -434,6 +434,7 @@
             </span>
         </div>
         <div class="voice-mini-server" id="voice-mini-server"></div>
+        <div class="voice-mini-participants" id="voice-mini-participants"></div>
         <div class="voice-mini-controls">
             <button class="voice-mini-btn" id="voice-mini-mute" onclick="toggleMiniMute()" title="{% trans 'Mute' %}">
                 <i class="fas fa-microphone"></i>
@@ -441,6 +442,14 @@
             <button class="voice-mini-btn" id="voice-mini-deafen" onclick="toggleMiniDeafen()" title="{% trans 'Deafen' %}">
                 <i class="fas fa-headphones"></i>
             </button>
+            <button class="voice-mini-btn" id="voice-mini-camera" onclick="toggleMiniCamera()" title="{% trans 'Camera' %}">
+                <i class="fas fa-video"></i>
+            </button>
+            <button class="voice-mini-btn" id="voice-mini-screen" onclick="toggleMiniScreenShare()" title="{% trans 'Share Screen' %}">
+                <i class="fas fa-desktop"></i>
+            </button>
+        </div>
+        <div class="voice-mini-controls voice-mini-controls-secondary">
             <button class="voice-mini-btn return" onclick="returnToVoice()" title="{% trans 'Return to Channel' %}">
                 <i class="fas fa-arrow-right"></i>
             </button>
@@ -539,9 +548,49 @@
             50% { box-shadow: 0 0 16px rgba(255, 165, 0, 0.9); }
         }
         
+        .voice-mini-participants {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-bottom: 8px;
+            max-height: 60px;
+            overflow-y: auto;
+        }
+        
+        .voice-mini-participant {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            padding: 2px 6px;
+            background: rgba(0, 255, 255, 0.1);
+            border-radius: 10px;
+            font-size: 10px;
+            color: #00FFFF;
+        }
+        
+        .voice-mini-participant.muted { opacity: 0.6; }
+        
+        .voice-mini-participant .avatar {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00FFFF, #FF00FF);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            font-weight: bold;
+            color: #0A0E27;
+        }
+        
         .voice-mini-controls {
             display: flex;
-            gap: 8px;
+            gap: 6px;
+            margin-bottom: 6px;
+        }
+        
+        .voice-mini-controls-secondary {
+            margin-bottom: 0;
         }
         
         .voice-mini-btn {
@@ -556,6 +605,13 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 12px;
+        }
+        
+        .voice-mini-btn.active {
+            background: rgba(0, 255, 128, 0.3);
+            border-color: #00FF80;
+            color: #00FF80;
         }
         
         .voice-mini-btn.return {
@@ -636,12 +692,21 @@
                     
                 case 'connected':
                     window.voiceState.connected = true;
+                    window.voiceState = { ...window.voiceState, ...data };
                     updateVoiceUI(true);
                     saveVoiceStateToSession();
                     break;
                     
                 case 'disconnected':
                     window.voiceState.connected = false;
+                    window.voiceState.cameraOn = false;
+                    window.voiceState.screenSharing = false;
+                    updateVoiceUI(false);
+                    hideVoiceMiniBox();
+                    break;
+                    
+                case 'connectionLost':
+                    // Connection was lost unexpectedly - show reconnect state
                     updateVoiceUI(false);
                     break;
                     
@@ -657,14 +722,38 @@
                     saveVoiceStateToSession();
                     break;
                     
+                case 'cameraChanged':
+                    window.voiceState.cameraOn = data.cameraOn;
+                    updateMiniButtonStates();
+                    saveVoiceStateToSession();
+                    break;
+                    
+                case 'screenShareChanged':
+                    window.voiceState.screenSharing = data.screenSharing;
+                    updateMiniButtonStates();
+                    saveVoiceStateToSession();
+                    break;
+                    
+                case 'participantsChanged':
+                    window.voiceState.participants = data.participants;
+                    updateMiniParticipants();
+                    // Forward to server_view if it's listening
+                    window.dispatchEvent(new CustomEvent('voiceFrameEvent', { detail: { type, ...data } }));
+                    break;
+                    
                 case 'voiceEvent':
                     // Forward to server_view if it's listening
                     window.dispatchEvent(new CustomEvent('voiceFrameEvent', { detail: data }));
                     break;
                     
                 case 'peerConnected':
-                case 'peerAudio':
+                case 'peerDisconnected':
+                case 'peerTrack':
                     window.dispatchEvent(new CustomEvent('voiceFrameEvent', { detail: { type, ...data } }));
+                    break;
+                    
+                case 'error':
+                    console.error('[Voice] Frame error:', data.message);
                     break;
             }
         });
@@ -751,6 +840,8 @@
         function updateMiniButtonStates() {
             const muteBtn = document.getElementById('voice-mini-mute');
             const deafenBtn = document.getElementById('voice-mini-deafen');
+            const cameraBtn = document.getElementById('voice-mini-camera');
+            const screenBtn = document.getElementById('voice-mini-screen');
             
             if (muteBtn) {
                 muteBtn.classList.toggle('muted', window.voiceState.muted);
@@ -765,6 +856,38 @@
                     '<i class="fas fa-volume-mute"></i>' : 
                     '<i class="fas fa-headphones"></i>';
             }
+            
+            if (cameraBtn) {
+                cameraBtn.classList.toggle('active', window.voiceState.cameraOn);
+                cameraBtn.innerHTML = window.voiceState.cameraOn ? 
+                    '<i class="fas fa-video"></i>' : 
+                    '<i class="fas fa-video-slash"></i>';
+            }
+            
+            if (screenBtn) {
+                screenBtn.classList.toggle('active', window.voiceState.screenSharing);
+            }
+        }
+        
+        function updateMiniParticipants() {
+            const container = document.getElementById('voice-mini-participants');
+            if (!container) return;
+            
+            const participants = window.voiceState.participants || [];
+            container.innerHTML = '';
+            
+            participants.forEach(p => {
+                const el = document.createElement('div');
+                el.className = 'voice-mini-participant' + (p.muted ? ' muted' : '');
+                el.innerHTML = `
+                    <span class="avatar">${(p.username || '?').charAt(0).toUpperCase()}</span>
+                    <span>${p.username || 'User'}</span>
+                    ${p.muted ? '<i class="fas fa-microphone-slash" style="font-size:8px;opacity:0.6;"></i>' : ''}
+                    ${p.video ? '<i class="fas fa-video" style="font-size:8px;color:#00FF80;"></i>' : ''}
+                    ${p.screen ? '<i class="fas fa-desktop" style="font-size:8px;color:#FF00FF;"></i>' : ''}
+                `;
+                container.appendChild(el);
+            });
         }
         
         function returnToVoice() {
@@ -781,9 +904,17 @@
             sendToVoiceFrame('toggleDeafen');
         }
         
+        function toggleMiniCamera() {
+            sendToVoiceFrame('toggleCamera');
+        }
+        
+        function toggleMiniScreenShare() {
+            sendToVoiceFrame('toggleScreenShare');
+        }
+        
         function disconnectMiniVoice() {
             sendToVoiceFrame('disconnect');
-            window.voiceState = { connected: false };
+            window.voiceState = { connected: false, participants: [] };
             sessionStorage.removeItem('voiceState');
             hideVoiceMiniBox();
         }
@@ -799,7 +930,10 @@
                 userId: config.userId,
                 username: config.username,
                 muted: config.muted || false,
-                deafened: config.deafened || false
+                deafened: config.deafened || false,
+                cameraOn: false,
+                screenSharing: false,
+                participants: []
             };
             saveVoiceStateToSession();
             
@@ -810,13 +944,38 @@
                 wsUrl,
                 ...config
             });
+            
+            // Show mini box when on other pages
+            const isServerView = document.querySelector('.gaming-hud-container');
+            if (!isServerView) {
+                showVoiceMiniBox(window.voiceState);
+            }
         };
         
         window.disconnectVoiceViaFrame = function() {
             sendToVoiceFrame('disconnect');
-            window.voiceState = { connected: false };
+            window.voiceState = { connected: false, participants: [] };
             sessionStorage.removeItem('voiceState');
             hideVoiceMiniBox();
+        };
+        
+        // Function to get current voice frame state
+        window.getVoiceFrameState = function() {
+            return new Promise((resolve) => {
+                const handler = (event) => {
+                    if (event.source === getVoiceFrame()?.contentWindow && event.data?.type === 'state') {
+                        window.removeEventListener('message', handler);
+                        resolve(event.data.data);
+                    }
+                };
+                window.addEventListener('message', handler);
+                sendToVoiceFrame('getState');
+                // Timeout after 1 second
+                setTimeout(() => {
+                    window.removeEventListener('message', handler);
+                    resolve(null);
+                }, 1000);
+            });
         };
         
         // Run on page load

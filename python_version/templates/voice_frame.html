@@ -1,29 +1,138 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Voice Connection</title>
+    <title>Voice Connection - Persistent</title>
     <style>
-        body { margin: 0; padding: 10px; background: #0A0E27; color: #00FFFF; font-family: sans-serif; font-size: 12px; }
-        .status { display: flex; align-items: center; gap: 8px; }
-        .dot { width: 8px; height: 8px; border-radius: 50%; background: #00FF80; }
+        * { box-sizing: border-box; }
+        body { 
+            margin: 0; 
+            padding: 8px; 
+            background: #0A0E27; 
+            color: #00FFFF; 
+            font-family: 'Segoe UI', sans-serif; 
+            font-size: 11px; 
+        }
+        .status { 
+            display: flex; 
+            align-items: center; 
+            gap: 6px; 
+            padding: 4px 8px;
+            background: rgba(0, 255, 128, 0.1);
+            border-radius: 4px;
+            margin-bottom: 6px;
+        }
+        .dot { 
+            width: 8px; 
+            height: 8px; 
+            border-radius: 50%; 
+            background: #00FF80;
+            flex-shrink: 0;
+        }
         .dot.disconnected { background: #FF0064; }
+        .dot.connecting { background: #FFA500; animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        
+        #participants {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 4px;
+        }
+        .participant {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 6px;
+            background: rgba(0, 255, 255, 0.1);
+            border-radius: 10px;
+            font-size: 10px;
+        }
+        .participant.muted { opacity: 0.6; }
+        .participant .avatar {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #00FFFF, #FF00FF);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 8px;
+            font-weight: bold;
+            color: #0A0E27;
+        }
+        
+        /* Video Grid */
+        #video-container {
+            display: none;
+            margin-top: 6px;
+        }
+        #video-container.has-video {
+            display: block;
+        }
+        .video-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+            gap: 4px;
+        }
+        .video-item {
+            position: relative;
+            background: #1a1f3e;
+            border-radius: 6px;
+            overflow: hidden;
+            aspect-ratio: 16/9;
+        }
+        .video-item video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .video-item .video-label {
+            position: absolute;
+            bottom: 2px;
+            left: 2px;
+            background: rgba(0,0,0,0.7);
+            color: #00FFFF;
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-size: 8px;
+        }
+        .video-item.screen-share {
+            grid-column: span 2;
+        }
     </style>
 </head>
 <body>
     <div class="status">
         <span class="dot" id="status-dot"></span>
-        <span id="status-text">Initializing...</span>
+        <span id="status-text">Ready</span>
+    </div>
+    <div id="participants"></div>
+    <div id="video-container">
+        <div class="video-grid" id="video-grid"></div>
     </div>
     
     <script>
-        // Voice Frame - Maintains WebSocket connection across page navigations
+        // ============================================
+        // PERSISTENT VOICE FRAME
+        // Maintains WebSocket + WebRTC across page navigations
+        // ============================================
+        
+        // State
         let voiceSocket = null;
         let localStream = null;
+        let localVideoStream = null;
+        let localScreenStream = null;
         let peerConnections = {};
+        let participants = new Map(); // normalized username -> { userId, username, muted, video, screen }
+        
         let isMuted = false;
         let isDeafened = false;
+        let isCameraOn = false;
+        let isScreenSharing = false;
+        
         let channelSlug = null;
         let channelName = null;
+        let serverSlug = null;
         let userId = null;
         let username = null;
         
@@ -33,31 +142,129 @@
         const iceServers = [
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:stun2.l.google.com:19302' },
         ];
         
-        function updateStatus(text, connected) {
-            document.getElementById('status-text').textContent = text;
-            document.getElementById('status-dot').classList.toggle('disconnected', !connected);
+        // ============================================
+        // DOM Updates
+        // ============================================
+        
+        function updateStatus(text, state = 'connected') {
+            const dot = document.getElementById('status-dot');
+            const txt = document.getElementById('status-text');
+            if (txt) txt.textContent = text;
+            if (dot) {
+                dot.classList.remove('disconnected', 'connecting');
+                if (state === 'disconnected') dot.classList.add('disconnected');
+                else if (state === 'connecting') dot.classList.add('connecting');
+            }
         }
         
-        // Listen for messages from parent window
+        function updateParticipantsUI() {
+            const container = document.getElementById('participants');
+            if (!container) return;
+            
+            container.innerHTML = '';
+            participants.forEach((data, key) => {
+                const el = document.createElement('div');
+                el.className = 'participant' + (data.muted ? ' muted' : '');
+                el.innerHTML = `
+                    <span class="avatar">${data.username.charAt(0).toUpperCase()}</span>
+                    <span>${data.username}</span>
+                    ${data.muted ? '<span>🔇</span>' : ''}
+                    ${data.video ? '<span>📹</span>' : ''}
+                    ${data.screen ? '<span>🖥️</span>' : ''}
+                `;
+                container.appendChild(el);
+            });
+        }
+        
+        function updateVideoGrid() {
+            const container = document.getElementById('video-container');
+            const grid = document.getElementById('video-grid');
+            if (!container || !grid) return;
+            
+            // Check if we have any video streams
+            let hasVideo = false;
+            
+            // Local video
+            if (isCameraOn && localVideoStream) {
+                hasVideo = true;
+                let localVideo = document.getElementById('local-video');
+                if (!localVideo) {
+                    const div = document.createElement('div');
+                    div.className = 'video-item';
+                    div.id = 'local-video-container';
+                    div.innerHTML = `
+                        <video id="local-video" autoplay muted playsinline></video>
+                        <span class="video-label">You</span>
+                    `;
+                    grid.appendChild(div);
+                    localVideo = document.getElementById('local-video');
+                }
+                if (localVideo.srcObject !== localVideoStream) {
+                    localVideo.srcObject = localVideoStream;
+                }
+            } else {
+                const localVideoContainer = document.getElementById('local-video-container');
+                if (localVideoContainer) localVideoContainer.remove();
+            }
+            
+            // Local screen share
+            if (isScreenSharing && localScreenStream) {
+                hasVideo = true;
+                let screenVideo = document.getElementById('local-screen');
+                if (!screenVideo) {
+                    const div = document.createElement('div');
+                    div.className = 'video-item screen-share';
+                    div.id = 'local-screen-container';
+                    div.innerHTML = `
+                        <video id="local-screen" autoplay muted playsinline></video>
+                        <span class="video-label">Your Screen</span>
+                    `;
+                    grid.appendChild(div);
+                    screenVideo = document.getElementById('local-screen');
+                }
+                if (screenVideo.srcObject !== localScreenStream) {
+                    screenVideo.srcObject = localScreenStream;
+                }
+            } else {
+                const screenContainer = document.getElementById('local-screen-container');
+                if (screenContainer) screenContainer.remove();
+            }
+            
+            // Check remote videos
+            grid.querySelectorAll('.video-item[data-peer-id]').forEach(el => {
+                hasVideo = true;
+            });
+            
+            container.classList.toggle('has-video', hasVideo);
+        }
+        
+        // ============================================
+        // Communication with Parent
+        // ============================================
+        
+        function sendToParent(type, data = {}) {
+            if (window.parent !== window) {
+                window.parent.postMessage({ type, data }, '*');
+            }
+        }
+        
         window.addEventListener('message', async (event) => {
-            const { type, data } = event.data;
-            console.log('[VoiceFrame] Received:', type, data);
+            // Only accept messages from parent
+            if (event.source !== window.parent) return;
+            
+            const { type, data } = event.data || {};
+            console.log('[VoiceFrame] Received:', type);
             
             switch (type) {
                 case 'connect':
-                    channelSlug = data.channelSlug;
-                    channelName = data.channelName;
-                    userId = data.userId;
-                    username = data.username;
-                    isMuted = data.muted || false;
-                    isDeafened = data.deafened || false;
-                    await initVoice(data.wsUrl);
+                    await handleConnect(data);
                     break;
                     
                 case 'disconnect':
-                    disconnect();
+                    handleDisconnect();
                     break;
                     
                 case 'toggleMute':
@@ -68,30 +275,76 @@
                     toggleDeafen();
                     break;
                     
+                case 'toggleCamera':
+                    await toggleCamera();
+                    break;
+                    
+                case 'toggleScreenShare':
+                    await toggleScreenShare();
+                    break;
+                    
                 case 'getState':
-                    sendToParent('state', {
-                        connected: voiceSocket && voiceSocket.readyState === WebSocket.OPEN,
-                        channelSlug,
-                        channelName,
-                        muted: isMuted,
-                        deafened: isDeafened
-                    });
+                    sendToParent('state', getState());
+                    break;
+                    
+                case 'setVolume':
+                    setUserVolume(data.peerId, data.volume);
                     break;
             }
         });
         
-        function sendToParent(type, data) {
-            if (window.parent !== window) {
-                window.parent.postMessage({ type, data }, '*');
-            }
+        function getState() {
+            return {
+                connected: voiceSocket && voiceSocket.readyState === WebSocket.OPEN,
+                channelSlug,
+                channelName,
+                serverSlug,
+                userId,
+                username,
+                muted: isMuted,
+                deafened: isDeafened,
+                cameraOn: isCameraOn,
+                screenSharing: isScreenSharing,
+                participants: Array.from(participants.values())
+            };
         }
         
-        async function initVoice(wsUrl) {
+        // ============================================
+        // Connection Handling
+        // ============================================
+        
+        async function handleConnect(config) {
+            // If already connected to same channel, don't reconnect
+            if (voiceSocket?.readyState === WebSocket.OPEN && channelSlug === config.channelSlug) {
+                console.log('[VoiceFrame] Already connected to this channel');
+                sendToParent('connected', getState());
+                return;
+            }
+            
+            // Disconnect from previous channel if any
+            if (voiceSocket) {
+                handleDisconnect();
+            }
+            
+            // Store config
+            channelSlug = config.channelSlug;
+            channelName = config.channelName;
+            serverSlug = config.serverSlug;
+            userId = config.userId;
+            username = config.username;
+            isMuted = config.muted || false;
+            isDeafened = config.deafened || false;
+            
             try {
-                updateStatus('Getting microphone...', false);
+                updateStatus('Getting microphone...', 'connecting');
                 
+                // Get audio stream
                 localStream = await navigator.mediaDevices.getUserMedia({
-                    audio: { echoCancellation: true, noiseSuppression: true },
+                    audio: { 
+                        echoCancellation: true, 
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    },
                     video: false
                 });
                 
@@ -99,75 +352,217 @@
                     localStream.getAudioTracks().forEach(t => t.enabled = false);
                 }
                 
-                updateStatus('Connecting...', false);
-                connectWebSocket(wsUrl);
+                // Add self to participants
+                addParticipant(userId, username, isMuted);
+                
+                // Connect WebSocket
+                updateStatus('Connecting...', 'connecting');
+                connectWebSocket(config.wsUrl);
                 
             } catch (err) {
                 console.error('[VoiceFrame] Mic error:', err);
-                updateStatus('Mic error: ' + err.message, false);
+                updateStatus('Mic error: ' + err.message, 'disconnected');
                 sendToParent('error', { message: err.message });
             }
         }
         
-        function connectWebSocket(wsUrl) {
+        function handleDisconnect() {
+            // Close WebSocket
             if (voiceSocket) {
                 voiceSocket.close();
+                voiceSocket = null;
             }
             
+            // Close all peer connections
+            Object.keys(peerConnections).forEach(closePeerConnection);
+            
+            // Stop local streams
+            if (localStream) {
+                localStream.getTracks().forEach(t => t.stop());
+                localStream = null;
+            }
+            if (localVideoStream) {
+                localVideoStream.getTracks().forEach(t => t.stop());
+                localVideoStream = null;
+            }
+            if (localScreenStream) {
+                localScreenStream.getTracks().forEach(t => t.stop());
+                localScreenStream = null;
+            }
+            
+            // Reset state
+            isCameraOn = false;
+            isScreenSharing = false;
+            participants.clear();
+            
+            channelSlug = null;
+            channelName = null;
+            
+            updateStatus('Disconnected', 'disconnected');
+            updateParticipantsUI();
+            updateVideoGrid();
+            sendToParent('disconnected', {});
+        }
+        
+        // ============================================
+        // Participant Management (Idempotent)
+        // ============================================
+        
+        function normalizeUsername(name) {
+            return (name || '').toLowerCase().trim();
+        }
+        
+        function addParticipant(pUserId, pUsername, pMuted = false, pVideo = false, pScreen = false) {
+            const key = normalizeUsername(pUsername);
+            if (!key) return false;
+            
+            // IDEMPOTENT: Check if already exists
+            if (participants.has(key)) {
+                // Update existing
+                const existing = participants.get(key);
+                existing.muted = pMuted;
+                existing.video = pVideo;
+                existing.screen = pScreen;
+                participants.set(key, existing);
+                console.log(`[VoiceFrame] Updated participant: ${pUsername}`);
+            } else {
+                // Add new
+                participants.set(key, {
+                    odedId: pUserId,
+                    userId: pUserId,
+                    username: pUsername,
+                    muted: pMuted,
+                    video: pVideo,
+                    screen: pScreen
+                });
+                console.log(`[VoiceFrame] Added participant: ${pUsername}`);
+            }
+            
+            updateParticipantsUI();
+            sendToParent('participantsChanged', { participants: Array.from(participants.values()) });
+            return true;
+        }
+        
+        function removeParticipant(pUsername) {
+            const key = normalizeUsername(pUsername);
+            if (participants.has(key)) {
+                participants.delete(key);
+                console.log(`[VoiceFrame] Removed participant: ${pUsername}`);
+                updateParticipantsUI();
+                sendToParent('participantsChanged', { participants: Array.from(participants.values()) });
+                return true;
+            }
+            return false;
+        }
+        
+        function updateParticipantState(pUsername, updates) {
+            const key = normalizeUsername(pUsername);
+            if (participants.has(key)) {
+                const p = participants.get(key);
+                Object.assign(p, updates);
+                participants.set(key, p);
+                updateParticipantsUI();
+                sendToParent('participantsChanged', { participants: Array.from(participants.values()) });
+            }
+        }
+        
+        // ============================================
+        // WebSocket
+        // ============================================
+        
+        function connectWebSocket(wsUrl) {
             voiceSocket = new WebSocket(wsUrl);
             
             voiceSocket.onopen = () => {
-                console.log('[VoiceFrame] Connected');
-                updateStatus('Connected: ' + channelName, true);
-                sendToParent('connected', { channelSlug, channelName });
+                console.log('[VoiceFrame] WebSocket connected');
+                updateStatus('Connected: ' + channelName, 'connected');
                 
+                // Send join signal
                 voiceSocket.send(JSON.stringify({
                     signal_type: 'join',
-                    data: { channel_slug: channelSlug, username }
+                    data: { 
+                        channel_slug: channelSlug, 
+                        username: username,
+                        has_video: isCameraOn,
+                        has_screen: isScreenSharing
+                    }
                 }));
+                
+                sendToParent('connected', getState());
             };
             
             voiceSocket.onmessage = (e) => {
                 try {
                     const data = JSON.parse(e.data);
-                    handleVoiceMessage(data);
+                    handleSocketMessage(data);
                 } catch (err) {
                     console.error('[VoiceFrame] Parse error:', err);
                 }
             };
             
             voiceSocket.onclose = () => {
-                console.log('[VoiceFrame] Disconnected');
-                updateStatus('Disconnected', false);
-                sendToParent('disconnected', {});
+                console.log('[VoiceFrame] WebSocket closed');
+                // Don't call handleDisconnect here - let parent decide
+                updateStatus('Connection lost', 'disconnected');
+                sendToParent('connectionLost', { channelSlug, channelName });
             };
             
             voiceSocket.onerror = (err) => {
-                console.error('[VoiceFrame] Error:', err);
-                updateStatus('Connection error', false);
+                console.error('[VoiceFrame] WebSocket error:', err);
+                updateStatus('Connection error', 'disconnected');
             };
         }
         
-        function handleVoiceMessage(data) {
-            // Forward relevant events to parent
+        function handleSocketMessage(data) {
+            // Forward all events to parent
             sendToParent('voiceEvent', data);
             
             switch (data.type) {
                 case 'system_notification':
-                    if (data.event === 'member_joined' && data.sender_id !== userId) {
-                        createPeerConnection(data.sender_id, data.username, true);
-                    } else if (data.event === 'member_left') {
-                        closePeerConnection(data.sender_id);
-                    }
+                    handleSystemNotification(data);
                     break;
                     
                 case 'webrtc_signal':
                     handleWebRTCSignal(data);
                     break;
+                    
+                case 'media_state':
+                    handleMediaState(data);
+                    break;
             }
         }
         
+        function handleSystemNotification(data) {
+            if (data.event === 'member_joined') {
+                // IDEMPOTENT: addParticipant checks for duplicates
+                if (data.sender_id !== userId) {
+                    addParticipant(data.sender_id, data.username, false, data.has_video, data.has_screen);
+                    // Create peer connection
+                    createPeerConnection(data.sender_id, data.username, true);
+                }
+            } else if (data.event === 'member_left') {
+                removeParticipant(data.username);
+                closePeerConnection(data.sender_id);
+            }
+        }
+        
+        function handleMediaState(data) {
+            const key = normalizeUsername(data.username);
+            if (participants.has(key)) {
+                updateParticipantState(data.username, {
+                    muted: data.muted,
+                    video: data.has_video,
+                    screen: data.has_screen
+                });
+            }
+        }
+        
+        // ============================================
+        // WebRTC
+        // ============================================
+        
         function createPeerConnection(peerId, peerUsername, isInitiator) {
+            // Clean up existing connection
             if (peerConnections[peerId]) {
                 closePeerConnection(peerId);
             }
@@ -175,10 +570,29 @@
             iceCandidateQueues[peerId] = [];
             
             const pc = new RTCPeerConnection({ iceServers });
-            peerConnections[peerId] = { pc, username: peerUsername, remoteDescriptionSet: false };
+            peerConnections[peerId] = { 
+                pc, 
+                username: peerUsername, 
+                remoteDescriptionSet: false,
+                audioElement: null,
+                videoElement: null
+            };
             
+            // Add local tracks
             if (localStream) {
-                localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+                localStream.getTracks().forEach(track => {
+                    pc.addTrack(track, localStream);
+                });
+            }
+            if (localVideoStream) {
+                localVideoStream.getTracks().forEach(track => {
+                    pc.addTrack(track, localVideoStream);
+                });
+            }
+            if (localScreenStream) {
+                localScreenStream.getTracks().forEach(track => {
+                    pc.addTrack(track, localScreenStream);
+                });
             }
             
             pc.onicecandidate = (event) => {
@@ -192,23 +606,60 @@
             };
             
             pc.ontrack = (event) => {
-                const audioId = `audio-${peerId}`;
-                let audio = document.getElementById(audioId);
-                if (!audio) {
-                    audio = document.createElement('audio');
-                    audio.id = audioId;
-                    audio.autoplay = true;
-                    document.body.appendChild(audio);
-                }
-                audio.srcObject = event.streams[0];
-                if (isDeafened) audio.muted = true;
+                const stream = event.streams[0];
+                if (!stream) return;
                 
-                sendToParent('peerAudio', { peerId, username: peerUsername });
+                const peerData = peerConnections[peerId];
+                if (!peerData) return;
+                
+                // Determine if this is audio or video
+                const track = event.track;
+                if (track.kind === 'audio') {
+                    // Create audio element if not exists
+                    let audio = peerData.audioElement;
+                    if (!audio) {
+                        audio = document.createElement('audio');
+                        audio.id = `audio-${peerId}`;
+                        audio.autoplay = true;
+                        audio.dataset.peerId = peerId;
+                        document.body.appendChild(audio);
+                        peerData.audioElement = audio;
+                    }
+                    audio.srcObject = stream;
+                    if (isDeafened) audio.muted = true;
+                    
+                } else if (track.kind === 'video') {
+                    // Create video element in grid
+                    const grid = document.getElementById('video-grid');
+                    let videoContainer = document.getElementById(`video-${peerId}`);
+                    if (!videoContainer) {
+                        videoContainer = document.createElement('div');
+                        videoContainer.className = 'video-item';
+                        videoContainer.id = `video-${peerId}`;
+                        videoContainer.dataset.peerId = peerId;
+                        videoContainer.innerHTML = `
+                            <video autoplay playsinline></video>
+                            <span class="video-label">${peerUsername}</span>
+                        `;
+                        grid.appendChild(videoContainer);
+                    }
+                    const video = videoContainer.querySelector('video');
+                    video.srcObject = stream;
+                    peerData.videoElement = video;
+                    
+                    updateVideoGrid();
+                }
+                
+                sendToParent('peerTrack', { peerId, username: peerUsername, kind: track.kind });
             };
             
             pc.onconnectionstatechange = () => {
-                if (pc.connectionState === 'connected') {
+                const state = pc.connectionState;
+                console.log(`[VoiceFrame] Peer ${peerId} connection: ${state}`);
+                if (state === 'connected') {
                     sendToParent('peerConnected', { peerId, username: peerUsername });
+                } else if (state === 'failed' || state === 'disconnected') {
+                    sendToParent('peerDisconnected', { peerId, username: peerUsername });
                 }
             };
             
@@ -222,7 +673,10 @@
             if (!peerData) return;
             
             try {
-                const offer = await peerData.pc.createOffer({ offerToReceiveAudio: true });
+                const offer = await peerData.pc.createOffer({ 
+                    offerToReceiveAudio: true,
+                    offerToReceiveVideo: true
+                });
                 await peerData.pc.setLocalDescription(offer);
                 
                 if (voiceSocket?.readyState === WebSocket.OPEN) {
@@ -246,50 +700,74 @@
             
             switch (data.signal_type) {
                 case 'offer':
-                    let pc = peerConnections[senderId]?.pc;
-                    if (!pc) {
-                        createPeerConnection(senderId, data.username, false);
-                        pc = peerConnections[senderId]?.pc;
-                    }
-                    if (pc) {
-                        await pc.setRemoteDescription(new RTCSessionDescription(data.data.sdp));
-                        peerConnections[senderId].remoteDescriptionSet = true;
-                        await processIceCandidateQueue(senderId);
-                        
-                        const answer = await pc.createAnswer();
-                        await pc.setLocalDescription(answer);
-                        
-                        if (voiceSocket?.readyState === WebSocket.OPEN) {
-                            voiceSocket.send(JSON.stringify({
-                                signal_type: 'answer',
-                                recipient_id: senderId,
-                                data: { sdp: answer }
-                            }));
-                        }
-                    }
+                    await handleOffer(senderId, data);
                     break;
                     
                 case 'answer':
-                    const peerData = peerConnections[senderId];
-                    if (peerData?.pc) {
-                        await peerData.pc.setRemoteDescription(new RTCSessionDescription(data.data.sdp));
-                        peerData.remoteDescriptionSet = true;
-                        await processIceCandidateQueue(senderId);
-                    }
+                    await handleAnswer(senderId, data);
                     break;
                     
                 case 'ice_candidate':
-                    const peer = peerConnections[senderId];
-                    const candidate = data.data?.candidate;
-                    if (candidate) {
-                        if (peer?.remoteDescriptionSet) {
-                            await peer.pc.addIceCandidate(new RTCIceCandidate(candidate));
-                        } else {
-                            if (!iceCandidateQueues[senderId]) iceCandidateQueues[senderId] = [];
-                            iceCandidateQueues[senderId].push(candidate);
-                        }
-                    }
+                    await handleIceCandidate(senderId, data);
                     break;
+            }
+        }
+        
+        async function handleOffer(senderId, data) {
+            let peerData = peerConnections[senderId];
+            if (!peerData) {
+                createPeerConnection(senderId, data.username, false);
+                peerData = peerConnections[senderId];
+            }
+            if (!peerData?.pc) return;
+            
+            try {
+                await peerData.pc.setRemoteDescription(new RTCSessionDescription(data.data.sdp));
+                peerData.remoteDescriptionSet = true;
+                await processIceCandidateQueue(senderId);
+                
+                const answer = await peerData.pc.createAnswer();
+                await peerData.pc.setLocalDescription(answer);
+                
+                if (voiceSocket?.readyState === WebSocket.OPEN) {
+                    voiceSocket.send(JSON.stringify({
+                        signal_type: 'answer',
+                        recipient_id: senderId,
+                        data: { sdp: answer }
+                    }));
+                }
+            } catch (err) {
+                console.error('[VoiceFrame] Handle offer error:', err);
+            }
+        }
+        
+        async function handleAnswer(senderId, data) {
+            const peerData = peerConnections[senderId];
+            if (!peerData?.pc) return;
+            
+            try {
+                await peerData.pc.setRemoteDescription(new RTCSessionDescription(data.data.sdp));
+                peerData.remoteDescriptionSet = true;
+                await processIceCandidateQueue(senderId);
+            } catch (err) {
+                console.error('[VoiceFrame] Handle answer error:', err);
+            }
+        }
+        
+        async function handleIceCandidate(senderId, data) {
+            const peerData = peerConnections[senderId];
+            const candidate = data.data?.candidate;
+            if (!candidate) return;
+            
+            if (peerData?.remoteDescriptionSet) {
+                try {
+                    await peerData.pc.addIceCandidate(new RTCIceCandidate(candidate));
+                } catch (e) {
+                    console.warn('[VoiceFrame] ICE candidate error:', e);
+                }
+            } else {
+                if (!iceCandidateQueues[senderId]) iceCandidateQueues[senderId] = [];
+                iceCandidateQueues[senderId].push(candidate);
             }
         }
         
@@ -308,59 +786,167 @@
         
         function closePeerConnection(peerId) {
             const peerData = peerConnections[peerId];
-            if (peerData?.pc) {
-                peerData.pc.close();
+            if (peerData) {
+                if (peerData.pc) peerData.pc.close();
+                if (peerData.audioElement) peerData.audioElement.remove();
             }
             delete peerConnections[peerId];
             delete iceCandidateQueues[peerId];
             
-            const audio = document.getElementById(`audio-${peerId}`);
-            if (audio) audio.remove();
+            // Remove video element
+            const videoContainer = document.getElementById(`video-${peerId}`);
+            if (videoContainer) videoContainer.remove();
+            
+            updateVideoGrid();
         }
+        
+        // ============================================
+        // Media Controls
+        // ============================================
         
         function toggleMute() {
             isMuted = !isMuted;
             if (localStream) {
                 localStream.getAudioTracks().forEach(t => t.enabled = !isMuted);
             }
+            
+            // Update self in participants
+            updateParticipantState(username, { muted: isMuted });
+            
+            // Notify server
             if (voiceSocket?.readyState === WebSocket.OPEN) {
                 voiceSocket.send(JSON.stringify({
-                    signal_type: 'mic_state_change',
-                    data: { muted: isMuted }
+                    signal_type: 'media_state',
+                    data: { muted: isMuted, has_video: isCameraOn, has_screen: isScreenSharing }
                 }));
             }
+            
             sendToParent('muteChanged', { muted: isMuted });
         }
         
         function toggleDeafen() {
             isDeafened = !isDeafened;
+            
+            // Mute all audio elements
             document.querySelectorAll('audio').forEach(a => a.muted = isDeafened);
-            if (isDeafened && !isMuted) toggleMute();
+            
+            // If deafening, also mute mic
+            if (isDeafened && !isMuted) {
+                toggleMute();
+            }
+            
             sendToParent('deafenChanged', { deafened: isDeafened });
         }
         
-        function disconnect() {
-            if (voiceSocket) {
-                voiceSocket.close();
-                voiceSocket = null;
+        async function toggleCamera() {
+            if (isCameraOn) {
+                // Turn off camera
+                if (localVideoStream) {
+                    localVideoStream.getTracks().forEach(t => t.stop());
+                    localVideoStream = null;
+                }
+                isCameraOn = false;
+            } else {
+                // Turn on camera
+                try {
+                    localVideoStream = await navigator.mediaDevices.getUserMedia({
+                        video: { width: 320, height: 240, frameRate: 15 }
+                    });
+                    isCameraOn = true;
+                    
+                    // Add video track to all peer connections
+                    Object.entries(peerConnections).forEach(([peerId, peerData]) => {
+                        localVideoStream.getVideoTracks().forEach(track => {
+                            peerData.pc.addTrack(track, localVideoStream);
+                        });
+                        // Renegotiate
+                        createAndSendOffer(peerId);
+                    });
+                } catch (err) {
+                    console.error('[VoiceFrame] Camera error:', err);
+                    sendToParent('error', { message: 'Camera error: ' + err.message });
+                    return;
+                }
             }
             
-            Object.keys(peerConnections).forEach(closePeerConnection);
+            updateParticipantState(username, { video: isCameraOn });
+            updateVideoGrid();
             
-            if (localStream) {
-                localStream.getTracks().forEach(t => t.stop());
-                localStream = null;
+            // Notify server
+            if (voiceSocket?.readyState === WebSocket.OPEN) {
+                voiceSocket.send(JSON.stringify({
+                    signal_type: 'media_state',
+                    data: { muted: isMuted, has_video: isCameraOn, has_screen: isScreenSharing }
+                }));
             }
             
-            channelSlug = null;
-            channelName = null;
-            updateStatus('Disconnected', false);
-            sendToParent('disconnected', {});
+            sendToParent('cameraChanged', { cameraOn: isCameraOn });
         }
         
-        // Notify parent that frame is ready
+        async function toggleScreenShare() {
+            if (isScreenSharing) {
+                // Stop screen share
+                if (localScreenStream) {
+                    localScreenStream.getTracks().forEach(t => t.stop());
+                    localScreenStream = null;
+                }
+                isScreenSharing = false;
+            } else {
+                // Start screen share
+                try {
+                    localScreenStream = await navigator.mediaDevices.getDisplayMedia({
+                        video: { cursor: 'always' },
+                        audio: false
+                    });
+                    isScreenSharing = true;
+                    
+                    // Handle user stopping share via browser UI
+                    localScreenStream.getVideoTracks()[0].onended = () => {
+                        toggleScreenShare();
+                    };
+                    
+                    // Add screen track to all peer connections
+                    Object.entries(peerConnections).forEach(([peerId, peerData]) => {
+                        localScreenStream.getVideoTracks().forEach(track => {
+                            peerData.pc.addTrack(track, localScreenStream);
+                        });
+                        // Renegotiate
+                        createAndSendOffer(peerId);
+                    });
+                } catch (err) {
+                    console.error('[VoiceFrame] Screen share error:', err);
+                    sendToParent('error', { message: 'Screen share cancelled or error' });
+                    return;
+                }
+            }
+            
+            updateParticipantState(username, { screen: isScreenSharing });
+            updateVideoGrid();
+            
+            // Notify server
+            if (voiceSocket?.readyState === WebSocket.OPEN) {
+                voiceSocket.send(JSON.stringify({
+                    signal_type: 'media_state',
+                    data: { muted: isMuted, has_video: isCameraOn, has_screen: isScreenSharing }
+                }));
+            }
+            
+            sendToParent('screenShareChanged', { screenSharing: isScreenSharing });
+        }
+        
+        function setUserVolume(peerId, volume) {
+            const peerData = peerConnections[peerId];
+            if (peerData?.audioElement) {
+                peerData.audioElement.volume = Math.max(0, Math.min(1, volume));
+            }
+        }
+        
+        // ============================================
+        // Initialize
+        // ============================================
+        
+        console.log('[VoiceFrame] Initialized');
         sendToParent('ready', {});
     </script>
 </body>
 </html>
-
