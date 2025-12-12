@@ -156,9 +156,62 @@
         visibility: hidden;
         transition: all 0.15s ease;
         z-index: 1000;
+        border: 1px solid rgba(148, 163, 184, 0.1);
+    }
+
+    .sidebar-item:hover .sidebar-tooltip {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .sidebar-bottom {
+        margin-top: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    /* ============================================
+       SERVER MAIN CONTENT AREA
+       ============================================ */
+
+    .server-main {
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+        overflow: hidden;
+    }
+
+    .server-topbar {
+        height: 48px;
+        background: #1E293B;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.1);
         display: flex;
         align-items: center;
+        padding: 0 16px;
         gap: 12px;
+        flex-shrink: 0;
+    }
+
+    .server-topbar-name {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: #F8FAFC;
+        font-size: 15px;
+        font-weight: 600;
+    }
+
+    .server-topbar-name svg {
+        color: #38BDF8;
+        width: 18px;
+        height: 18px;
+    }
+
+    #main-content-viewport {
+        flex: 1;
+        overflow: hidden;
+        background: #0F172A;
     }
 
     .server-navbar-brand {
@@ -252,9 +305,8 @@
     .gaming-hud-container {
         display: grid;
         grid-template-columns: 260px 1fr 240px;
-        height: calc(100vh - 48px);
-        /* Subtract navbar height */
-        width: 100vw;
+        height: 100%;
+        width: 100%;
         position: relative;
         overflow: hidden;
     }
@@ -2381,7 +2433,7 @@
 <div class="server-shell">
     <!-- Sidebar Navigation -->
     <nav class="app-sidebar">
-        <!-- Logo -->
+        <!-- Logo - Goes to app shell home -->
         <a href="/" class="sidebar-logo" title="Rashigo">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 stroke-width="2">
@@ -2391,7 +2443,7 @@
 
         <div class="sidebar-divider"></div>
 
-        <!-- Home -->
+        <!-- Home - Full navigation back to app shell -->
         <a href="/" class="sidebar-item" title="{% trans 'Home' %}">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 stroke-width="2">
@@ -2401,18 +2453,20 @@
             <span class="sidebar-tooltip">{% trans "Home" %}</span>
         </a>
 
-        <!-- Chat (Active in server) -->
-        <a href="#" class="sidebar-item active" onclick="showChatViewport(); return false;" title="{% trans 'Chat' %}">
+        <!-- Chat - Show server chat (default in server view) -->
+        <button type="button" class="sidebar-item active" onclick="showChatViewport(); setActiveSidebar(this);"
+            title="{% trans 'Chat' %}">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 stroke-width="2">
                 <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
             </svg>
             <span class="sidebar-tooltip">{% trans "Chat" %}</span>
-        </a>
+        </button>
 
-        <!-- Games -->
-        <a href="{% url 'all_games_lobby' %}" class="sidebar-item" hx-get="{% url 'all_games_lobby' %}?partial=true"
-            hx-target="#main-content-viewport" hx-swap="innerHTML">
+        <!-- Games - Load via HTMX -->
+        <button type="button" class="sidebar-item" hx-get="{% url 'all_games_lobby' %}?partial=true"
+            hx-target="#main-content-viewport" hx-swap="innerHTML" onclick="setActiveSidebar(this);"
+            title="{% trans 'Games' %}">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 stroke-width="2">
                 <line x1="6" x2="10" y1="11" y2="11" />
@@ -2421,11 +2475,12 @@
                     d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z" />
             </svg>
             <span class="sidebar-tooltip">{% trans "Games" %}</span>
-        </a>
+        </button>
 
-        <!-- Leaderboard -->
-        <a href="{% url 'leaderboard' %}" class="sidebar-item" hx-get="{% url 'leaderboard' %}?partial=true"
-            hx-target="#main-content-viewport" hx-swap="innerHTML">
+        <!-- Leaderboard - Load via HTMX -->
+        <button type="button" class="sidebar-item" hx-get="{% url 'leaderboard' %}?partial=true"
+            hx-target="#main-content-viewport" hx-swap="innerHTML" onclick="setActiveSidebar(this);"
+            title="{% trans 'Ranks' %}">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 stroke-width="2">
                 <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
@@ -2436,11 +2491,13 @@
                 <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
             </svg>
             <span class="sidebar-tooltip">{% trans "Ranks" %}</span>
-        </a>
+        </button>
 
         <div class="sidebar-bottom">
-            <!-- Settings -->
-            <a href="{% url 'settings' %}" class="sidebar-item">
+            <!-- Settings - Load via HTMX -->
+            <button type="button" class="sidebar-item" hx-get="/?view=settings&partial=true"
+                hx-target="#main-content-viewport" hx-swap="innerHTML" onclick="setActiveSidebar(this);"
+                title="{% trans 'Settings' %}">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                     stroke-width="2">
                     <path
@@ -2448,7 +2505,7 @@
                     <circle cx="12" cy="12" r="3" />
                 </svg>
                 <span class="sidebar-tooltip">{% trans "Settings" %}</span>
-            </a>
+            </button>
         </div>
     </nav>
 
@@ -2899,26 +2956,29 @@
                             // Remove non-chat content from viewport
                             const children = Array.from(viewport.children);
                             children.forEach(child => {
-                                if (child.id !== 'chat-content') {
+                                if (child.id !== 'chat-content' && !child.classList.contains('gaming-hud-container')) {
                                     child.remove();
                                 }
                             });
-                            chatContent.style.display = 'flex';
+                            // Show the gaming HUD container
+                            const hudContainer = viewport.querySelector('.gaming-hud-container');
+                            if (hudContainer) hudContainer.style.display = 'grid';
                         }
-
-                        // Update active nav link
-                        document.querySelectorAll('.nav-viewport-link').forEach(link => {
-                            link.classList.remove('active');
-                        });
-                        const chatLink = document.getElementById('chat-nav-link');
-                        if (chatLink) chatLink.classList.add('active');
                     }
 
-                    // Hide chat when loading other content via HTMX
+                    // Set active state on sidebar buttons
+                    function setActiveSidebar(element) {
+                        document.querySelectorAll('.app-sidebar .sidebar-item').forEach(item => {
+                            item.classList.remove('active');
+                        });
+                        element.classList.add('active');
+                    }
+
+                    // Hide HUD when loading other content via HTMX
                     document.body.addEventListener('htmx:beforeSwap', function (evt) {
-                        const chatContent = document.getElementById('chat-content');
-                        if (chatContent && evt.target.id === 'main-content-viewport') {
-                            chatContent.style.display = 'none';
+                        if (evt.target.id === 'main-content-viewport') {
+                            const hudContainer = document.querySelector('.gaming-hud-container');
+                            if (hudContainer) hudContainer.style.display = 'none';
                         }
                     });
 
