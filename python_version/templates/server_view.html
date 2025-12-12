@@ -2675,8 +2675,7 @@
         </button>
 
         <div class="sidebar-bottom">
-            <!-- Settings - Load via HTMX -->
-            <button type="button" class="sidebar-item" hx-get="/?view=settings&partial=true"
+            <button type="button" class="sidebar-item" hx-get="/" hx-vals='{"view": "settings", "partial": "true"}'
                 hx-target="#main-content-viewport" hx-swap="innerHTML" onclick="setActiveSidebar(this);"
                 title="{% trans 'Settings' %}">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
