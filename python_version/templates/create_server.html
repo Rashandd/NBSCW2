@@ -1,4 +1,4 @@
-{% extends 'base.html' %}
+{% extends 'base_app.html' %}
 {% load i18n %}
 
 {% block title %}{% trans "Create Server" %} - Rashigo{% endblock %}
@@ -8,7 +8,7 @@
 <style>
     body {
         background: #0F172A;
-        background-image: 
+        background-image:
             radial-gradient(circle at 20% 50%, rgba(56, 189, 248, 0.03) 0%, transparent 50%),
             radial-gradient(circle at 80% 80%, rgba(99, 102, 241, 0.03) 0%, transparent 50%) !important;
         background-size: 400% 400%;
@@ -16,19 +16,27 @@
         animation: gradientShift 20s ease infinite;
         min-height: 100vh;
     }
-    
+
     @keyframes gradientShift {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
+        0% {
+            background-position: 0% 50%;
+        }
+
+        50% {
+            background-position: 100% 50%;
+        }
+
+        100% {
+            background-position: 0% 50%;
+        }
     }
-    
+
     .create-server-container {
         max-width: 700px;
         margin: 2rem auto;
         padding: 2rem;
     }
-    
+
     .create-server-card {
         background: rgba(30, 41, 59, 0.8);
         backdrop-filter: blur(20px);
@@ -37,12 +45,12 @@
         border: 1px solid rgba(56, 189, 248, 0.2);
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     }
-    
+
     .create-server-header {
         text-align: center;
         margin-bottom: 2rem;
     }
-    
+
     .create-server-title {
         font-size: 2.5rem;
         font-weight: 700;
@@ -52,51 +60,53 @@
         background-clip: text;
         margin-bottom: 0.5rem;
     }
-    
+
     .create-server-subtitle {
         color: #90E0B0;
         font-size: 1.1rem;
     }
-    
+
     .form-label {
         color: #38BDF8;
         font-weight: 600;
         margin-bottom: 0.5rem;
     }
-    
-    .form-control, .form-select {
+
+    .form-control,
+    .form-select {
         background: rgba(15, 23, 42, 0.6);
         border: 1px solid rgba(56, 189, 248, 0.3);
         color: #38BDF8;
         padding: 0.75rem 1rem;
         border-radius: 10px;
     }
-    
-    .form-control:focus, .form-select:focus {
+
+    .form-control:focus,
+    .form-select:focus {
         background: rgba(15, 23, 42, 0.8);
         border-color: #38BDF8;
         color: #38BDF8;
         box-shadow: 0 0 0 0.2rem rgba(56, 189, 248, 0.25);
     }
-    
+
     .form-control::placeholder {
         color: #64748b;
     }
-    
+
     .form-check-input {
         background-color: rgba(15, 23, 42, 0.6);
         border-color: rgba(56, 189, 248, 0.3);
     }
-    
+
     .form-check-input:checked {
         background-color: #38BDF8;
         border-color: #38BDF8;
     }
-    
+
     .form-check-label {
         color: #E0E0E0;
     }
-    
+
     .info-box {
         background: rgba(56, 189, 248, 0.1);
         border-left: 4px solid #38BDF8;
@@ -104,13 +114,13 @@
         border-radius: 8px;
         margin-bottom: 1.5rem;
     }
-    
+
     .info-box p {
         margin: 0;
         color: #E0E0E0;
         font-size: 0.9rem;
     }
-    
+
     .btn-create {
         background: linear-gradient(135deg, #38BDF8 0%, #6366F1 100%);
         border: none;
@@ -121,13 +131,13 @@
         transition: all 0.3s ease;
         width: 100%;
     }
-    
+
     .btn-create:hover {
         transform: translateY(-2px);
         box-shadow: 0 8px 20px rgba(56, 189, 248, 0.5);
         color: white;
     }
-    
+
     .btn-cancel {
         background: rgba(56, 189, 248, 0.2);
         border: 2px solid #38BDF8;
@@ -141,13 +151,13 @@
         display: inline-block;
         text-align: center;
     }
-    
+
     .btn-cancel:hover {
         background: #38BDF8;
         color: white;
         transform: translateY(-2px);
     }
-    
+
     .icon-preview {
         font-size: 3rem;
         text-align: center;
@@ -174,7 +184,7 @@
                 {% trans "Build your community and connect with others" %}
             </p>
         </div>
-        
+
         {% if max_servers %}
         <div class="info-box">
             <p>
@@ -183,40 +193,38 @@
             </p>
         </div>
         {% endif %}
-        
+
         <form method="post">
             {% csrf_token %}
-            
+
             <div class="mb-4">
                 <label for="name" class="form-label">
                     <i class="fas fa-tag me-2"></i>{% trans "Server Name" %} <span class="text-danger">*</span>
                 </label>
-                <input type="text" class="form-control" id="name" name="name" 
-                       value="{{ name|default:'' }}" required 
-                       placeholder="{% trans 'Enter server name...' %}" maxlength="100">
+                <input type="text" class="form-control" id="name" name="name" value="{{ name|default:'' }}" required
+                    placeholder="{% trans 'Enter server name...' %}" maxlength="100">
                 <small class="form-text text-muted">
                     {% trans "Choose a unique name for your server" %}
                 </small>
             </div>
-            
+
             <div class="mb-4">
                 <label for="description" class="form-label">
                     <i class="fas fa-align-left me-2"></i>{% trans "Description" %}
                 </label>
-                <textarea class="form-control" id="description" name="description" rows="3" 
-                          placeholder="{% trans 'Describe your server...' %}">{{ description|default:'' }}</textarea>
+                <textarea class="form-control" id="description" name="description" rows="3"
+                    placeholder="{% trans 'Describe your server...' %}">{{ description|default:'' }}</textarea>
                 <small class="form-text text-muted">
                     {% trans "Optional: Add a description to help others understand your server" %}
                 </small>
             </div>
-            
+
             <div class="mb-4">
                 <label for="icon" class="form-label">
                     <i class="fas fa-image me-2"></i>{% trans "Icon (Emoji)" %}
                 </label>
-                <input type="text" class="form-control" id="icon" name="icon" 
-                       value="{{ icon|default:'' }}" 
-                       placeholder="🎮" maxlength="100">
+                <input type="text" class="form-control" id="icon" name="icon" value="{{ icon|default:'' }}"
+                    placeholder="🎮" maxlength="100">
                 <div class="icon-preview" id="iconPreview">
                     {{ icon|default:"🎮" }}
                 </div>
@@ -224,11 +232,11 @@
                     {% trans "Optional: Add an emoji or icon name for your server" %}
                 </small>
             </div>
-            
+
             <div class="mb-4">
                 <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="is_private" name="is_private" 
-                           {% if is_private %}checked{% endif %}>
+                    <input class="form-check-input" type="checkbox" id="is_private" name="is_private" {% if is_private
+                        %}checked{% endif %}>
                     <label class="form-check-label" for="is_private">
                         <i class="fas fa-lock me-2"></i>{% trans "Private Server" %}
                     </label>
@@ -237,7 +245,7 @@
                     {% trans "Private servers require an invite code to join" %}
                 </small>
             </div>
-            
+
             <div class="info-box">
                 <p>
                     <i class="fas fa-shield-alt me-2"></i>
@@ -250,7 +258,7 @@
                     {% trans "You will automatically be added as Admin when you create the server." %}
                 </p>
             </div>
-            
+
             <div class="d-flex gap-3 mt-4">
                 <a href="{% url 'index' %}" class="btn-cancel">
                     <i class="fas fa-times me-2"></i>{% trans "Cancel" %}
@@ -265,10 +273,9 @@
 
 <script>
     // Icon preview update
-    document.getElementById('icon').addEventListener('input', function(e) {
+    document.getElementById('icon').addEventListener('input', function (e) {
         const preview = document.getElementById('iconPreview');
         preview.textContent = e.target.value || '🎮';
     });
 </script>
 {% endblock %}
-
