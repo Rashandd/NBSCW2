@@ -10,8 +10,8 @@
         font-family: 'Inter', sans-serif !important;
         background: #0F172A;
         background-image: 
-            radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.03) 0%, transparent 50%),
-            radial-gradient(circle at 80% 80%, rgba(0, 255, 128, 0.03) 0%, transparent 50%) !important;
+            radial-gradient(circle at 20% 50%, rgba(56, 189, 248, 0.03) 0%, transparent 50%),
+            radial-gradient(circle at 80% 80%, rgba(99, 102, 241, 0.03) 0%, transparent 50%) !important;
         background-size: 400% 400%;
         animation: gradientShift 20s ease infinite;
         min-height: 100vh;
@@ -50,12 +50,12 @@
     }
     
     .settings-card {
-        background: rgba(10, 14, 39, 0.7);
+        background: rgba(30, 41, 59, 0.7);
         backdrop-filter: blur(20px);
         border-radius: 20px;
         padding: 2rem;
         margin-bottom: 2rem;
-        border: 1px solid rgba(0, 255, 255, 0.2);
+        border: 1px solid rgba(56, 189, 248, 0.2);
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
     }
     
@@ -87,7 +87,7 @@
     }
     
     .setting-item:hover {
-        background: rgba(0, 255, 255, 0.05);
+        background: rgba(56, 189, 248, 0.05);
         border-radius: 10px;
     }
     
@@ -115,8 +115,8 @@
     }
     
     .stat-card {
-        background: linear-gradient(135deg, rgba(0, 255, 255, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
-        border: 1px solid rgba(0, 255, 255, 0.3);
+        background: linear-gradient(135deg, rgba(56, 189, 248, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+        border: 1px solid rgba(56, 189, 248, 0.3);
         border-radius: 15px;
         padding: 1.5rem;
         text-align: center;
@@ -177,13 +177,13 @@
     
     .btn-primary-custom:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(0, 255, 255, 0.4);
+        box-shadow: 0 8px 20px rgba(56, 189, 248, 0.4);
         color: white;
     }
     
     .user-info-card {
-        background: linear-gradient(135deg, rgba(0, 255, 255, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
-        border: 1px solid rgba(0, 255, 255, 0.3);
+        background: linear-gradient(135deg, rgba(56, 189, 248, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+        border: 1px solid rgba(56, 189, 248, 0.3);
         border-radius: 15px;
         padding: 2rem;
         text-align: center;
@@ -202,7 +202,7 @@
         color: white;
         font-weight: 700;
         margin: 0 auto 1rem;
-        box-shadow: 0 8px 25px rgba(0, 255, 255, 0.4);
+        box-shadow: 0 8px 25px rgba(56, 189, 248, 0.4);
     }
     
     .user-name {
@@ -386,7 +386,7 @@
                 <p>{% trans "Select your preferred audio output device" %}</p>
             </div>
             <div class="setting-control">
-                <select id="audioOutputDevice" class="form-control" style="width: 300px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(0, 255, 255, 0.3); color: #38BDF8; padding: 0.5rem; border-radius: 8px;">
+                <select id="audioOutputDevice" class="form-control" style="width: 300px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.3); color: #38BDF8; padding: 0.5rem; border-radius: 8px;">
                     <option value="">{% trans "Default Device" %}</option>
                 </select>
                 <button type="button" class="btn btn-sm btn-secondary ms-2" onclick="loadAudioDevices()">
@@ -401,7 +401,7 @@
                 <p>{% trans "Select your preferred microphone input device" %}</p>
             </div>
             <div class="setting-control">
-                <select id="audioInputDevice" class="form-control" style="width: 300px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(0, 255, 255, 0.3); color: #38BDF8; padding: 0.5rem; border-radius: 8px;">
+                <select id="audioInputDevice" class="form-control" style="width: 300px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.3); color: #38BDF8; padding: 0.5rem; border-radius: 8px;">
                     <option value="">{% trans "Default Device" %}</option>
                 </select>
                 <button type="button" class="btn btn-sm btn-secondary ms-2" onclick="loadAudioDevices()">
@@ -416,7 +416,7 @@
                 <p>{% trans "Select your preferred camera input device" %}</p>
             </div>
             <div class="setting-control">
-                <select id="videoInputDevice" class="form-control" style="width: 300px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(0, 255, 255, 0.3); color: #38BDF8; padding: 0.5rem; border-radius: 8px;">
+                <select id="videoInputDevice" class="form-control" style="width: 300px; background: rgba(15, 23, 42, 0.6); border: 1px solid rgba(56, 189, 248, 0.3); color: #38BDF8; padding: 0.5rem; border-radius: 8px;">
                     <option value="">{% trans "Default Device" %}</option>
                 </select>
                 <button type="button" class="btn btn-sm btn-secondary ms-2" onclick="loadVideoDevices()">
