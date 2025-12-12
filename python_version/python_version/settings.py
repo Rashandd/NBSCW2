@@ -68,6 +68,9 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# Allow same-origin framing for HTMX and embedded content
+X_FRAME_OPTIONS = 'SAMEORIGIN'
+
 ROOT_URLCONF = 'python_version.urls'
 
 TEMPLATES = [
