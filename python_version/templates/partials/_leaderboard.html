@@ -1,0 +1,171 @@
+{% load i18n %}
+
+<!-- Leaderboard Partial (Loaded via HTMX into viewport) -->
+<div class="leaderboard-viewport-container">
+    <div class="viewport-header">
+        <h2><i class="fas fa-trophy"></i> {% trans "Leaderboard" %}</h2>
+        <p class="viewport-subtitle">{% trans "Top players ranked by performance" %}</p>
+    </div>
+
+    <div class="leaderboard-table-container">
+        <table class="leaderboard-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>{% trans "Player" %}</th>
+                    <th><i class="fas fa-star"></i> {% trans "Rank" %}</th>
+                    <th><i class="fas fa-trophy"></i> {% trans "Wins" %}</th>
+                    <th><i class="fas fa-percent"></i> {% trans "Rate" %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for player in top_players %}
+                <tr class="{% if player == current_user %}current-user{% endif %}">
+                    <td class="rank-position">{{ forloop.counter }}</td>
+                    <td class="player-name">
+                        <div class="player-avatar">{{ player.username|first|upper }}</div>
+                        {{ player.username }}
+                    </td>
+                    <td class="rank-points">{{ player.rank_point|default:0 }}</td>
+                    <td>{{ player.total_wins|default:0 }}</td>
+                    <td>{{ player.win_rate|floatformat:1 }}%</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="5" class="empty-row">{% trans "No players yet" %}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if user_rank %}
+    <div class="user-rank-card">
+        <span class="rank-label">{% trans "Your Rank" %}</span>
+        <span class="rank-value">#{{ user_rank }}</span>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .leaderboard-viewport-container {
+        padding: 2rem;
+        height: 100%;
+        overflow-y: auto;
+    }
+
+    .viewport-header {
+        margin-bottom: 2rem;
+    }
+
+    .viewport-header h2 {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.75rem;
+        color: var(--dark-text, #F9FAFB);
+        margin-bottom: 0.5rem;
+    }
+
+    .viewport-header h2 i {
+        color: var(--warning, #F59E0B);
+        margin-right: 0.5rem;
+    }
+
+    .viewport-subtitle {
+        color: var(--dark-text-secondary, #D1D5DB);
+        font-size: 1rem;
+    }
+
+    .leaderboard-table-container {
+        background: var(--dark-surface, #27272A);
+        border: 1px solid var(--dark-border, #3F3F46);
+        border-radius: 16px;
+        overflow: hidden;
+    }
+
+    .leaderboard-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .leaderboard-table th,
+    .leaderboard-table td {
+        padding: 1rem;
+        text-align: left;
+    }
+
+    .leaderboard-table th {
+        background: rgba(99, 102, 241, 0.1);
+        color: var(--dark-text-secondary, #D1D5DB);
+        font-size: 0.875rem;
+        font-weight: 600;
+    }
+
+    .leaderboard-table td {
+        border-bottom: 1px solid var(--dark-border, #3F3F46);
+    }
+
+    .leaderboard-table tbody tr:hover {
+        background: rgba(99, 102, 241, 0.05);
+    }
+
+    .leaderboard-table tbody tr.current-user {
+        background: rgba(99, 102, 241, 0.15);
+    }
+
+    .rank-position {
+        font-weight: 700;
+        color: var(--primary, #6366F1);
+    }
+
+    .player-name {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        color: var(--dark-text, #F9FAFB);
+    }
+
+    .player-avatar {
+        width: 32px;
+        height: 32px;
+        background: linear-gradient(135deg, var(--primary, #6366F1), var(--secondary, #EC4899));
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        color: white;
+        font-size: 0.875rem;
+    }
+
+    .rank-points {
+        color: var(--warning, #F59E0B);
+        font-weight: 600;
+    }
+
+    .user-rank-card {
+        margin-top: 1.5rem;
+        padding: 1rem 1.5rem;
+        background: linear-gradient(135deg, var(--primary, #6366F1), var(--secondary, #EC4899));
+        border-radius: 12px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .rank-label {
+        color: white;
+        font-weight: 500;
+    }
+
+    .rank-value {
+        color: white;
+        font-size: 1.5rem;
+        font-weight: 700;
+    }
+
+    .empty-row {
+        text-align: center;
+        color: var(--dark-text-secondary, #D1D5DB);
+        padding: 2rem !important;
+    }
+</style>

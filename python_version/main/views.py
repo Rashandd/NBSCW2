@@ -839,6 +839,10 @@ def all_games_lobby(request):
         'max_players_filter': max_players_filter,
         'sort_by': sort_by,
     }
+    
+    # HTMX Support: Return partial template for dynamic content loading
+    if request.GET.get('partial') == 'true' or request.headers.get('HX-Request'):
+        return render(request, 'partials/_minigames.html', context)
     return render(request, 'minigames.html', context)
 
 
@@ -1121,6 +1125,10 @@ def leaderboard(request):
         'order': order,
         'game_type': None,  # Global leaderboard
     }
+    
+    # HTMX Support: Return partial template for dynamic content loading
+    if request.GET.get('partial') == 'true' or request.headers.get('HX-Request'):
+        return render(request, 'partials/_leaderboard.html', context)
     return render(request, 'leaderboard.html', context)
 
 

@@ -1,0 +1,162 @@
+{% load i18n %}
+{% load static %}
+
+<!-- Minigames Partial (Loaded via HTMX into viewport) -->
+<div class="games-viewport-container">
+    <div class="viewport-header">
+        <h2><i class="fas fa-gamepad"></i> {% trans "Game Center" %}</h2>
+        <p class="viewport-subtitle">{% trans "Select a game to play" %}</p>
+    </div>
+
+    <div class="games-grid">
+        {% for game in minigames_list %}
+        <div class="game-card-viewport">
+            <div class="game-icon">
+                <i class="fas fa-dice-d20"></i>
+            </div>
+            <h3 class="game-title">{{ game.name }}</h3>
+            <p class="game-desc">{{ game.description|default:_("No description")|truncatewords:15 }}</p>
+            <div class="game-meta">
+                <span class="player-count">
+                    <i class="fas fa-users"></i> {{ game.min_players }}-{{ game.max_players }}
+                </span>
+            </div>
+            <a href="{% url 'game_specific_lobby' game.slug %}" class="btn-game-play">
+                {% trans "Play" %} <i class="fas fa-arrow-right"></i>
+            </a>
+        </div>
+        {% empty %}
+        <div class="empty-games">
+            <i class="fas fa-gamepad"></i>
+            <p>{% trans "No games available" %}</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+    .games-viewport-container {
+        padding: 2rem;
+        height: 100%;
+        overflow-y: auto;
+    }
+
+    .viewport-header {
+        margin-bottom: 2rem;
+    }
+
+    .viewport-header h2 {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.75rem;
+        color: var(--dark-text, #F9FAFB);
+        margin-bottom: 0.5rem;
+    }
+
+    .viewport-header h2 i {
+        color: var(--primary, #6366F1);
+        margin-right: 0.5rem;
+    }
+
+    .viewport-subtitle {
+        color: var(--dark-text-secondary, #D1D5DB);
+        font-size: 1rem;
+    }
+
+    .games-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .game-card-viewport {
+        background: var(--dark-surface, #27272A);
+        border: 1px solid var(--dark-border, #3F3F46);
+        border-radius: 16px;
+        padding: 1.5rem;
+        transition: all 0.2s ease;
+    }
+
+    .game-card-viewport:hover {
+        transform: translateY(-4px);
+        border-color: var(--primary, #6366F1);
+        box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    }
+
+    .game-card-viewport .game-icon {
+        width: 56px;
+        height: 56px;
+        background: linear-gradient(135deg, var(--primary, #6366F1), var(--secondary, #EC4899));
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: white;
+        margin-bottom: 1rem;
+    }
+
+    .game-card-viewport .game-title {
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.25rem;
+        color: var(--dark-text, #F9FAFB);
+        margin-bottom: 0.5rem;
+    }
+
+    .game-card-viewport .game-desc {
+        color: var(--dark-text-secondary, #D1D5DB);
+        font-size: 0.9rem;
+        margin-bottom: 1rem;
+        line-height: 1.5;
+    }
+
+    .game-card-viewport .game-meta {
+        margin-bottom: 1rem;
+    }
+
+    .game-card-viewport .player-count {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+        padding: 0.25rem 0.75rem;
+        background: rgba(99, 102, 241, 0.1);
+        color: var(--primary, #6366F1);
+        border-radius: 8px;
+        font-size: 0.8rem;
+        font-weight: 600;
+    }
+
+    .btn-game-play {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        width: 100%;
+        padding: 0.75rem;
+        background: var(--primary, #6366F1);
+        color: white;
+        border: none;
+        border-radius: 10px;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .btn-game-play:hover {
+        background: var(--primary-hover, #4F46E5);
+        color: white;
+        transform: translateY(-1px);
+    }
+
+    .empty-games {
+        grid-column: 1 / -1;
+        text-align: center;
+        padding: 3rem;
+        color: var(--dark-text-secondary, #D1D5DB);
+    }
+
+    .empty-games i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        opacity: 0.5;
+    }
+</style>
