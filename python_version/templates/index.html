@@ -4,241 +4,221 @@
 {% block extra_css %}
 {{ block.super }}
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
-    
-    body {
-        font-family: 'Inter', sans-serif !important;
-        background: #0A0E27 !important;
-        background-image: 
-            radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.03) 0%, transparent 50%),
-            radial-gradient(circle at 80% 80%, rgba(0, 255, 128, 0.03) 0%, transparent 50%) !important;
-        min-height: 100vh;
-    }
-    
-    @keyframes gradientShift {
-        0% { background-position: 0% 50%; }
-        50% { background-position: 100% 50%; }
-        100% { background-position: 0% 50%; }
-    }
-    
+    /* Warm Home Page Design */
     .main-container {
         max-width: 1400px;
         margin: 0 auto;
         padding: 2rem 1rem;
     }
-    
+
     .hero-section {
         text-align: center;
-        padding: 3rem 0;
-        margin-bottom: 3rem;
+        padding: 2.5rem 0;
+        margin-bottom: 2.5rem;
     }
-    
+
     .hero-title {
-        font-size: 3.5rem;
-        font-weight: 900;
-        color: #00FFFF;
-        text-shadow: 0 0 20px rgba(0, 255, 255, 0.6), 0 4px 20px rgba(0,0,0,0.5);
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 3rem;
+        font-weight: 700;
+        color: var(--primary);
         margin-bottom: 1rem;
-        letter-spacing: -0.02em;
-        text-transform: uppercase;
+        letter-spacing: -1px;
     }
-    
+
     .hero-subtitle {
-        font-size: 1.25rem;
-        color: #90E0B0;
-        font-weight: 400;
+        font-size: 1.125rem;
+        color: var(--dark-text-secondary);
+        font-weight: 500;
         margin-bottom: 2rem;
     }
-    
+
+    /* Server Cards - Unique & Playful */
     .server-card {
-        background: rgba(10, 14, 39, 0.7);
-        backdrop-filter: blur(10px);
+        background: var(--dark-surface);
+        border: 1px solid var(--dark-border);
         border-radius: 20px;
-        padding: 2rem;
+        padding: 1.75rem;
         height: 100%;
-        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        border: 1px solid rgba(0, 255, 255, 0.2);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        transition: all 0.3s ease;
         position: relative;
         overflow: hidden;
+        display: flex;
+        flex-direction: column;
     }
-    
+
     .server-card::before {
         content: '';
         position: absolute;
         top: 0;
         left: 0;
         right: 0;
-        height: 4px;
-        background: linear-gradient(90deg, #00FFFF, #00FF80, #00FFFF, #00FF80);
-        background-size: 200% 100%;
-        animation: shimmer 3s ease infinite;
+        height: 3px;
+        background: linear-gradient(90deg, var(--primary), var(--secondary));
+        opacity: 0;
+        transition: opacity 0.3s ease;
     }
-    
-    @keyframes shimmer {
-        0% { background-position: -200% 0; }
-        100% { background-position: 200% 0; }
+
+    .server-card:hover::before {
+        opacity: 1;
     }
-    
+
     .server-card:hover {
-        transform: translateY(-10px) scale(1.02);
-        box-shadow: 0 20px 60px rgba(0, 255, 255, 0.4);
-        border-color: rgba(0, 255, 255, 0.5);
-        background: rgba(10, 14, 39, 0.9);
+        transform: translateY(-4px);
+        box-shadow: 0 12px 24px -4px rgba(0, 0, 0, 0.15);
+        border-color: var(--primary);
     }
-    
+
     .server-icon {
-        width: 70px;
-        height: 70px;
-        border-radius: 18px;
-        background: linear-gradient(135deg, #00FFFF 0%, #00FF80 100%);
+        width: 64px;
+        height: 64px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, var(--primary), var(--secondary));
         display: flex;
         align-items: center;
         justify-content: center;
         font-size: 2rem;
-        margin-bottom: 1.5rem;
-        box-shadow: 0 4px 15px rgba(0, 255, 255, 0.4);
+        margin-bottom: 1.25rem;
         transition: transform 0.3s ease;
     }
-    
+
     .server-card:hover .server-icon {
-        transform: rotate(5deg) scale(1.1);
+        transform: scale(1.05) rotate(-3deg);
     }
-    
+
     .server-name {
-        font-size: 1.5rem;
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.375rem;
         font-weight: 700;
-        color: #00FFFF;
+        color: var(--dark-text);
         margin-bottom: 0.75rem;
-        text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
     }
-    
+
     .server-description {
-        color: #90E0B0;
-        font-size: 0.95rem;
+        color: var(--dark-text-secondary);
+        font-size: 0.9375rem;
         line-height: 1.6;
-        margin-bottom: 1.5rem;
+        margin-bottom: 1.25rem;
         min-height: 3em;
+        flex-grow: 1;
     }
-    
+
     .server-stats {
         display: flex;
-        gap: 1rem;
-        margin-bottom: 1.5rem;
+        gap: 0.5rem;
+        margin-bottom: 1.25rem;
         flex-wrap: wrap;
     }
-    
+
     .stat-badge {
         display: inline-flex;
         align-items: center;
-        gap: 0.5rem;
-        padding: 0.5rem 1rem;
-        border-radius: 25px;
-        font-size: 0.875rem;
+        gap: 0.375rem;
+        padding: 0.375rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.8125rem;
         font-weight: 600;
-        transition: all 0.3s ease;
-        color: white;
+        transition: all 0.2s ease;
     }
-    
+
     .stat-badge.members {
-        background: linear-gradient(135deg, #00FFFF 0%, #00FF80 100%);
+        background: rgba(99, 102, 241, 0.1);
+        color: var(--primary);
     }
-    
+
     .stat-badge.channels {
-        background: linear-gradient(135deg, #8B00FF 0%, #FF0064 100%);
+        background: rgba(236, 72, 153, 0.1);
+        color: var(--secondary);
     }
-    
+
     .stat-badge.voice {
-        background: linear-gradient(135deg, #00FF80 0%, #00FFFF 100%);
+        background: rgba(139, 92, 246, 0.1);
+        color: var(--voice-active);
     }
-    
+
     .stat-badge:hover {
         transform: scale(1.05);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
     }
-    
+
     .server-actions {
         display: flex;
         gap: 0.75rem;
         margin-top: auto;
     }
-    
+
     .btn-primary-custom {
-        background: linear-gradient(135deg, #00FFFF 0%, #00FF80 100%);
-        border: 1px solid rgba(0, 255, 255, 0.3);
-        color: #0A0E27;
-        padding: 0.75rem 1.5rem;
+        background: var(--primary);
+        border: none;
+        color: white;
+        padding: 0.75rem 1.25rem;
         border-radius: 12px;
         font-weight: 600;
-        transition: all 0.3s ease;
+        transition: all 0.2s ease;
         flex: 1;
         text-decoration: none;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         gap: 0.5rem;
-        box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
     }
-    
+
     .btn-primary-custom:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(0, 255, 255, 0.5);
-        color: #0A0E27;
+        background: var(--primary-hover);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+        color: white;
     }
-    
+
     .btn-secondary-custom {
-        background: rgba(0, 255, 255, 0.1);
-        border: 1px solid rgba(0, 255, 255, 0.3);
-        color: #00FFFF;
-        padding: 0.75rem 1.5rem;
+        background: rgba(236, 72, 153, 0.1);
+        border: 1px solid var(--secondary);
+        color: var(--secondary);
+        padding: 0.75rem 1.25rem;
         border-radius: 12px;
         font-weight: 600;
-        transition: all 0.3s ease;
+        transition: all 0.2s ease;
         text-decoration: none;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
     }
-    
+
     .btn-secondary-custom:hover {
-        background: rgba(0, 255, 255, 0.2);
-        color: #00FFFF;
-        transform: translateY(-2px);
-        box-shadow: 0 0 15px rgba(0, 255, 255, 0.4);
+        background: var(--secondary);
+        color: white;
+        transform: translateY(-1px);
     }
-    
+
     .empty-state {
-        background: rgba(10, 14, 39, 0.7);
-        backdrop-filter: blur(10px);
+        background: var(--dark-surface);
+        border: 2px dashed var(--dark-border);
         border-radius: 20px;
         padding: 4rem 2rem;
         text-align: center;
-        border: 2px dashed rgba(0, 255, 255, 0.3);
     }
-    
+
     .empty-state-icon {
-        font-size: 5rem;
-        color: #00FFFF;
-        filter: drop-shadow(0 0 20px rgba(0, 255, 255, 0.5));
+        font-size: 4rem;
+        color: var(--primary);
         margin-bottom: 1.5rem;
+        opacity: 0.8;
     }
-    
+
     .empty-state-title {
-        font-size: 2rem;
+        font-family: 'Space Grotesk', sans-serif;
+        font-size: 1.75rem;
         font-weight: 700;
-        color: #00FFFF;
-        text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+        color: var(--dark-text);
         margin-bottom: 1rem;
-        text-transform: uppercase;
     }
-    
+
     .empty-state-text {
-        color: #90E0B0;
-        font-size: 1.1rem;
+        color: var(--dark-text-secondary);
+        font-size: 1.0625rem;
         margin-bottom: 2rem;
     }
-    
+
     .action-buttons {
         display: flex;
         gap: 1rem;
@@ -246,57 +226,56 @@
         margin-top: 2rem;
         flex-wrap: wrap;
     }
-    
+
     .header-actions {
         display: flex;
-        gap: 1rem;
+        gap: 0.75rem;
         justify-content: flex-end;
         margin-bottom: 2rem;
         flex-wrap: wrap;
     }
-    
+
     .owner-badge {
-        background: linear-gradient(135deg, #FFA500 0%, #FF8C00 100%);
-        color: #0A0E27;
-        padding: 0.35rem 0.75rem;
-        border-radius: 20px;
+        background: var(--warning);
+        color: white;
+        padding: 0.375rem 0.75rem;
+        border-radius: 12px;
         font-size: 0.75rem;
         font-weight: 700;
         display: inline-flex;
         align-items: center;
-        gap: 0.35rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        box-shadow: 0 0 10px rgba(255, 165, 0, 0.4);
+        gap: 0.375rem;
     }
-    
-    .modal-content {
-        background-color: var(--bg-secondary);
-        border-color: var(--border-color);
-        color: var(--text-primary);
+
+    /* Section Headers */
+    h2 {
+        font-family: 'Space Grotesk', sans-serif;
+        color: var(--dark-text);
+        font-size: 1.5rem;
+        font-weight: 700;
+        margin-bottom: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
     }
-    
-    .modal-header {
-        border-color: var(--border-color);
+
+    h2 i {
+        color: var(--primary);
     }
-    
-    .modal-footer {
-        border-color: var(--border-color);
-    }
-    
+
     @media (max-width: 768px) {
         .hero-title {
-            font-size: 2.5rem;
+            font-size: 2.25rem;
         }
-        
+
         .hero-subtitle {
             font-size: 1rem;
         }
-        
+
         .server-card {
             padding: 1.5rem;
         }
-        
+
         .main-container {
             padding: 1rem;
         }
@@ -307,171 +286,173 @@
 {% block content %}
 <div class="main-container">
     {% if user.is_authenticated %}
-        <!-- Hero Section -->
-        <div class="hero-section">
-            <h1 class="hero-title">🎮 Rashigo</h1>
-            <p class="hero-subtitle">{% trans "Your servers, your community, your way" %}</p>
-            
-            <div class="header-actions">
-                <button class="btn btn-secondary-custom" data-bs-toggle="modal" data-bs-target="#joinServerModal">
-                    <i class="fas fa-key"></i> {% trans "Join Private Server" %}
-                </button>
-                <button class="btn btn-secondary-custom" onclick="alert('Filter coming soon!')">
-                    <i class="fas fa-filter"></i> {% trans "Filter" %}
-                </button>
-                <a href="{% url 'create_server' %}" class="btn btn-primary-custom">
-                    <i class="fas fa-plus"></i> {% trans "Create Server" %}
-                </a>
-    </div>
-</div>
+    <!-- Hero Section -->
+    <div class="hero-section">
+        <h1 class="hero-title">Rashigo</h1>
+        <p class="hero-subtitle">{% trans "Your servers, your community, your way" %}</p>
 
-        <!-- My Servers Section -->
-        {% if my_servers %}
-            <h2 style="color: #00FFFF; font-size: 1.75rem; font-weight: 700; margin-bottom: 1.5rem; text-shadow: 0 0 10px rgba(0, 255, 255, 0.5); text-transform: uppercase;">
-                <i class="fas fa-home me-2"></i>{% trans "My Servers" %}
-            </h2>
-            <div class="row g-4 mb-5">
-                {% for server in my_servers %}
-                <div class="col-md-6 col-lg-4">
-                    <div class="server-card">
-                        <div class="server-icon">
-                            {{ server.icon|default:"🎮" }}
-                        </div>
-                        
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <h3 class="server-name">{{ server.name }}</h3>
-                            {% if server.owner == user %}
-                            <span class="owner-badge">
-                                <i class="fas fa-crown"></i> {% trans "Owner" %}
-                            </span>
-                            {% endif %}
-                        </div>
-                        
-                        <p class="server-description">
-                            {{ server.description|default:"Join this amazing server and connect with friends!"|truncatewords:20 }}
-                        </p>
-                        
-                        <div class="server-stats">
-                            <span class="stat-badge members">
-                                <i class="fas fa-users"></i>
-                                {{ server.members.count }} {% trans "members" %}
-                            </span>
-                            <span class="stat-badge channels">
-                                <i class="fas fa-hashtag"></i>
-                                {{ server.text_channels.count }} {% trans "text" %}
-                            </span>
-                            <span class="stat-badge voice">
-                                <i class="fas fa-volume-up"></i>
-                                {{ server.voice_channels.count }} {% trans "voice" %}
-                            </span>
-                        </div>
-                        
-                        <div class="server-actions">
-                            <a href="{% url 'server_view' slug=server.slug %}" class="btn btn-primary-custom">
-                                {% trans "Open" %} <i class="fas fa-arrow-right"></i>
-                            </a>
-                        </div>
-                    </div>
+        <div class="header-actions">
+            <button class="btn btn-secondary-custom" data-bs-toggle="modal" data-bs-target="#joinServerModal">
+                <i class="fas fa-key"></i> {% trans "Join Private Server" %}
+            </button>
+            <button class="btn btn-secondary-custom" onclick="alert('Filter coming soon!')">
+                <i class="fas fa-filter"></i> {% trans "Filter" %}
+            </button>
+            <a href="{% url 'create_server' %}" class="btn btn-primary-custom">
+                <i class="fas fa-plus"></i> {% trans "Create Server" %}
+            </a>
+        </div>
+    </div>
+
+    <!-- My Servers Section -->
+    {% if my_servers %}
+    <h2>
+        <i class="fas fa-home"></i>{% trans "My Servers" %}
+    </h2>
+    <div class="row g-4 mb-5">
+        {% for server in my_servers %}
+        <div class="col-md-6 col-lg-4">
+            <div class="server-card">
+                <div class="server-icon">
+                    {{ server.icon|default:"🎮" }}
                 </div>
-                {% endfor %}
-            </div>
-        {% endif %}
-        
-        <!-- Public Servers Section -->
-        {% if public_servers %}
-            <h2 style="color: #00FFFF; font-size: 1.75rem; font-weight: 700; margin-bottom: 1.5rem; text-shadow: 0 0 10px rgba(0, 255, 255, 0.5); text-transform: uppercase;">
-                <i class="fas fa-globe me-2"></i>{% trans "Discover Public Servers" %}
-            </h2>
-            <div class="row g-4">
-                {% for server in public_servers %}
-                <div class="col-md-6 col-lg-4">
-                    <div class="server-card">
-                        <div class="server-icon">
-                            {{ server.icon|default:"🌐" }}
-                        </div>
-                        
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <h3 class="server-name">{{ server.name }}</h3>
-                            <span class="badge bg-success">
-                                <i class="fas fa-globe"></i> {% trans "Public" %}
-                            </span>
-                        </div>
-                        
-                        <p class="server-description">
-                            {{ server.description|default:"Join this amazing server and connect with friends!"|truncatewords:20 }}
-                        </p>
-                        
-                        <div class="server-stats">
-                            <span class="stat-badge members">
-                                <i class="fas fa-users"></i>
-                                {{ server.members.count }} {% trans "members" %}
-                            </span>
-                            <span class="stat-badge channels">
-                                <i class="fas fa-hashtag"></i>
-                                {{ server.text_channels.count }} {% trans "text" %}
-                            </span>
-                            <span class="stat-badge voice">
-                                <i class="fas fa-volume-up"></i>
-                                {{ server.voice_channels.count }} {% trans "voice" %}
-                            </span>
-                        </div>
-                        
-                        <div class="server-actions">
-                            <form method="post" action="{% url 'join_server' %}" style="width: 100%;">
-                                {% csrf_token %}
-                                <input type="hidden" name="invite_code" value="{{ server.slug }}">
-                                <button type="submit" class="btn btn-primary-custom" style="width: 100%;">
-                                    <i class="fas fa-sign-in-alt"></i> {% trans "Join Server" %}
-                                </button>
-                            </form>
-                        </div>
-                    </div>
+
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h3 class="server-name">{{ server.name }}</h3>
+                    {% if server.owner == user %}
+                    <span class="owner-badge">
+                        <i class="fas fa-crown"></i> {% trans "Owner" %}
+                    </span>
+                    {% endif %}
                 </div>
-                {% endfor %}
-            </div>
-        {% endif %}
-        
-        {% if not my_servers and not public_servers %}
-            <!-- Empty State -->
-            <div class="empty-state">
-                <div class="empty-state-icon">
-                    <i class="fas fa-server"></i>
-                </div>
-                <h2 class="empty-state-title">{% trans "No Servers Yet" %}</h2>
-                <p class="empty-state-text">
-                    {% trans "Create your first server to start building your community!" %}
+
+                <p class="server-description">
+                    {{ server.description|default:"Join this amazing server and connect with friends!"|truncatewords:20
+                    }}
                 </p>
-                <div class="action-buttons">
-                    <button class="btn btn-secondary-custom" data-bs-toggle="modal" data-bs-target="#joinServerModal">
-                        <i class="fas fa-key"></i> {% trans "Join Private Server" %}
-                    </button>
-                    <a href="{% url 'create_server' %}" class="btn btn-primary-custom">
-                        <i class="fas fa-plus"></i> {% trans "Create Your First Server" %}
+
+                <div class="server-stats">
+                    <span class="stat-badge members">
+                        <i class="fas fa-users"></i>
+                        {{ server.members.count }} {% trans "members" %}
+                    </span>
+                    <span class="stat-badge channels">
+                        <i class="fas fa-hashtag"></i>
+                        {{ server.text_channels.count }} {% trans "text" %}
+                    </span>
+                    <span class="stat-badge voice">
+                        <i class="fas fa-volume-up"></i>
+                        {{ server.voice_channels.count }} {% trans "voice" %}
+                    </span>
+                </div>
+
+                <div class="server-actions">
+                    <a href="{% url 'server_view' slug=server.slug %}" class="btn btn-primary-custom">
+                        {% trans "Open" %} <i class="fas fa-arrow-right"></i>
                     </a>
                 </div>
             </div>
-        {% endif %}
-                {% else %}
-        <!-- Not Logged In -->
-        <div class="hero-section">
-            <h1 class="hero-title">🎮 Rashigo</h1>
-            <p class="hero-subtitle">{% trans "Connect, chat, and collaborate with your community" %}</p>
         </div>
-        
-        <div class="empty-state">
-            <div class="empty-state-icon">
-                <i class="fas fa-lock"></i>
-            </div>
-            <h2 class="empty-state-title">{% trans "Welcome to Rashigo" %}</h2>
-            <p class="empty-state-text">
-                {% trans "Please log in to access servers and start connecting with others!" %}
-            </p>
-            <div class="action-buttons">
-                <a href="{% url 'login' %}" class="btn btn-primary-custom">
-                    <i class="fas fa-sign-in-alt"></i> {% trans "Log In" %}
-                </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Public Servers Section -->
+    {% if public_servers %}
+    <h2>
+        <i class="fas fa-globe"></i>{% trans "Discover Public Servers" %}
+    </h2>
+    <div class="row g-4">
+        {% for server in public_servers %}
+        <div class="col-md-6 col-lg-4">
+            <div class="server-card">
+                <div class="server-icon">
+                    {{ server.icon|default:"🌐" }}
+                </div>
+
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h3 class="server-name">{{ server.name }}</h3>
+                    <span class="badge bg-success">
+                        <i class="fas fa-globe"></i> {% trans "Public" %}
+                    </span>
+                </div>
+
+                <p class="server-description">
+                    {{ server.description|default:"Join this amazing server and connect with friends!"|truncatewords:20
+                    }}
+                </p>
+
+                <div class="server-stats">
+                    <span class="stat-badge members">
+                        <i class="fas fa-users"></i>
+                        {{ server.members.count }} {% trans "members" %}
+                    </span>
+                    <span class="stat-badge channels">
+                        <i class="fas fa-hashtag"></i>
+                        {{ server.text_channels.count }} {% trans "text" %}
+                    </span>
+                    <span class="stat-badge voice">
+                        <i class="fas fa-volume-up"></i>
+                        {{ server.voice_channels.count }} {% trans "voice" %}
+                    </span>
+                </div>
+
+                <div class="server-actions">
+                    <form method="post" action="{% url 'join_server' %}" style="width: 100%;">
+                        {% csrf_token %}
+                        <input type="hidden" name="invite_code" value="{{ server.slug }}">
+                        <button type="submit" class="btn btn-primary-custom" style="width: 100%;">
+                            <i class="fas fa-sign-in-alt"></i> {% trans "Join Server" %}
+                        </button>
+                    </form>
+                </div>
             </div>
         </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if not my_servers and not public_servers %}
+    <!-- Empty State -->
+    <div class="empty-state">
+        <div class="empty-state-icon">
+            <i class="fas fa-server"></i>
+        </div>
+        <h2 class="empty-state-title">{% trans "No Servers Yet" %}</h2>
+        <p class="empty-state-text">
+            {% trans "Create your first server to start building your community!" %}
+        </p>
+        <div class="action-buttons">
+            <button class="btn btn-secondary-custom" data-bs-toggle="modal" data-bs-target="#joinServerModal">
+                <i class="fas fa-key"></i> {% trans "Join Private Server" %}
+            </button>
+            <a href="{% url 'create_server' %}" class="btn btn-primary-custom">
+                <i class="fas fa-plus"></i> {% trans "Create Your First Server" %}
+            </a>
+        </div>
+    </div>
+    {% endif %}
+    {% else %}
+    <!-- Not Logged In -->
+    <div class="hero-section">
+        <h1 class="hero-title">Rashigo</h1>
+        <p class="hero-subtitle">{% trans "Connect, chat, and collaborate with your community" %}</p>
+    </div>
+
+    <div class="empty-state">
+        <div class="empty-state-icon">
+            <i class="fas fa-lock"></i>
+        </div>
+        <h2 class="empty-state-title">{% trans "Welcome to Rashigo" %}</h2>
+        <p class="empty-state-text">
+            {% trans "Please log in to access servers and start connecting with others!" %}
+        </p>
+        <div class="action-buttons">
+            <a href="{% url 'login' %}" class="btn btn-primary-custom">
+                <i class="fas fa-sign-in-alt"></i> {% trans "Log In" %}
+            </a>
+        </div>
+    </div>
     {% endif %}
 </div>
 
@@ -484,7 +465,8 @@
                 <h5 class="modal-title" id="joinServerModalLabel">
                     <i class="fas fa-key me-2"></i>{% trans "Join Private Server" %}
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
             </div>
             <form method="post" action="{% url 'join_server' %}">
                 {% csrf_token %}
@@ -494,21 +476,22 @@
                     </p>
                     <div class="mb-3">
                         <label for="inviteCode" class="form-label">{% trans "Invite Code" %}</label>
-                        <input type="text" class="form-control" id="inviteCode" name="invite_code" 
-                               placeholder="{% trans 'Enter server invite code...' %}" required>
+                        <input type="text" class="form-control" id="inviteCode" name="invite_code"
+                            placeholder="{% trans 'Enter server invite code...' %}" required>
                         <small class="form-text text-muted">
                             {% trans "The invite code is usually the server's slug name." %}
                         </small>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel"
+                        %}</button>
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-sign-in-alt me-2"></i>{% trans "Join Server" %}
                     </button>
                 </div>
             </form>
-    </div>
+        </div>
     </div>
 </div>
 {% endif %}

@@ -1,292 +1,322 @@
 {% load i18n %}
 <!DOCTYPE html>
 <html lang="{{ LANGUAGE_CODE|default:'en' }}" data-theme="dark">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>{% block title %}{% trans "Django Project" %}{% endblock %}</title>
+    <title>{% block title %}Rashigo{% endblock %}</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link
+        href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap"
+        rel="stylesheet">
 
     {% block extra_css %}
     <style>
         /* ============================================
-           CYBERPUNK GAMING THEME - GLOBAL STYLES
+           RASHIGO - WARM SOCIAL HUB DESIGN
            ============================================ */
-        
+
         :root {
-            /* Cyberpunk Color Palette */
-            --cyber-bg-primary: #0A0E27;
-            --cyber-bg-secondary: rgba(10, 14, 39, 0.7);
-            --cyber-bg-tertiary: rgba(10, 14, 39, 0.6);
-            --cyber-text-primary: #E0E0E0;
-            --cyber-text-secondary: #B0B0B0;
-            --cyber-text-muted: #6B7280;
-            --cyber-accent-cyan: #00FFFF;
-            --cyber-accent-green: #00FF80;
-            --cyber-accent-pink: #FF0064;
-            --cyber-accent-orange: #FFA500;
-            --cyber-border: rgba(0, 255, 255, 0.2);
-            --cyber-glow-cyan: rgba(0, 255, 255, 0.5);
-            --cyber-glow-green: rgba(0, 255, 128, 0.5);
+            /* Warm Color Palette */
+            --primary: #6366F1;
+            --primary-hover: #4F46E5;
+            --secondary: #EC4899;
+            --secondary-hover: #DB2777;
+            --bg: #FAFAF9;
+            --surface: #FFFFFF;
+            --border: #E7E5E4;
+            --text: #1F2937;
+            --text-secondary: #6B7280;
+            --text-muted: #9CA3AF;
+            --success: #10B981;
+            --warning: #F59E0B;
+            --error: #EF4444;
+            --voice-active: #8B5CF6;
+            --game-active: #F59E0B;
+
+            /* Dark mode */
+            --dark-bg: #18181B;
+            --dark-surface: #27272A;
+            --dark-border: #3F3F46;
+            --dark-text: #F9FAFB;
+            --dark-text-secondary: #D1D5DB;
         }
-        
+
         * {
             box-sizing: border-box;
         }
-        
+
         body {
-            font-family: 'Inter', 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: var(--cyber-bg-primary);
-            background-image: 
-                radial-gradient(circle at 20% 50%, rgba(0, 255, 255, 0.03) 0%, transparent 50%),
-                radial-gradient(circle at 80% 80%, rgba(0, 255, 128, 0.03) 0%, transparent 50%);
-            color: var(--cyber-text-primary);
+            font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--dark-bg);
+            color: var(--dark-text);
             min-height: 100vh;
-            position: relative;
+            font-size: 15px;
+            line-height: 1.6;
         }
-        
-        /* Navbar - Cyberpunk Style */
-        .navbar, .cyber-navbar {
-            background: rgba(10, 14, 39, 0.95) !important;
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid var(--cyber-border) !important;
-            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
-            padding: 0.75rem 1rem;
+
+        /* Navbar - Warm & Rounded */
+        .navbar,
+        .cyber-navbar {
+            background: var(--dark-surface) !important;
+            border-bottom: 1px solid var(--dark-border) !important;
+            padding: 1rem 1.5rem;
             z-index: 1000;
         }
-        
+
         .navbar-brand {
-            color: var(--cyber-accent-cyan) !important;
-            text-transform: uppercase;
-            letter-spacing: 2px;
+            color: var(--primary) !important;
+            font-family: 'Space Grotesk', sans-serif;
             font-weight: 700;
-            font-size: 1.1rem;
-            text-shadow: 0 0 10px var(--cyber-glow-cyan);
+            font-size: 1.25rem;
+            letter-spacing: -0.5px;
             display: flex;
             align-items: center;
+            gap: 0.5rem;
+            transition: color 0.2s ease;
         }
-        
+
+        .navbar-brand:hover {
+            color: var(--primary-hover) !important;
+        }
+
         .navbar-brand i {
-            color: var(--cyber-accent-green);
-            filter: drop-shadow(0 0 5px var(--cyber-glow-green));
+            color: var(--secondary);
+            font-size: 1.5rem;
         }
-        
+
         .navbar-dark .navbar-nav .nav-link {
-            color: var(--cyber-text-secondary);
-            transition: all 0.3s ease;
-            font-size: 0.9rem;
+            color: var(--dark-text-secondary);
+            transition: all 0.2s ease;
+            font-size: 0.9375rem;
+            font-weight: 500;
             padding: 0.5rem 1rem;
-            border-radius: 4px;
+            border-radius: 12px;
+            margin: 0 0.25rem;
         }
-        
+
         .navbar-dark .navbar-nav .nav-link:hover {
-            color: var(--cyber-accent-cyan);
-            text-shadow: 0 0 8px var(--cyber-glow-cyan);
-            background: rgba(0, 255, 255, 0.1);
+            color: var(--dark-text);
+            background: rgba(99, 102, 241, 0.1);
         }
-        
+
         .navbar-dark .navbar-nav .nav-link i {
-            opacity: 0.7;
-            transition: all 0.3s ease;
+            margin-right: 0.5rem;
         }
-        
-        .navbar-dark .navbar-nav .nav-link:hover i {
-            opacity: 1;
-            color: var(--cyber-accent-cyan);
-        }
-        
+
         .cyber-username {
-            color: var(--cyber-accent-green) !important;
+            color: var(--primary) !important;
             font-weight: 600;
-            text-shadow: 0 0 8px var(--cyber-glow-green);
         }
-        
+
         .navbar-toggler {
-            border-color: var(--cyber-border);
+            border: none;
+            padding: 0.5rem;
         }
-        
-        .navbar-toggler-icon {
-            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3e%3cpath stroke='rgba%280, 255, 255, 0.8%29' stroke-linecap='round' stroke-miterlimit='10' stroke-width='2' d='M4 7h22M4 15h22M4 23h22'/%3e%3c/svg%3e");
+
+        .navbar-toggler:focus {
+            box-shadow: none;
         }
-        
+
         /* Hide navbar for full-screen pages */
         .no-navbar .navbar,
         .no-navbar .cyber-navbar {
             display: none !important;
         }
-        
-        /* Cards - Glassmorphism */
+
+        /* Cards - Soft & Rounded */
         .card {
-            background: var(--cyber-bg-secondary) !important;
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--cyber-border) !important;
-            color: var(--cyber-text-primary);
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            background: var(--dark-surface) !important;
+            border: 1px solid var(--dark-border) !important;
+            border-radius: 16px !important;
+            color: var(--dark-text);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
-        
-        /* Buttons - Cyberpunk Style */
-        .btn-primary {
-            background: rgba(0, 255, 255, 0.2);
-            border: 1px solid rgba(0, 255, 255, 0.3);
-            color: var(--cyber-accent-cyan);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-weight: 600;
-            transition: all 0.3s ease;
-        }
-        
-        .btn-primary:hover {
-            background: rgba(0, 255, 255, 0.3);
-            border-color: var(--cyber-accent-cyan);
-            box-shadow: 0 0 20px var(--cyber-glow-cyan);
+
+        .card:hover {
             transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
         }
-        
-        .btn-secondary {
-            background: rgba(255, 0, 100, 0.2);
-            border: 1px solid rgba(255, 0, 100, 0.3);
-            color: var(--cyber-accent-pink);
-        }
-        
-        .btn-secondary:hover {
-            background: rgba(255, 0, 100, 0.3);
-            border-color: var(--cyber-accent-pink);
-            box-shadow: 0 0 20px rgba(255, 0, 100, 0.4);
-        }
-        
-        /* Form Controls - Cyberpunk Style */
-        .form-control, .form-select {
-            background: rgba(0, 0, 0, 0.4) !important;
-            border: 1px solid var(--cyber-border) !important;
-            color: var(--cyber-text-primary) !important;
-            border-radius: 6px;
-        }
-        
-        .form-control:focus, .form-select:focus {
-            background: rgba(0, 0, 0, 0.5) !important;
-            border-color: var(--cyber-accent-cyan) !important;
-            color: var(--cyber-text-primary) !important;
-            box-shadow: 0 0 20px var(--cyber-glow-cyan);
-        }
-        
-        .form-label {
-            color: var(--cyber-accent-green);
-            text-transform: uppercase;
-            font-size: 11px;
-            letter-spacing: 1px;
+
+        /* Buttons - Warm & Friendly */
+        .btn-primary {
+            background: var(--primary);
+            border: none;
+            color: white;
             font-weight: 600;
+            padding: 0.625rem 1.25rem;
+            border-radius: 12px;
+            transition: all 0.2s ease;
         }
-        
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: rgba(236, 72, 153, 0.1);
+            border: 1px solid var(--secondary);
+            color: var(--secondary);
+            font-weight: 600;
+            padding: 0.625rem 1.25rem;
+            border-radius: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-secondary:hover {
+            background: var(--secondary);
+            color: white;
+            transform: translateY(-1px);
+        }
+
+        /* Form Controls - Clean & Modern */
+        .form-control,
+        .form-select {
+            background: var(--dark-bg) !important;
+            border: 1px solid var(--dark-border) !important;
+            color: var(--dark-text) !important;
+            border-radius: 12px;
+            padding: 0.75rem 1rem;
+            font-size: 0.9375rem;
+            transition: all 0.2s ease;
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            background: var(--dark-bg) !important;
+            border-color: var(--primary) !important;
+            color: var(--dark-text) !important;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .form-label {
+            color: var(--dark-text-secondary);
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
         /* Dropdowns */
         .dropdown-menu {
-            background: var(--cyber-bg-secondary) !important;
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--cyber-border) !important;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            background: var(--dark-surface) !important;
+            border: 1px solid var(--dark-border) !important;
+            border-radius: 12px;
+            padding: 0.5rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
         }
-        
+
         .dropdown-item {
-            color: var(--cyber-text-secondary);
-            transition: all 0.3s ease;
+            color: var(--dark-text-secondary);
+            border-radius: 8px;
+            padding: 0.5rem 0.75rem;
+            transition: all 0.2s ease;
         }
-        
-        .dropdown-item:hover, .dropdown-item.active {
-            background: rgba(0, 255, 255, 0.1) !important;
-            color: var(--cyber-accent-cyan);
+
+        .dropdown-item:hover,
+        .dropdown-item.active {
+            background: rgba(99, 102, 241, 0.1) !important;
+            color: var(--primary);
         }
-        
-        /* Alerts - Cyberpunk Style */
+
+        /* Alerts - Soft & Friendly */
         .alert {
-            background: var(--cyber-bg-secondary);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--cyber-border);
-            color: var(--cyber-text-primary);
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+            border-radius: 12px;
+            border: none;
+            padding: 1rem 1.25rem;
         }
-        
+
         .alert-success {
-            border-color: rgba(0, 255, 128, 0.3);
-            background: rgba(0, 255, 128, 0.1);
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--success);
         }
-        
+
         .alert-danger {
-            border-color: rgba(255, 0, 100, 0.3);
-            background: rgba(255, 0, 100, 0.1);
+            background: rgba(239, 68, 68, 0.1);
+            color: var(--error);
         }
-        
+
         .alert-warning {
-            border-color: rgba(255, 165, 0, 0.3);
-            background: rgba(255, 165, 0, 0.1);
+            background: rgba(245, 158, 11, 0.1);
+            color: var(--warning);
         }
-        
+
         .alert-info {
-            border-color: rgba(0, 255, 255, 0.3);
-            background: rgba(0, 255, 255, 0.1);
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--primary);
         }
-        
-        /* Modals - Cyberpunk Style */
+
+        /* Modals - Clean & Modern */
         .modal-content {
-            background: var(--cyber-bg-secondary) !important;
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--cyber-border) !important;
-            box-shadow: 0 0 30px rgba(0, 0, 0, 0.7);
+            background: var(--dark-surface) !important;
+            border: 1px solid var(--dark-border) !important;
+            border-radius: 20px;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
         }
-        
+
         .modal-header {
-            border-bottom: 1px solid var(--cyber-border) !important;
+            border-bottom: 1px solid var(--dark-border) !important;
+            padding: 1.5rem;
         }
-        
+
         .modal-title {
-            color: var(--cyber-accent-cyan);
-            text-transform: uppercase;
-            letter-spacing: 2px;
+            color: var(--dark-text);
+            font-family: 'Space Grotesk', sans-serif;
             font-weight: 700;
+            font-size: 1.25rem;
         }
-        
+
         .modal-footer {
-            border-top: 1px solid var(--cyber-border) !important;
+            border-top: 1px solid var(--dark-border) !important;
+            padding: 1.5rem;
         }
-        
-        .btn-close-white {
-            filter: invert(1) grayscale(100%) brightness(200%);
+
+        .modal-body {
+            padding: 1.5rem;
         }
-        
-        /* Scrollbars - Cyberpunk Style */
+
+        .btn-close {
+            filter: invert(1);
+        }
+
+        /* Scrollbars - Subtle */
         ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
+            width: 10px;
+            height: 10px;
         }
-        
+
         ::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.2);
+            background: var(--dark-bg);
         }
-        
+
         ::-webkit-scrollbar-thumb {
-            background: rgba(0, 255, 255, 0.3);
-            border-radius: 4px;
+            background: var(--dark-border);
+            border-radius: 5px;
         }
-        
+
         ::-webkit-scrollbar-thumb:hover {
-            background: rgba(0, 255, 255, 0.5);
-            box-shadow: 0 0 10px var(--cyber-glow-cyan);
+            background: var(--primary);
         }
-        
+
         /* Container adjustments */
         .container {
-            max-width: 1200px;
+            max-width: 1280px;
         }
-        
-        /* Text utilities */
-        .text-cyber-cyan {
-            color: var(--cyber-accent-cyan);
-            text-shadow: 0 0 10px var(--cyber-glow-cyan);
+
+        /* Utility classes */
+        .rounded-xl {
+            border-radius: 16px !important;
         }
-        
-        .text-cyber-green {
-            color: var(--cyber-accent-green);
-            text-shadow: 0 0 10px var(--cyber-glow-green);
+
+        .rounded-2xl {
+            border-radius: 20px !important;
         }
     </style>
     {% endblock %}
@@ -298,58 +328,60 @@
     <nav class="navbar navbar-expand-lg navbar-dark cyber-navbar">
         <div class="container-fluid">
             <a class="navbar-brand" href="/">
-                <i class="fas fa-bolt me-2"></i>
+                <i class="fas fa-comments"></i>
                 {% if server %}
                 {{server.name}}
                 {% else %}
-                    {{ page_title|default:"RASHIGO" }}
+                {{ page_title|default:"Rashigo" }}
                 {% endif %}
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
                 <span class="navbar-toggler-icon"></span>
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     {% if request.user.is_authenticated %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="/">
-                                <i class="fas fa-home me-1"></i>{% trans "Home" %}
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'all_games_lobby' %}">
-                                <i class="fas fa-gamepad me-1"></i>{% trans "Minigames" %}
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'leaderboard' %}">
-                                <i class="fas fa-trophy me-1"></i>{% trans "Leaderboard" %}
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <span class="nav-link cyber-username">
-                                <i class="fas fa-user me-1"></i>{{ request.user.username }}
-                            </span>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'settings' %}">
-                                <i class="fas fa-cog me-1"></i>{% trans "Settings" %}
-                            </a>
-                        </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/">
+                            <i class="fas fa-home me-1"></i>{% trans "Home" %}
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'all_games_lobby' %}">
+                            <i class="fas fa-gamepad me-1"></i>{% trans "Minigames" %}
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'leaderboard' %}">
+                            <i class="fas fa-trophy me-1"></i>{% trans "Leaderboard" %}
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <span class="nav-link cyber-username">
+                            <i class="fas fa-user me-1"></i>{{ request.user.username }}
+                        </span>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'settings' %}">
+                            <i class="fas fa-cog me-1"></i>{% trans "Settings" %}
+                        </a>
+                    </li>
                     {% else %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'login' %}">
-                                <i class="fas fa-sign-in-alt me-1"></i>{% trans "Login" %}
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" href="{% url 'register' %}">
-                                <i class="fas fa-user-plus me-1"></i>{% trans "Register" %}
-                            </a>
-                        </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'login' %}">
+                            <i class="fas fa-sign-in-alt me-1"></i>{% trans "Login" %}
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'register' %}">
+                            <i class="fas fa-user-plus me-1"></i>{% trans "Register" %}
+                        </a>
+                    </li>
                     {% endif %}
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" id="languageDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        <a class="nav-link dropdown-toggle" href="#" id="languageDropdown" role="button"
+                            data-bs-toggle="dropdown" aria-expanded="false">
                             <i class="fas fa-globe"></i>
                         </a>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="languageDropdown">
@@ -360,7 +392,8 @@
                                 <form action="{% url 'set_language' %}" method="post" style="display: inline;">
                                     {% csrf_token %}
                                     <input type="hidden" name="language" value="{{ lang_code }}">
-                                    <button type="submit" class="dropdown-item {% if lang_code == CURRENT_LANGUAGE %}active{% endif %}">
+                                    <button type="submit"
+                                        class="dropdown-item {% if lang_code == CURRENT_LANGUAGE %}active{% endif %}">
                                         {{ lang_name }}
                                     </button>
                                 </form>
@@ -387,7 +420,7 @@
         {% block content %}
         {% endblock %}
     </main>
-    
+
     <style>
         /* Full-width layout for special pages (server view, etc.) */
         main.full-width {
@@ -396,27 +429,29 @@
             margin: 0 !important;
             width: 100% !important;
         }
-        
+
         /* When gaming HUD container is present, make body full-screen */
         body:has(.gaming-hud-container) {
             overflow: hidden;
         }
-        
+
         body:has(.gaming-hud-container) main {
             max-width: 100% !important;
             padding: 0 !important;
             margin: 0 !important;
             width: 100% !important;
         }
-        
+
         /* Cyber alert styling */
         .cyber-alert {
             border-radius: 6px;
         }
     </style>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
-    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
+        crossorigin="anonymous"></script>
+
     <script>
         // Set theme to dark by default (theme switcher removed)
         document.documentElement.setAttribute('data-theme', 'dark');
@@ -424,7 +459,7 @@
 
     <!-- Hidden Voice Frame - Maintains connection across pages -->
     <iframe id="voice-frame" src="/voice-frame/" style="display:none; width:0; height:0; border:0;"></iframe>
-    
+
     <!-- Voice Chat Mini Box (Global) -->
     <div id="voice-mini-box" class="voice-mini-box" style="display: none;">
         <div class="voice-mini-header">
@@ -439,13 +474,16 @@
             <button class="voice-mini-btn" id="voice-mini-mute" onclick="toggleMiniMute()" title="{% trans 'Mute' %}">
                 <i class="fas fa-microphone"></i>
             </button>
-            <button class="voice-mini-btn" id="voice-mini-deafen" onclick="toggleMiniDeafen()" title="{% trans 'Deafen' %}">
+            <button class="voice-mini-btn" id="voice-mini-deafen" onclick="toggleMiniDeafen()"
+                title="{% trans 'Deafen' %}">
                 <i class="fas fa-headphones"></i>
             </button>
-            <button class="voice-mini-btn" id="voice-mini-camera" onclick="toggleMiniCamera()" title="{% trans 'Camera' %}">
+            <button class="voice-mini-btn" id="voice-mini-camera" onclick="toggleMiniCamera()"
+                title="{% trans 'Camera' %}">
                 <i class="fas fa-video"></i>
             </button>
-            <button class="voice-mini-btn" id="voice-mini-screen" onclick="toggleMiniScreenShare()" title="{% trans 'Share Screen' %}">
+            <button class="voice-mini-btn" id="voice-mini-screen" onclick="toggleMiniScreenShare()"
+                title="{% trans 'Share Screen' %}">
                 <i class="fas fa-desktop"></i>
             </button>
         </div>
@@ -458,63 +496,73 @@
             </button>
         </div>
     </div>
-    
+
     <style>
-        /* Voice Mini Box - Global */
+        /* Voice Mini Box - Warm Design */
         .voice-mini-box {
             position: fixed;
-            bottom: 20px;
-            left: 20px;
-            background: rgba(10, 14, 39, 0.95);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(0, 255, 255, 0.3);
-            border-radius: 12px;
-            padding: 12px 16px;
-            min-width: 200px;
-            box-shadow: 
-                0 10px 40px rgba(0, 0, 0, 0.5),
-                0 0 20px rgba(0, 255, 255, 0.2);
+            bottom: 24px;
+            left: 24px;
+            background: var(--dark-surface);
+            border: 1px solid var(--dark-border);
+            border-radius: 16px;
+            padding: 16px;
+            min-width: 220px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
             z-index: 10000;
             animation: slideInUp 0.3s ease;
         }
-        
+
         @keyframes slideInUp {
-            from { transform: translateY(100px); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+            from {
+                transform: translateY(100px);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
         }
-        
+
         .voice-mini-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
         }
-        
+
         .voice-mini-status {
             display: flex;
             align-items: center;
             gap: 8px;
-            color: #00FF80;
-            font-size: 12px;
+            color: var(--voice-active);
+            font-size: 13px;
             font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
         }
-        
+
         .voice-mini-dot {
             width: 8px;
             height: 8px;
-            background: #00FF80;
+            background: var(--voice-active);
             border-radius: 50%;
-            box-shadow: 0 0 10px rgba(0, 255, 128, 0.6);
             animation: pulse-dot 1.5s ease-in-out infinite;
         }
-        
+
         @keyframes pulse-dot {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.6; transform: scale(1.1); }
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.6;
+                transform: scale(1.1);
+            }
         }
-        
+
         .voice-mini-close {
             background: none;
             border: none;
@@ -524,11 +572,11 @@
             border-radius: 4px;
             transition: all 0.2s ease;
         }
-        
+
         .voice-mini-close:hover {
             background: rgba(0, 255, 255, 0.1);
         }
-        
+
         .voice-mini-server {
             font-size: 10px;
             color: #6B7280;
@@ -536,18 +584,25 @@
             letter-spacing: 1px;
             margin-bottom: 4px;
         }
-        
+
         .voice-mini-status.disconnected .voice-mini-dot {
             background: #FFA500 !important;
             box-shadow: 0 0 8px rgba(255, 165, 0, 0.6);
             animation: pulse-orange 2s infinite;
         }
-        
+
         @keyframes pulse-orange {
-            0%, 100% { box-shadow: 0 0 8px rgba(255, 165, 0, 0.6); }
-            50% { box-shadow: 0 0 16px rgba(255, 165, 0, 0.9); }
+
+            0%,
+            100% {
+                box-shadow: 0 0 8px rgba(255, 165, 0, 0.6);
+            }
+
+            50% {
+                box-shadow: 0 0 16px rgba(255, 165, 0, 0.9);
+            }
         }
-        
+
         .voice-mini-participants {
             display: flex;
             flex-wrap: wrap;
@@ -556,7 +611,7 @@
             max-height: 60px;
             overflow-y: auto;
         }
-        
+
         .voice-mini-participant {
             display: flex;
             align-items: center;
@@ -567,9 +622,11 @@
             font-size: 10px;
             color: #00FFFF;
         }
-        
-        .voice-mini-participant.muted { opacity: 0.6; }
-        
+
+        .voice-mini-participant.muted {
+            opacity: 0.6;
+        }
+
         .voice-mini-participant .avatar {
             width: 14px;
             height: 14px;
@@ -582,76 +639,77 @@
             font-weight: bold;
             color: #0A0E27;
         }
-        
+
         .voice-mini-controls {
             display: flex;
             gap: 6px;
             margin-bottom: 6px;
         }
-        
+
         .voice-mini-controls-secondary {
             margin-bottom: 0;
         }
-        
+
         .voice-mini-btn {
             flex: 1;
-            padding: 8px;
-            background: rgba(0, 255, 255, 0.1);
-            border: 1px solid rgba(0, 255, 255, 0.2);
-            border-radius: 8px;
-            color: #00FFFF;
+            padding: 10px;
+            background: rgba(99, 102, 241, 0.1);
+            border: 1px solid var(--dark-border);
+            border-radius: 10px;
+            color: var(--primary);
             cursor: pointer;
             transition: all 0.2s ease;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 12px;
+            font-size: 14px;
         }
-        
+
         .voice-mini-btn.active {
-            background: rgba(0, 255, 128, 0.3);
-            border-color: #00FF80;
-            color: #00FF80;
+            background: var(--voice-active);
+            border-color: var(--voice-active);
+            color: white;
         }
-        
+
         .voice-mini-btn.return {
             background: rgba(0, 255, 128, 0.2);
             border-color: rgba(0, 255, 128, 0.3);
             color: #00FF80;
         }
-        
+
         .voice-mini-btn.return:hover {
             background: rgba(0, 255, 128, 0.3);
             box-shadow: 0 0 15px rgba(0, 255, 128, 0.3);
         }
-        
+
         .voice-mini-btn:hover {
-            background: rgba(0, 255, 255, 0.2);
-            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+            background: rgba(99, 102, 241, 0.2);
+            transform: translateY(-1px);
         }
-        
+
         .voice-mini-btn.muted {
-            background: rgba(255, 0, 100, 0.2);
-            border-color: rgba(255, 0, 100, 0.3);
-            color: #FF0064;
+            background: var(--error);
+            border-color: var(--error);
+            color: white;
         }
-        
+
         .voice-mini-btn.disconnect {
-            background: rgba(255, 0, 100, 0.2);
-            border-color: rgba(255, 0, 100, 0.3);
-            color: #FF0064;
+            background: rgba(239, 68, 68, 0.1);
+            border-color: var(--error);
+            color: var(--error);
         }
-        
+
         .voice-mini-btn.disconnect:hover {
-            background: rgba(255, 0, 100, 0.3);
+            background: var(--error);
+            color: white;
         }
     </style>
-    
+
     <script>
         // ============================================
         // PERSISTENT VOICE - Uses hidden iframe for connection
         // ============================================
-        
+
         window.voiceState = {
             connected: false,
             channelName: '',
@@ -661,14 +719,14 @@
             muted: false,
             deafened: false
         };
-        
+
         let voiceFrameReady = false;
-        
+
         // Get voice frame
         function getVoiceFrame() {
             return document.getElementById('voice-frame');
         }
-        
+
         // Send message to voice frame
         function sendToVoiceFrame(type, data = {}) {
             const frame = getVoiceFrame();
@@ -676,27 +734,27 @@
                 frame.contentWindow.postMessage({ type, data }, '*');
             }
         }
-        
+
         // Listen for messages from voice frame
         window.addEventListener('message', (event) => {
             if (event.source !== getVoiceFrame()?.contentWindow) return;
-            
+
             const { type, data } = event.data;
             console.log('[Voice] Frame message:', type, data);
-            
+
             switch (type) {
                 case 'ready':
                     voiceFrameReady = true;
                     checkVoiceSession();
                     break;
-                    
+
                 case 'connected':
                     window.voiceState.connected = true;
                     window.voiceState = { ...window.voiceState, ...data };
                     updateVoiceUI(true);
                     saveVoiceStateToSession();
                     break;
-                    
+
                 case 'disconnected':
                     window.voiceState.connected = false;
                     window.voiceState.cameraOn = false;
@@ -704,77 +762,77 @@
                     updateVoiceUI(false);
                     hideVoiceMiniBox();
                     break;
-                    
+
                 case 'connectionLost':
                     // Connection was lost unexpectedly - show reconnect state
                     updateVoiceUI(false);
                     break;
-                    
+
                 case 'muteChanged':
                     window.voiceState.muted = data.muted;
                     updateMiniButtonStates();
                     saveVoiceStateToSession();
                     break;
-                    
+
                 case 'deafenChanged':
                     window.voiceState.deafened = data.deafened;
                     updateMiniButtonStates();
                     saveVoiceStateToSession();
                     break;
-                    
+
                 case 'cameraChanged':
                     window.voiceState.cameraOn = data.cameraOn;
                     updateMiniButtonStates();
                     saveVoiceStateToSession();
                     break;
-                    
+
                 case 'screenShareChanged':
                     window.voiceState.screenSharing = data.screenSharing;
                     updateMiniButtonStates();
                     saveVoiceStateToSession();
                     break;
-                    
+
                 case 'participantsChanged':
                     window.voiceState.participants = data.participants;
                     updateMiniParticipants();
                     // Forward to server_view if it's listening
                     window.dispatchEvent(new CustomEvent('voiceFrameEvent', { detail: { type, ...data } }));
                     break;
-                    
+
                 case 'voiceEvent':
                     // Forward to server_view if it's listening
                     window.dispatchEvent(new CustomEvent('voiceFrameEvent', { detail: data }));
                     break;
-                    
+
                 case 'peerConnected':
                 case 'peerDisconnected':
                 case 'peerTrack':
                     window.dispatchEvent(new CustomEvent('voiceFrameEvent', { detail: { type, ...data } }));
                     break;
-                    
+
                 case 'error':
                     console.error('[Voice] Frame error:', data.message);
                     break;
             }
         });
-        
+
         function saveVoiceStateToSession() {
             sessionStorage.setItem('voiceState', JSON.stringify(window.voiceState));
         }
-        
+
         function checkVoiceSession() {
             const savedState = sessionStorage.getItem('voiceState');
             if (savedState) {
                 try {
                     const state = JSON.parse(savedState);
                     window.voiceState = { ...window.voiceState, ...state };
-                    
+
                     // Only show mini box if we're NOT on the server view page
                     const isServerView = document.querySelector('.gaming-hud-container');
-                    
+
                     if (state.connected && !isServerView) {
                         showVoiceMiniBox(state);
-                        
+
                         // If frame is ready and we have connection info, reconnect
                         if (voiceFrameReady && state.channelSlug) {
                             reconnectVoice(state);
@@ -785,11 +843,11 @@
                 }
             }
         }
-        
+
         function reconnectVoice(state) {
             const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsUrl = `${wsProtocol}//${window.location.host}/ws/voice/?channel_slug=${state.channelSlug}&channel_type=voice`;
-            
+
             sendToVoiceFrame('connect', {
                 wsUrl,
                 channelSlug: state.channelSlug,
@@ -800,11 +858,11 @@
                 deafened: state.deafened
             });
         }
-        
+
         function updateVoiceUI(connected) {
             const statusWrap = document.getElementById('voice-mini-status-wrap');
             const dot = document.getElementById('voice-mini-dot');
-            
+
             if (statusWrap) {
                 statusWrap.classList.toggle('disconnected', !connected);
             }
@@ -812,12 +870,12 @@
                 dot.style.background = connected ? '#00FF80' : '#FFA500';
             }
         }
-        
+
         function showVoiceMiniBox(state) {
             const miniBox = document.getElementById('voice-mini-box');
             const channelLabel = document.getElementById('voice-mini-channel');
             const serverLabel = document.getElementById('voice-mini-server');
-            
+
             if (miniBox && channelLabel) {
                 window.voiceState = { ...window.voiceState, ...state };
                 channelLabel.textContent = state.channelName || 'Voice Connected';
@@ -829,53 +887,53 @@
                 updateVoiceUI(state.connected);
             }
         }
-        
+
         function hideVoiceMiniBox() {
             const miniBox = document.getElementById('voice-mini-box');
             if (miniBox) {
                 miniBox.style.display = 'none';
             }
         }
-        
+
         function updateMiniButtonStates() {
             const muteBtn = document.getElementById('voice-mini-mute');
             const deafenBtn = document.getElementById('voice-mini-deafen');
             const cameraBtn = document.getElementById('voice-mini-camera');
             const screenBtn = document.getElementById('voice-mini-screen');
-            
+
             if (muteBtn) {
                 muteBtn.classList.toggle('muted', window.voiceState.muted);
-                muteBtn.innerHTML = window.voiceState.muted ? 
-                    '<i class="fas fa-microphone-slash"></i>' : 
+                muteBtn.innerHTML = window.voiceState.muted ?
+                    '<i class="fas fa-microphone-slash"></i>' :
                     '<i class="fas fa-microphone"></i>';
             }
-            
+
             if (deafenBtn) {
                 deafenBtn.classList.toggle('muted', window.voiceState.deafened);
-                deafenBtn.innerHTML = window.voiceState.deafened ? 
-                    '<i class="fas fa-volume-mute"></i>' : 
+                deafenBtn.innerHTML = window.voiceState.deafened ?
+                    '<i class="fas fa-volume-mute"></i>' :
                     '<i class="fas fa-headphones"></i>';
             }
-            
+
             if (cameraBtn) {
                 cameraBtn.classList.toggle('active', window.voiceState.cameraOn);
-                cameraBtn.innerHTML = window.voiceState.cameraOn ? 
-                    '<i class="fas fa-video"></i>' : 
+                cameraBtn.innerHTML = window.voiceState.cameraOn ?
+                    '<i class="fas fa-video"></i>' :
                     '<i class="fas fa-video-slash"></i>';
             }
-            
+
             if (screenBtn) {
                 screenBtn.classList.toggle('active', window.voiceState.screenSharing);
             }
         }
-        
+
         function updateMiniParticipants() {
             const container = document.getElementById('voice-mini-participants');
             if (!container) return;
-            
+
             const participants = window.voiceState.participants || [];
             container.innerHTML = '';
-            
+
             participants.forEach(p => {
                 const el = document.createElement('div');
                 el.className = 'voice-mini-participant' + (p.muted ? ' muted' : '');
@@ -889,38 +947,38 @@
                 container.appendChild(el);
             });
         }
-        
+
         function returnToVoice() {
             if (window.voiceState.serverSlug) {
                 window.location.href = '/server/' + window.voiceState.serverSlug + '/';
             }
         }
-        
+
         function toggleMiniMute() {
             sendToVoiceFrame('toggleMute');
         }
-        
+
         function toggleMiniDeafen() {
             sendToVoiceFrame('toggleDeafen');
         }
-        
+
         function toggleMiniCamera() {
             sendToVoiceFrame('toggleCamera');
         }
-        
+
         function toggleMiniScreenShare() {
             sendToVoiceFrame('toggleScreenShare');
         }
-        
+
         function disconnectMiniVoice() {
             sendToVoiceFrame('disconnect');
             window.voiceState = { connected: false, participants: [] };
             sessionStorage.removeItem('voiceState');
             hideVoiceMiniBox();
         }
-        
+
         // Global function to connect voice from server_view
-        window.connectVoiceViaFrame = function(config) {
+        window.connectVoiceViaFrame = function (config) {
             window.voiceState = {
                 connected: true,
                 channelName: config.channelName,
@@ -936,31 +994,31 @@
                 participants: []
             };
             saveVoiceStateToSession();
-            
+
             const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
             const wsUrl = `${wsProtocol}//${window.location.host}/ws/voice/?channel_slug=${config.channelSlug}&channel_type=voice`;
-            
+
             sendToVoiceFrame('connect', {
                 wsUrl,
                 ...config
             });
-            
+
             // Show mini box when on other pages
             const isServerView = document.querySelector('.gaming-hud-container');
             if (!isServerView) {
                 showVoiceMiniBox(window.voiceState);
             }
         };
-        
-        window.disconnectVoiceViaFrame = function() {
+
+        window.disconnectVoiceViaFrame = function () {
             sendToVoiceFrame('disconnect');
             window.voiceState = { connected: false, participants: [] };
             sessionStorage.removeItem('voiceState');
             hideVoiceMiniBox();
         };
-        
+
         // Function to get current voice frame state
-        window.getVoiceFrameState = function() {
+        window.getVoiceFrameState = function () {
             return new Promise((resolve) => {
                 const handler = (event) => {
                     if (event.source === getVoiceFrame()?.contentWindow && event.data?.type === 'state') {
@@ -977,7 +1035,7 @@
                 }, 1000);
             });
         };
-        
+
         // Run on page load
         document.addEventListener('DOMContentLoaded', () => {
             // Wait a bit for iframe to load
@@ -988,4 +1046,5 @@
     {% block extra_js %}{% endblock %}
 
 </body>
+
 </html>
