@@ -1,322 +1,585 @@
-{% extends 'base_app.html' %}
+{% extends request.GET.partial|yesno:"partials/base.html,base_app.html" %}
 {% load i18n %}
 
 {% block title %}{% trans "Game Room" %} - {{ game.game_id|truncatechars:8 }}{% endblock %}
 
 {% block extra_css %}
-    <style>
-        /* Combined background theme for game room */
-        body {
-            background: #0F172A;
-        background-image: 
+<style>
+    /* Combined background theme for game room */
+    body {
+        background: #0F172A;
+        background-image:
             radial-gradient(circle at 20% 50%, rgba(56, 189, 248, 0.03) 0%, transparent 50%),
             radial-gradient(circle at 80% 80%, rgba(99, 102, 241, 0.03) 0%, transparent 50%) !important;
-            background-size: 400% 400%;
-            background-attachment: fixed;
-            animation: gradientShift 20s ease infinite;
-            min-height: 100vh;
-        }
-        
-        @keyframes gradientShift {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-        
-        .page-shell {
-            background: transparent !important;
-            padding: 2rem 0;
-        }
-        
-        :root {
-            --p1-color: #d90429; --p2-color: #0077b6; --p3-color: #28a745; --p4-color: #ffc107;
-            --board-bg: #1a1d29; --cell-border: #2d3748; --cell-hover: #3a4556;
-            --card-bg: rgba(30, 41, 59, 0.7);
-            --card-border: rgba(56, 189, 248, 0.2);
-        }
-        
-        .card {
-            background: var(--card-bg) !important;
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--card-border) !important;
-        }
-        
-        .card-header {
-            background: rgba(15, 23, 42, 0.6) !important;
-            border-bottom: 1px solid var(--card-border) !important;
-        }
-        #game-board-container { position: relative; width: 100%; max-width: 500px; margin: auto; }
-        #game-board {
-            display: grid;
-            grid-template-columns: repeat(var(--board-size, 5), 1fr);
-            grid-template-rows: repeat(var(--board-size, 5), 1fr);
-            width: 100%; aspect-ratio: 1 / 1; background-color: var(--board-bg);
-            border: 2px solid var(--cell-border); border-radius: 8px; overflow: hidden;
-        }
-        .cell {
-            border: 1px solid var(--cell-border); display: flex; align-items: center;
-            justify-content: center; font-size: 1.8rem; color: white;
-            transition: all 0.2s ease; cursor: pointer;
-        }
-        :root[style*="--board-size: 7"] .cell { font-size: 1.4rem; }
-        :root[style*="--board-size: 6"] .cell { font-size: 1.6rem; }
-        .cell:hover { background-color: var(--cell-hover); }
-        .cell.p1 { background-color: var(--p1-color); box-shadow: 0 0 10px 2px var(--p1-color); }
-        .cell.p2 { background-color: var(--p2-color); box-shadow: 0 0 10px 2px var(--p2-color); }
-        .cell.p3 { background-color: var(--p3-color); box-shadow: 0 0 10px 2px var(--p3-color); }
-        .cell.p4 { background-color: var(--p4-color); box-shadow: 0 0 10px 2px var(--p4-color); }
-        .cell.explode-flash { 
-            animation: explodeFlash 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
-            z-index: 15;
-        }
-        @keyframes explodeFlash {
-            0% { 
-                transform: scale(1) rotate(0deg); 
-                opacity: 1; 
-                box-shadow: 0 0 15px 8px currentColor, 0 0 30px 15px currentColor;
-            }
-            30% { 
-                transform: scale(1.3) rotate(180deg); 
-                opacity: 0.9; 
-                box-shadow: 0 0 25px 15px currentColor, 0 0 50px 25px currentColor;
-            }
-            60% { 
-                transform: scale(1.1) rotate(360deg); 
-                opacity: 0.7; 
-                box-shadow: 0 0 20px 12px currentColor;
-            }
-            100% { 
-                transform: scale(1) rotate(360deg); 
-                opacity: 1; 
-                box-shadow: 0 0 10px 2px currentColor;
-            }
-        }
-        /* Move highlight animation */
-        .cell.move-highlight {
-            animation: moveHighlight 0.8s ease-out forwards;
-            z-index: 10;
-        }
-        @keyframes moveHighlight {
-            0% { transform: scale(1); box-shadow: 0 0 15px 5px rgba(255, 255, 255, 0.8); }
-            50% { transform: scale(1.15); box-shadow: 0 0 30px 10px rgba(255, 255, 255, 1); }
-            100% { transform: scale(1); box-shadow: 0 0 10px 2px currentColor; }
-        }
-        /* Player move indicator */
-        .move-indicator {
-            position: fixed;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: linear-gradient(135deg, rgba(0, 123, 255, 0.95), rgba(0, 86, 179, 0.95));
-            color: white;
-            padding: 1rem 2rem;
-            border-radius: 10px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
-            z-index: 999;
-            display: none;
-            text-align: center;
-            animation: moveIndicatorShow 0.4s ease-out;
-        }
-        .move-indicator.show {
-            display: block;
-        }
-        @keyframes moveIndicatorShow {
-            0% { transform: translateX(-50%) translateY(-100%); opacity: 0; }
-            100% { transform: translateX(-50%) translateY(0); opacity: 1; }
-        }
-        .particle {
-            position: absolute; 
-            width: 20px; 
-            height: 20px; 
-            border-radius: 3px; 
-            z-index: 99;
-            transform: translate(-50%, -50%) scale(1); 
-            opacity: 1; 
-            background: linear-gradient(135deg, currentColor, rgba(255, 255, 255, 0.3));
-            box-shadow: 0 0 10px currentColor, 0 0 20px currentColor, inset 0 0 5px rgba(255, 255, 255, 0.5); 
-            font-size: 12px; 
-            display: flex;
-            align-items: center; 
-            justify-content: center; 
-            overflow: hidden; 
-            color: white;
-            border: 1px solid rgba(255, 255, 255, 0.3);
-        }
-        .particle.up    { animation: particleUp 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
-        .particle.down  { animation: particleDown 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
-        .particle.left  { animation: particleLeft 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
-        .particle.right { animation: particleRight 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards; }
-        @keyframes particleUp { 
-            0% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; } 
-            50% { transform: translate(-50%, -250%) scale(1.2) rotate(180deg); opacity: 0.9; } 
-            100% { transform: translate(-50%, -500%) scale(0.2) rotate(360deg); opacity: 0; } 
-        }
-        @keyframes particleDown { 
-            0% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; } 
-            50% { transform: translate(-50%, 250%) scale(1.2) rotate(-180deg); opacity: 0.9; } 
-            100% { transform: translate(-50%, 500%) scale(0.2) rotate(-360deg); opacity: 0; } 
-        }
-        @keyframes particleLeft { 
-            0% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; } 
-            50% { transform: translate(-250%, -50%) scale(1.2) rotate(180deg); opacity: 0.9; } 
-            100% { transform: translate(-500%, -50%) scale(0.2) rotate(360deg); opacity: 0; } 
-        }
-        @keyframes particleRight { 
-            0% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; } 
-            50% { transform: translate(250%, -50%) scale(1.2) rotate(-180deg); opacity: 0.9; } 
-            100% { transform: translate(500%, -50%) scale(0.2) rotate(-360deg); opacity: 0; } 
-        }
-        #wheel-overlay, #game-over-overlay {
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.9);
-            color: #fff; display: none; flex-direction: column; align-items: center;
-            justify-content: center; z-index: 20; border-radius: 8px; text-align: center;
-        }
-        #wheel-spinner { font-size: 100px; margin-bottom: 20px; animation: spin 1.5s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        /* Alert container for game messages */
-        #game-alert-container {
-            min-height: 50px;
-        }
-        .game-alert {
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            animation: slideInAlert 0.3s ease-out;
-            border-left: 4px solid;
-        }
-        .game-alert.alert-info {
-            background: rgba(13, 110, 253, 0.15);
-            border-color: #0d6efd;
-            color: #cfe2ff;
-        }
-        .game-alert.alert-success {
-            background: rgba(25, 135, 84, 0.15);
-            border-color: #198754;
-            color: #d1e7dd;
-        }
-        .game-alert.alert-warning {
-            background: rgba(255, 193, 7, 0.15);
-            border-color: #ffc107;
-            color: #fff3cd;
-        }
-        .game-alert.alert-danger {
-            background: rgba(220, 53, 69, 0.15);
-            border-color: #dc3545;
-            color: #f8d7da;
-        }
-        @keyframes slideInAlert {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        .game-alert i {
-            font-size: 1.1rem;
-        }
-        .game-alert .alert-content {
-            flex: 1;
-            font-size: 0.9rem;
-        }
-        .game-alert .alert-time {
-            font-size: 0.75rem;
-            opacity: 0.7;
-            margin-left: auto;
-        }
-        .player-box {
-            padding: 0.75rem 1rem; border-radius: 8px; border: 2px solid transparent;
-            transition: all 0.3s ease-in-out; margin-bottom: 0.5rem;
-            /* YENİ: Kick butonu için */
-            display: flex; justify-content: space-between; align-items: center;
-        }
-        .player-box.p1 { background-color: rgba(217, 4, 41, 0.1); }
-        .player-box.p2 { background-color: rgba(0, 119, 182, 0.1); }
-        .player-box.p3 { background-color: rgba(40, 167, 69, 0.1); }
-        .player-box.p4 { background-color: rgba(255, 193, 7, 0.1); }
-        .player-box.active-turn { border-color: var(--p1-color); box-shadow: 0 0 15px 3px var(--p1-color); transform: scale(1.03); }
-        .player-box.active-turn.p1 { border-color: var(--p1-color); box-shadow: 0 0 15px 3px var(--p1-color); }
-        .player-box.active-turn.p2 { border-color: var(--p2-color); box-shadow: 0 0 15px 3px var(--p2-color); }
-        .player-box.active-turn.p3 { border-color: var(--p3-color); box-shadow: 0 0 15px 3px var(--p3-color); }
-        .player-box.active-turn.p4 { border-color: var(--p4-color); box-shadow: 0 0 15px 3px var(--p4-color); }
+        background-size: 400% 400%;
+        background-attachment: fixed;
+        animation: gradientShift 20s ease infinite;
+        min-height: 100vh;
+    }
 
-        /* YENİ: Kick Butonu Stili */
-        .kick-btn {
-            background-color: #dc3545; color: white; border: none;
-            border-radius: 5px; padding: 2px 8px; font-size: 0.8rem;
-            cursor: pointer; opacity: 0.7;
+    @keyframes gradientShift {
+        0% {
+            background-position: 0% 50%;
         }
-        .kick-btn:hover { opacity: 1; }
-        
-        /* YENİ: Elenmiş Oyuncu Stili */
-        .player-box.eliminated {
-            opacity: 0.6;
-            background-color: rgba(108, 117, 125, 0.3) !important;
-            position: relative;
+
+        50% {
+            background-position: 100% 50%;
         }
-        .player-box.winner {
-            background-color: rgba(40, 167, 69, 0.2) !important;
-            border: 2px solid #28a745 !important;
+
+        100% {
+            background-position: 0% 50%;
         }
-        .player-box.eliminated::after {
-            content: '❌ ELIMINATED';
-            position: absolute;
-            right: 10px;
-            color: #dc3545;
-            font-weight: bold;
-            font-size: 0.85rem;
-            animation: eliminationPulse 0.6s ease-in-out;
+    }
+
+    .page-shell {
+        background: transparent !important;
+        padding: 2rem 0;
+    }
+
+    :root {
+        --p1-color: #d90429;
+        --p2-color: #0077b6;
+        --p3-color: #28a745;
+        --p4-color: #ffc107;
+        --board-bg: #1a1d29;
+        --cell-border: #2d3748;
+        --cell-hover: #3a4556;
+        --card-bg: rgba(30, 41, 59, 0.7);
+        --card-border: rgba(56, 189, 248, 0.2);
+    }
+
+    .card {
+        background: var(--card-bg) !important;
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--card-border) !important;
+    }
+
+    .card-header {
+        background: rgba(15, 23, 42, 0.6) !important;
+        border-bottom: 1px solid var(--card-border) !important;
+    }
+
+    #game-board-container {
+        position: relative;
+        width: 100%;
+        max-width: 500px;
+        margin: auto;
+    }
+
+    #game-board {
+        display: grid;
+        grid-template-columns: repeat(var(--board-size, 5), 1fr);
+        grid-template-rows: repeat(var(--board-size, 5), 1fr);
+        width: 100%;
+        aspect-ratio: 1 / 1;
+        background-color: var(--board-bg);
+        border: 2px solid var(--cell-border);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .cell {
+        border: 1px solid var(--cell-border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.8rem;
+        color: white;
+        transition: all 0.2s ease;
+        cursor: pointer;
+    }
+
+    :root[style*="--board-size: 7"] .cell {
+        font-size: 1.4rem;
+    }
+
+    :root[style*="--board-size: 6"] .cell {
+        font-size: 1.6rem;
+    }
+
+    .cell:hover {
+        background-color: var(--cell-hover);
+    }
+
+    .cell.p1 {
+        background-color: var(--p1-color);
+        box-shadow: 0 0 10px 2px var(--p1-color);
+    }
+
+    .cell.p2 {
+        background-color: var(--p2-color);
+        box-shadow: 0 0 10px 2px var(--p2-color);
+    }
+
+    .cell.p3 {
+        background-color: var(--p3-color);
+        box-shadow: 0 0 10px 2px var(--p3-color);
+    }
+
+    .cell.p4 {
+        background-color: var(--p4-color);
+        box-shadow: 0 0 10px 2px var(--p4-color);
+    }
+
+    .cell.explode-flash {
+        animation: explodeFlash 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+        z-index: 15;
+    }
+
+    @keyframes explodeFlash {
+        0% {
+            transform: scale(1) rotate(0deg);
+            opacity: 1;
+            box-shadow: 0 0 15px 8px currentColor, 0 0 30px 15px currentColor;
         }
-        @keyframes eliminationPulse {
-            0%, 100% { transform: scale(1); opacity: 1; }
-            50% { transform: scale(1.2); opacity: 0.8; }
+
+        30% {
+            transform: scale(1.3) rotate(180deg);
+            opacity: 0.9;
+            box-shadow: 0 0 25px 15px currentColor, 0 0 50px 25px currentColor;
         }
-        
-        /* YENİ: Elenme Bildirimi Overlay */
-        #elimination-overlay {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: linear-gradient(135deg, rgba(220, 53, 69, 0.95), rgba(139, 0, 0, 0.95));
-            color: white;
-            padding: 2rem 3rem;
-            border-radius: 15px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            display: none;
-            text-align: center;
-            animation: eliminationShow 0.5s ease-out;
+
+        60% {
+            transform: scale(1.1) rotate(360deg);
+            opacity: 0.7;
+            box-shadow: 0 0 20px 12px currentColor;
         }
-        #elimination-overlay.show {
-            display: block;
+
+        100% {
+            transform: scale(1) rotate(360deg);
+            opacity: 1;
+            box-shadow: 0 0 10px 2px currentColor;
         }
-        @keyframes eliminationShow {
-            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
-            50% { transform: translate(-50%, -50%) scale(1.15); }
-            100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+    }
+
+    /* Move highlight animation */
+    .cell.move-highlight {
+        animation: moveHighlight 0.8s ease-out forwards;
+        z-index: 10;
+    }
+
+    @keyframes moveHighlight {
+        0% {
+            transform: scale(1);
+            box-shadow: 0 0 15px 5px rgba(255, 255, 255, 0.8);
         }
-        @keyframes eliminationHide {
-            0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
-            100% { transform: translate(-50%, -50%) scale(0.8); opacity: 0; }
+
+        50% {
+            transform: scale(1.15);
+            box-shadow: 0 0 30px 10px rgba(255, 255, 255, 1);
         }
-        #elimination-overlay h3 {
-            font-size: 2rem;
-            margin-bottom: 1rem;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+
+        100% {
+            transform: scale(1);
+            box-shadow: 0 0 10px 2px currentColor;
         }
-        #elimination-overlay .eliminated-name {
-            font-size: 1.5rem;
-            font-weight: bold;
-            margin: 0.5rem 0;
-            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Player move indicator */
+    .move-indicator {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: linear-gradient(135deg, rgba(0, 123, 255, 0.95), rgba(0, 86, 179, 0.95));
+        color: white;
+        padding: 1rem 2rem;
+        border-radius: 10px;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.5);
+        z-index: 999;
+        display: none;
+        text-align: center;
+        animation: moveIndicatorShow 0.4s ease-out;
+    }
+
+    .move-indicator.show {
+        display: block;
+    }
+
+    @keyframes moveIndicatorShow {
+        0% {
+            transform: translateX(-50%) translateY(-100%);
+            opacity: 0;
         }
-    </style>
+
+        100% {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+    }
+
+    .particle {
+        position: absolute;
+        width: 20px;
+        height: 20px;
+        border-radius: 3px;
+        z-index: 99;
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+        background: linear-gradient(135deg, currentColor, rgba(255, 255, 255, 0.3));
+        box-shadow: 0 0 10px currentColor, 0 0 20px currentColor, inset 0 0 5px rgba(255, 255, 255, 0.5);
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .particle.up {
+        animation: particleUp 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    }
+
+    .particle.down {
+        animation: particleDown 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    }
+
+    .particle.left {
+        animation: particleLeft 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    }
+
+    .particle.right {
+        animation: particleRight 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    }
+
+    @keyframes particleUp {
+        0% {
+            transform: translate(-50%, -50%) scale(1) rotate(0deg);
+            opacity: 1;
+        }
+
+        50% {
+            transform: translate(-50%, -250%) scale(1.2) rotate(180deg);
+            opacity: 0.9;
+        }
+
+        100% {
+            transform: translate(-50%, -500%) scale(0.2) rotate(360deg);
+            opacity: 0;
+        }
+    }
+
+    @keyframes particleDown {
+        0% {
+            transform: translate(-50%, -50%) scale(1) rotate(0deg);
+            opacity: 1;
+        }
+
+        50% {
+            transform: translate(-50%, 250%) scale(1.2) rotate(-180deg);
+            opacity: 0.9;
+        }
+
+        100% {
+            transform: translate(-50%, 500%) scale(0.2) rotate(-360deg);
+            opacity: 0;
+        }
+    }
+
+    @keyframes particleLeft {
+        0% {
+            transform: translate(-50%, -50%) scale(1) rotate(0deg);
+            opacity: 1;
+        }
+
+        50% {
+            transform: translate(-250%, -50%) scale(1.2) rotate(180deg);
+            opacity: 0.9;
+        }
+
+        100% {
+            transform: translate(-500%, -50%) scale(0.2) rotate(360deg);
+            opacity: 0;
+        }
+    }
+
+    @keyframes particleRight {
+        0% {
+            transform: translate(-50%, -50%) scale(1) rotate(0deg);
+            opacity: 1;
+        }
+
+        50% {
+            transform: translate(250%, -50%) scale(1.2) rotate(-180deg);
+            opacity: 0.9;
+        }
+
+        100% {
+            transform: translate(500%, -50%) scale(0.2) rotate(-360deg);
+            opacity: 0;
+        }
+    }
+
+    #wheel-overlay,
+    #game-over-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.9);
+        color: #fff;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 20;
+        border-radius: 8px;
+        text-align: center;
+    }
+
+    #wheel-spinner {
+        font-size: 100px;
+        margin-bottom: 20px;
+        animation: spin 1.5s linear infinite;
+    }
+
+    @keyframes spin {
+        0% {
+            transform: rotate(0deg);
+        }
+
+        100% {
+            transform: rotate(360deg);
+        }
+    }
+
+    /* Alert container for game messages */
+    #game-alert-container {
+        min-height: 50px;
+    }
+
+    .game-alert {
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        animation: slideInAlert 0.3s ease-out;
+        border-left: 4px solid;
+    }
+
+    .game-alert.alert-info {
+        background: rgba(13, 110, 253, 0.15);
+        border-color: #0d6efd;
+        color: #cfe2ff;
+    }
+
+    .game-alert.alert-success {
+        background: rgba(25, 135, 84, 0.15);
+        border-color: #198754;
+        color: #d1e7dd;
+    }
+
+    .game-alert.alert-warning {
+        background: rgba(255, 193, 7, 0.15);
+        border-color: #ffc107;
+        color: #fff3cd;
+    }
+
+    .game-alert.alert-danger {
+        background: rgba(220, 53, 69, 0.15);
+        border-color: #dc3545;
+        color: #f8d7da;
+    }
+
+    @keyframes slideInAlert {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .game-alert i {
+        font-size: 1.1rem;
+    }
+
+    .game-alert .alert-content {
+        flex: 1;
+        font-size: 0.9rem;
+    }
+
+    .game-alert .alert-time {
+        font-size: 0.75rem;
+        opacity: 0.7;
+        margin-left: auto;
+    }
+
+    .player-box {
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        border: 2px solid transparent;
+        transition: all 0.3s ease-in-out;
+        margin-bottom: 0.5rem;
+        /* YENİ: Kick butonu için */
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .player-box.p1 {
+        background-color: rgba(217, 4, 41, 0.1);
+    }
+
+    .player-box.p2 {
+        background-color: rgba(0, 119, 182, 0.1);
+    }
+
+    .player-box.p3 {
+        background-color: rgba(40, 167, 69, 0.1);
+    }
+
+    .player-box.p4 {
+        background-color: rgba(255, 193, 7, 0.1);
+    }
+
+    .player-box.active-turn {
+        border-color: var(--p1-color);
+        box-shadow: 0 0 15px 3px var(--p1-color);
+        transform: scale(1.03);
+    }
+
+    .player-box.active-turn.p1 {
+        border-color: var(--p1-color);
+        box-shadow: 0 0 15px 3px var(--p1-color);
+    }
+
+    .player-box.active-turn.p2 {
+        border-color: var(--p2-color);
+        box-shadow: 0 0 15px 3px var(--p2-color);
+    }
+
+    .player-box.active-turn.p3 {
+        border-color: var(--p3-color);
+        box-shadow: 0 0 15px 3px var(--p3-color);
+    }
+
+    .player-box.active-turn.p4 {
+        border-color: var(--p4-color);
+        box-shadow: 0 0 15px 3px var(--p4-color);
+    }
+
+    /* YENİ: Kick Butonu Stili */
+    .kick-btn {
+        background-color: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        padding: 2px 8px;
+        font-size: 0.8rem;
+        cursor: pointer;
+        opacity: 0.7;
+    }
+
+    .kick-btn:hover {
+        opacity: 1;
+    }
+
+    /* YENİ: Elenmiş Oyuncu Stili */
+    .player-box.eliminated {
+        opacity: 0.6;
+        background-color: rgba(108, 117, 125, 0.3) !important;
+        position: relative;
+    }
+
+    .player-box.winner {
+        background-color: rgba(40, 167, 69, 0.2) !important;
+        border: 2px solid #28a745 !important;
+    }
+
+    .player-box.eliminated::after {
+        content: '❌ ELIMINATED';
+        position: absolute;
+        right: 10px;
+        color: #dc3545;
+        font-weight: bold;
+        font-size: 0.85rem;
+        animation: eliminationPulse 0.6s ease-in-out;
+    }
+
+    @keyframes eliminationPulse {
+
+        0%,
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+
+        50% {
+            transform: scale(1.2);
+            opacity: 0.8;
+        }
+    }
+
+    /* YENİ: Elenme Bildirimi Overlay */
+    #elimination-overlay {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: linear-gradient(135deg, rgba(220, 53, 69, 0.95), rgba(139, 0, 0, 0.95));
+        color: white;
+        padding: 2rem 3rem;
+        border-radius: 15px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        display: none;
+        text-align: center;
+        animation: eliminationShow 0.5s ease-out;
+    }
+
+    #elimination-overlay.show {
+        display: block;
+    }
+
+    @keyframes eliminationShow {
+        0% {
+            transform: translate(-50%, -50%) scale(0.5);
+            opacity: 0;
+        }
+
+        50% {
+            transform: translate(-50%, -50%) scale(1.15);
+        }
+
+        100% {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+    }
+
+    @keyframes eliminationHide {
+        0% {
+            transform: translate(-50%, -50%) scale(1);
+            opacity: 1;
+        }
+
+        100% {
+            transform: translate(-50%, -50%) scale(0.8);
+            opacity: 0;
+        }
+    }
+
+    #elimination-overlay h3 {
+        font-size: 2rem;
+        margin-bottom: 1rem;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    #elimination-overlay .eliminated-name {
+        font-size: 1.5rem;
+        font-weight: bold;
+        margin: 0.5rem 0;
+        text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.5);
+    }
+</style>
 {% endblock %}
 
 
@@ -333,11 +596,13 @@
                         <button id="rematch-button" class="btn btn-primary btn-lg flex-fill">
                             <i class="fas fa-undo-alt me-2"></i> {% trans "Request Rematch" %}
                         </button>
-                        <a href="{% url 'game_specific_lobby' game_slug=game.game_type.slug %}" class="btn btn-outline-light btn-lg flex-fill">
+                        <a href="{% url 'game_specific_lobby' game_slug=game.game_type.slug %}"
+                            class="btn btn-outline-light btn-lg flex-fill">
                             <i class="fas fa-door-open me-2"></i> {% trans "Back to Lobby" %}
                         </a>
                     </div>
-                    <small class="text-muted d-block mt-2">{% trans "Rematch lobby keeps the same players. Others must accept to join." %}</small>
+                    <small class="text-muted d-block mt-2">{% trans "Rematch lobby keeps the same players. Others must
+                        accept to join." %}</small>
                 </div>
                 <div id="wheel-overlay">
                     <div id="wheel-spinner"><i class="fas fa-compact-disc"></i></div>
@@ -345,15 +610,15 @@
                     <h3 id="wheel-winner-name" class="mt-3" style="display: none;"></h3>
                 </div>
                 <div id="game-board">
-                    </div>
+                </div>
             </div>
         </div>
-        
+
         <!-- Move Indicator -->
         <div id="move-indicator" class="move-indicator">
             <strong id="move-indicator-text"></strong>
         </div>
-        
+
         <!-- YENİ: Elenme Bildirimi Overlay -->
         <div id="elimination-overlay">
             <h3><i class="fas fa-skull"></i> {% trans "PLAYER ELIMINATED" %}</h3>
@@ -371,11 +636,12 @@
                     </h5>
 
                     <div id="player-list-container">
-                        </div>
+                    </div>
 
                     <div class="alert alert-info mt-3" id="waiting-alert" style="display: none;">
                         <i class="fas fa-spinner fa-spin me-1"></i>
-                        {% trans "Waiting for players..." %} (<span id="player-count-span">1</span>/<span id="max-player-span">{{ game.game_type.max_players }}</span>)
+                        {% trans "Waiting for players..." %} (<span id="player-count-span">1</span>/<span
+                            id="max-player-span">{{ game.game_type.max_players }}</span>)
                     </div>
 
                     <div class="alert alert-primary mt-3" id="rematch-invite-banner" style="display: none;">
@@ -404,15 +670,17 @@
                             <i class="fas fa-play me-1"></i> {% trans "Start Game" %}
                         </button>
                         <small id="start-game-helper" class="form-text text-muted d-block mt-1">
-                            {% trans "At least" %} {{ game.game_type.min_players }} {% trans "players required to start." %}
+                            {% trans "At least" %} {{ game.game_type.min_players }} {% trans "players required to
+                            start." %}
                         </small>
                     </div>
                     {% endif %}
 
                     <!-- Alert for game status messages -->
                     <div id="game-alert-container" class="mt-3"></div>
-                    
-                    <a href="{% url 'game_specific_lobby' game_slug=game.game_type.slug %}" class="btn btn-secondary mt-3 w-100">
+
+                    <a href="{% url 'game_specific_lobby' game_slug=game.game_type.slug %}"
+                        class="btn btn-secondary mt-3 w-100">
                         <i class="fas fa-door-open me-1"></i> {% trans "Leave Lobby" %}
                     </a>
                 </div>
@@ -434,387 +702,387 @@
 {% endblock %}
 
 {% block extra_js %}
-    <script>
-        // DOM elementleri ve veriler
-        const gameId = JSON.parse(document.getElementById('game-id').textContent);
-        const myUsername = JSON.parse(document.getElementById('current-username').textContent);
-        const isSpectator = JSON.parse(document.getElementById('is-spectator').textContent);
-        const initialBoardState = JSON.parse(document.getElementById('initial-board-state').textContent);
-        let boardSize = JSON.parse(document.getElementById('board-size-json').textContent);
-        document.documentElement.style.setProperty('--board-size', boardSize);
+<script>
+    // DOM elementleri ve veriler
+    const gameId = JSON.parse(document.getElementById('game-id').textContent);
+    const myUsername = JSON.parse(document.getElementById('current-username').textContent);
+    const isSpectator = JSON.parse(document.getElementById('is-spectator').textContent);
+    const initialBoardState = JSON.parse(document.getElementById('initial-board-state').textContent);
+    let boardSize = JSON.parse(document.getElementById('board-size-json').textContent);
+    document.documentElement.style.setProperty('--board-size', boardSize);
 
-        // YENİ: Host kontrol verileri
-        const hostUsername = JSON.parse(document.getElementById('host-username').textContent);
-        const minPlayers = JSON.parse(document.getElementById('min-players').textContent);
-        const amIHost = (myUsername === hostUsername);
-        let eliminatedPlayers = JSON.parse(document.getElementById('eliminated-players-json').textContent || '[]');
-        const winnerUsername = document.getElementById('winner-json') ? JSON.parse(document.getElementById('winner-json').textContent) : null;
+    // YENİ: Host kontrol verileri
+    const hostUsername = JSON.parse(document.getElementById('host-username').textContent);
+    const minPlayers = JSON.parse(document.getElementById('min-players').textContent);
+    const amIHost = (myUsername === hostUsername);
+    let eliminatedPlayers = JSON.parse(document.getElementById('eliminated-players-json').textContent || '[]');
+    const winnerUsername = document.getElementById('winner-json') ? JSON.parse(document.getElementById('winner-json').textContent) : null;
 
-        const boardElement = document.getElementById('game-board');
-        const turnIndicator = document.getElementById('turn-indicator');
-        const gameAlertContainer = document.getElementById('game-alert-container');
-        const playerListContainer = document.getElementById('player-list-container');
-        const gameOverOverlay = document.getElementById('game-over-overlay');
-        const winnerNameEl = document.getElementById('winner-name');
-        const wheelOverlay = document.getElementById('wheel-overlay');
-        const wheelWinnerText = document.getElementById('wheel-winner-name');
+    const boardElement = document.getElementById('game-board');
+    const turnIndicator = document.getElementById('turn-indicator');
+    const gameAlertContainer = document.getElementById('game-alert-container');
+    const playerListContainer = document.getElementById('player-list-container');
+    const gameOverOverlay = document.getElementById('game-over-overlay');
+    const winnerNameEl = document.getElementById('winner-name');
+    const wheelOverlay = document.getElementById('wheel-overlay');
+    const wheelWinnerText = document.getElementById('wheel-winner-name');
 
-        // YENİ: Lobi UI elementleri
-        const waitingAlert = document.getElementById('waiting-alert');
-        const playerCountSpan = document.getElementById('player-count-span');
-        const hostControls = document.getElementById('host-controls');
-        const startGameBtn = document.getElementById('start-game-btn');
-        const startGameHelper = document.getElementById('start-game-helper');
+    // YENİ: Lobi UI elementleri
+    const waitingAlert = document.getElementById('waiting-alert');
+    const playerCountSpan = document.getElementById('player-count-span');
+    const hostControls = document.getElementById('host-controls');
+    const startGameBtn = document.getElementById('start-game-btn');
+    const startGameHelper = document.getElementById('start-game-helper');
 
-        let playerColors = {};
-        let playerUsernames = [];
-        // Track eliminated players that have already been shown (to avoid duplicate messages)
-        let shownEliminatedPlayers = new Set(eliminatedPlayers || []);
-        let lastLocalMoveCell = null;
-        let localChainActive = false;
-        let localChainResetHandle = null;
-        
-        // Enhanced dice icons with better visual representation
-        const diceIcons = { 
-            1: 'fa-dice-one', 
-            2: 'fa-dice-two', 
-            3: 'fa-dice-three',
-            4: 'fa-dice-four',
-            5: 'fa-dice-five',
-            6: 'fa-dice-six'
-        };
-        function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
+    let playerColors = {};
+    let playerUsernames = [];
+    // Track eliminated players that have already been shown (to avoid duplicate messages)
+    let shownEliminatedPlayers = new Set(eliminatedPlayers || []);
+    let lastLocalMoveCell = null;
+    let localChainActive = false;
+    let localChainResetHandle = null;
 
-        // WebSocket Bağlantısı
-        const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-        const gameSocket = new WebSocket(
-            wsProtocol + window.location.host + '/ws/dice-wars/' + gameId + '/'
-        );
+    // Enhanced dice icons with better visual representation
+    const diceIcons = {
+        1: 'fa-dice-one',
+        2: 'fa-dice-two',
+        3: 'fa-dice-three',
+        4: 'fa-dice-four',
+        5: 'fa-dice-five',
+        6: 'fa-dice-six'
+    };
+    function sleep(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
-        // Translation strings (will be replaced by Django i18n in production)
-        const translations = {
-            'waiting': '{% trans "Waiting for players..." %}',
-            'turn': '{% trans "Turn:" %}',
-            'gameOver': '{% trans "Game Over!" %}',
-            'winner': '{% trans "Winner:" %}',
-            'eliminated': '{% trans "eliminated" %}',
-            'madeMove': '{% trans "made a move" %}',
-            'youEliminated': '{% trans "You were eliminated! You can no longer make moves, but you can continue watching the game." %}',
-            'spectatorNoMove': '{% trans "Spectators cannot make moves." %}',
-            'eliminatedNoMove': '{% trans "Eliminated players cannot make moves." %}',
-            'connectionLost': '{% trans "Connection to server lost. Please refresh the page." %}',
-            'connected': '{% trans "Successfully connected to game table." %}',
-            'kicked': '{% trans "You were kicked from the game by the host." %}',
-            'gameReady': '{% trans "Game is ready to start!" %}',
-            'playersRequired': '{% trans "At least" %}',
-            'playersRequiredEnd': '{% trans "players required to start." %}',
-            'startGameConfirm': '{% trans "Are you sure you want to start the game? No new players will be accepted." %}',
-            'kickPlayerConfirm': '{% trans "Are you sure you want to kick" %}',
-            'kickPlayerConfirmEnd': '{% trans "from the game?" %}',
-            'startingOrder': '{% trans "Determining starting order..." %}',
-            'starts': '{% trans "starts!" %}',
-            'rematchInvite': '{% trans "wants a rematch. Join?" %}',
-            'rematchRequested': '{% trans "Creating rematch lobby..." %}',
-            'rematchCreated': '{% trans "Rematch lobby created. Waiting for other players." %}',
-            'rematchJoin': '{% trans "Join Rematch" %}',
-            'rematchDeclined': '{% trans "You can join later from the lobby." %}',
-            'rematchError': '{% trans "Rematch could not be created. Please try again." %}',
-            'privateRematchInfo': '{% trans "Rematch lobby is private to previous players only." %}'
-        };
+    // WebSocket Bağlantısı
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const gameSocket = new WebSocket(
+        wsProtocol + window.location.host + '/ws/dice-wars/' + gameId + '/'
+    );
 
-        function getCookie(name) {
-            let cookieValue = null;
-            if (document.cookie && document.cookie !== '') {
-                const cookies = document.cookie.split(';');
-                for (let i = 0; i < cookies.length; i++) {
-                    const cookie = cookies[i].trim();
-                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                        break;
-                    }
+    // Translation strings (will be replaced by Django i18n in production)
+    const translations = {
+        'waiting': '{% trans "Waiting for players..." %}',
+        'turn': '{% trans "Turn:" %}',
+        'gameOver': '{% trans "Game Over!" %}',
+        'winner': '{% trans "Winner:" %}',
+        'eliminated': '{% trans "eliminated" %}',
+        'madeMove': '{% trans "made a move" %}',
+        'youEliminated': '{% trans "You were eliminated! You can no longer make moves, but you can continue watching the game." %}',
+        'spectatorNoMove': '{% trans "Spectators cannot make moves." %}',
+        'eliminatedNoMove': '{% trans "Eliminated players cannot make moves." %}',
+        'connectionLost': '{% trans "Connection to server lost. Please refresh the page." %}',
+        'connected': '{% trans "Successfully connected to game table." %}',
+        'kicked': '{% trans "You were kicked from the game by the host." %}',
+        'gameReady': '{% trans "Game is ready to start!" %}',
+        'playersRequired': '{% trans "At least" %}',
+        'playersRequiredEnd': '{% trans "players required to start." %}',
+        'startGameConfirm': '{% trans "Are you sure you want to start the game? No new players will be accepted." %}',
+        'kickPlayerConfirm': '{% trans "Are you sure you want to kick" %}',
+        'kickPlayerConfirmEnd': '{% trans "from the game?" %}',
+        'startingOrder': '{% trans "Determining starting order..." %}',
+        'starts': '{% trans "starts!" %}',
+        'rematchInvite': '{% trans "wants a rematch. Join?" %}',
+        'rematchRequested': '{% trans "Creating rematch lobby..." %}',
+        'rematchCreated': '{% trans "Rematch lobby created. Waiting for other players." %}',
+        'rematchJoin': '{% trans "Join Rematch" %}',
+        'rematchDeclined': '{% trans "You can join later from the lobby." %}',
+        'rematchError': '{% trans "Rematch could not be created. Please try again." %}',
+        'privateRematchInfo': '{% trans "Rematch lobby is private to previous players only." %}'
+    };
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
                 }
             }
-            return cookieValue;
+        }
+        return cookieValue;
+    }
+
+    const csrfToken = getCookie('csrftoken');
+    const originalGameId = "{{ game.game_id }}";
+    const currentGameRoomUrl = "{% url 'game_room' game_id=game.game_id %}";
+    const currentJoinGameUrl = "{% url 'join_game' game_id=game.game_id %}";
+    const rematchRequestUrl = "{% url 'rematch_request' game_id=game.game_id %}";
+    const buildGameRoomUrl = (gameId) => currentGameRoomUrl.replace(originalGameId, gameId);
+    const buildJoinGameUrl = (gameId) => currentJoinGameUrl.replace(originalGameId, gameId);
+
+    const rematchButton = document.getElementById('rematch-button');
+    const rematchInviteBanner = document.getElementById('rematch-invite-banner');
+    const rematchInviteText = document.getElementById('rematch-invite-text');
+    const acceptRematchBtn = document.getElementById('accept-rematch-btn');
+    const declineRematchBtn = document.getElementById('decline-rematch-btn');
+    let pendingRematchData = null;
+    let messageQueue = Promise.resolve();
+
+    function activateLocalChain() {
+        localChainActive = true;
+        if (localChainResetHandle) {
+            clearTimeout(localChainResetHandle);
+        }
+        localChainResetHandle = setTimeout(() => {
+            localChainActive = false;
+            localChainResetHandle = null;
+            lastLocalMoveCell = null;
+        }, 4000);
+    }
+
+    // Sunucudan Mesaj Alma (IMPROVED ANIMATION SEQUENCING + MESSAGE QUEUE)
+    gameSocket.onmessage = function (e) {
+        const data = JSON.parse(e.data);
+        console.log("Received from server:", data);
+
+        if (data.type === 'error') {
+            logMessage(data.message, 'danger');
+            return;
         }
 
-        const csrfToken = getCookie('csrftoken');
-        const originalGameId = "{{ game.game_id }}";
-        const currentGameRoomUrl = "{% url 'game_room' game_id=game.game_id %}";
-        const currentJoinGameUrl = "{% url 'join_game' game_id=game.game_id %}";
-        const rematchRequestUrl = "{% url 'rematch_request' game_id=game.game_id %}";
-        const buildGameRoomUrl = (gameId) => currentGameRoomUrl.replace(originalGameId, gameId);
-        const buildJoinGameUrl = (gameId) => currentJoinGameUrl.replace(originalGameId, gameId);
+        if (data.type === 'rematch_invite') {
+            handleRematchInvite(data);
+            return;
+        }
 
-        const rematchButton = document.getElementById('rematch-button');
-        const rematchInviteBanner = document.getElementById('rematch-invite-banner');
-        const rematchInviteText = document.getElementById('rematch-invite-text');
-        const acceptRematchBtn = document.getElementById('accept-rematch-btn');
-        const declineRematchBtn = document.getElementById('decline-rematch-btn');
-        let pendingRematchData = null;
-        let messageQueue = Promise.resolve();
+        if (data.type === 'game_state') {
+            messageQueue = messageQueue.then(() => handleGameStateMessage(data))
+                .catch(err => console.error('Game state processing error:', err));
+        }
+    };
 
-        function activateLocalChain() {
-            localChainActive = true;
-            if (localChainResetHandle) {
-                clearTimeout(localChainResetHandle);
-            }
-            localChainResetHandle = setTimeout(() => {
-                localChainActive = false;
-                localChainResetHandle = null;
+    async function handleGameStateMessage(data) {
+        let isLocalMove = false;
+        if (data.move_cell && lastLocalMoveCell) {
+            const [expectedRow, expectedCol] = lastLocalMoveCell;
+            if (data.move_cell[0] === expectedRow && data.move_cell[1] === expectedCol) {
+                isLocalMove = true;
                 lastLocalMoveCell = null;
-            }, 4000);
+                activateLocalChain();
+            }
         }
+        const chainDelayFactor = localChainActive ? 0.6 : 1;
 
-        // Sunucudan Mesaj Alma (IMPROVED ANIMATION SEQUENCING + MESSAGE QUEUE)
-        gameSocket.onmessage = function(e) {
-            const data = JSON.parse(e.data);
-            console.log("Received from server:", data);
-
-            if (data.type === 'error') {
-                logMessage(data.message, 'danger');
-                return;
-            }
-
-            if (data.type === 'rematch_invite') {
-                handleRematchInvite(data);
-                return;
-            }
-
-            if (data.type === 'game_state') {
-                messageQueue = messageQueue.then(() => handleGameStateMessage(data))
-                    .catch(err => console.error('Game state processing error:', err));
-            }
-        };
-
-        async function handleGameStateMessage(data) {
-            let isLocalMove = false;
-            if (data.move_cell && lastLocalMoveCell) {
-                const [expectedRow, expectedCol] = lastLocalMoveCell;
-                if (data.move_cell[0] === expectedRow && data.move_cell[1] === expectedCol) {
-                    isLocalMove = true;
-                    lastLocalMoveCell = null;
-                    activateLocalChain();
-                }
-            }
-            const chainDelayFactor = localChainActive ? 0.6 : 1;
-
-            // 1. Update player info first
-            if (data.players) {
-                playerUsernames = data.players;
-                if (data.eliminated_players !== undefined) {
-                    eliminatedPlayers = data.eliminated_players;
-                    // Update shown eliminated players set
-                    data.eliminated_players.forEach(p => shownEliminatedPlayers.add(p));
-                }
-                updatePlayerList(data.players, eliminatedPlayers, data.winner);
-
-                if (data.status === 'waiting' && !data.players.includes(myUsername) && !isSpectator) {
-                    alert(translations.kicked);
-                    const lobbyUrl = "{% url 'game_specific_lobby' game_slug=game.game_type.slug %}";
-                    window.location.href = lobbyUrl;
-                    return;
-                }
-            }
-
-            // 2. Update board size
-            if (data.board_size && data.board_size !== boardSize) {
-                boardSize = data.board_size;
-                document.documentElement.style.setProperty('--board-size', boardSize);
-            }
-
-            // 3. Show move indicator if message contains move info
-            if (data.message) {
-                // Check for move messages in different languages
-                const movePatterns = ['made a move', 'tıkladı'];
-                const hasMove = movePatterns.some(pattern => data.message.toLowerCase().includes(pattern.toLowerCase()));
-                if (hasMove) {
-                    // Extract username (usually first word before the move text)
-                    const parts = data.message.split(' ');
-                    if (parts.length > 0) {
-                        showMoveIndicator(parts[0]);
-                    }
-                }
-            }
-
-            // 4. Update turn indicator
-            updateTurnIndicator(data.turn, data.status, data.winner);
-
-            // 5. Game start wheel
-            if (data.special_event === 'game_start_roll') {
-                wheelWinnerText.style.display = 'none';
-                wheelOverlay.classList.remove('finished');
-                wheelOverlay.style.display = 'flex';
-                await sleep(2000);
-                wheelWinnerText.innerHTML = `<i class="fas fa-check-circle"></i> ${data.turn} ${translations.starts}`;
-                wheelWinnerText.style.display = 'block';
-                wheelOverlay.classList.add('finished');
-                await sleep(1500);
-                wheelOverlay.style.display = 'none';
-                logMessage(data.message, 'success');
-            }
-
-            // 6. IMPROVED: Proper animation sequencing
-            // IMPORTANT: Show animations on CURRENT board BEFORE rendering new state
-            
-            // First, show move animation on the moved cell (for all players) - BEFORE rendering new board
-            if (data.move_cell && data.move_cell.length === 2) {
-                if (!isLocalMove) {
-                    const [moveRow, moveCol] = data.move_cell;
-                    const moveCell = boardElement.querySelector(`.cell[data-row="${moveRow}"][data-col="${moveCol}"]`);
-                    if (moveCell) {
-                        moveCell.classList.add('move-highlight');
-                        setTimeout(() => {
-                            moveCell.classList.remove('move-highlight');
-                        }, 800);
-                    }
-                    await sleep(150 * chainDelayFactor);
-                } else {
-                    await sleep(30);
-                }
-            }
-            
-            // IMPORTANT: Show explosions on CURRENT board BEFORE rendering new state
-            // This ensures explosions are visible on the cells that are about to be cleared
-            // For local moves, we need to ensure explosions show even if board was updated optimistically
-            if (data.exploded_cells && data.exploded_cells.length > 0) {
-                // If this is a local move chain, make sure we show explosions immediately
-                // Don't wait for board update - show on current board state
-                await triggerSequentialExplosions(data.exploded_cells, localChainActive);
-                // Small delay after explosions
-                await sleep(localChainActive ? 30 : 100);
-            }
-            
-            // Then, render board with new state (this updates the board for all players)
-            // This happens AFTER animations so animations are visible on the old board
-            if (data.state) {
-                renderBoard(data.state);
-                // Small delay to see the updated board
-                await sleep(localChainActive ? 20 : 60);
-            }
-
-            // After explosions and board update, handle eliminations IMMEDIATELY
-            // Check for eliminations in this message
+        // 1. Update player info first
+        if (data.players) {
+            playerUsernames = data.players;
             if (data.eliminated_players !== undefined) {
-                // Check which players are newly eliminated (not shown before)
-                const newlyEliminated = data.eliminated_players.filter(p => !shownEliminatedPlayers.has(p));
-                
-                // Update our tracking
                 eliminatedPlayers = data.eliminated_players;
-                newlyEliminated.forEach(p => shownEliminatedPlayers.add(p));
-                
-                // Show elimination animation IMMEDIATELY for newly eliminated players
-                if (newlyEliminated.length > 0) {
-                    // Don't wait - show immediately after board update
-                    await handlePlayerElimination(newlyEliminated);
-                }
+                // Update shown eliminated players set
+                data.eliminated_players.forEach(p => shownEliminatedPlayers.add(p));
             }
+            updatePlayerList(data.players, eliminatedPlayers, data.winner);
 
-            // Finally, log message if not game start
-            if (data.message && data.special_event !== 'game_start_roll') {
-                logMessage(data.message, 'info');
+            if (data.status === 'waiting' && !data.players.includes(myUsername) && !isSpectator) {
+                alert(translations.kicked);
+                const lobbyUrl = "{% url 'game_specific_lobby' game_slug=game.game_type.slug %}";
+                window.location.href = lobbyUrl;
+                return;
             }
+        }
 
-            if (localChainActive) {
-                if ((data.turn && data.turn !== myUsername) || data.status === 'finished') {
-                    localChainActive = false;
-                    if (localChainResetHandle) {
-                        clearTimeout(localChainResetHandle);
-                        localChainResetHandle = null;
-                    }
-                    lastLocalMoveCell = null;
+        // 2. Update board size
+        if (data.board_size && data.board_size !== boardSize) {
+            boardSize = data.board_size;
+            document.documentElement.style.setProperty('--board-size', boardSize);
+        }
+
+        // 3. Show move indicator if message contains move info
+        if (data.message) {
+            // Check for move messages in different languages
+            const movePatterns = ['made a move', 'tıkladı'];
+            const hasMove = movePatterns.some(pattern => data.message.toLowerCase().includes(pattern.toLowerCase()));
+            if (hasMove) {
+                // Extract username (usually first word before the move text)
+                const parts = data.message.split(' ');
+                if (parts.length > 0) {
+                    showMoveIndicator(parts[0]);
                 }
             }
         }
 
-        gameSocket.onclose = function(e) {
-            logMessage(translations.connectionLost, 'danger');
+        // 4. Update turn indicator
+        updateTurnIndicator(data.turn, data.status, data.winner);
+
+        // 5. Game start wheel
+        if (data.special_event === 'game_start_roll') {
+            wheelWinnerText.style.display = 'none';
+            wheelOverlay.classList.remove('finished');
+            wheelOverlay.style.display = 'flex';
+            await sleep(2000);
+            wheelWinnerText.innerHTML = `<i class="fas fa-check-circle"></i> ${data.turn} ${translations.starts}`;
+            wheelWinnerText.style.display = 'block';
+            wheelOverlay.classList.add('finished');
+            await sleep(1500);
+            wheelOverlay.style.display = 'none';
+            logMessage(data.message, 'success');
+        }
+
+        // 6. IMPROVED: Proper animation sequencing
+        // IMPORTANT: Show animations on CURRENT board BEFORE rendering new state
+
+        // First, show move animation on the moved cell (for all players) - BEFORE rendering new board
+        if (data.move_cell && data.move_cell.length === 2) {
+            if (!isLocalMove) {
+                const [moveRow, moveCol] = data.move_cell;
+                const moveCell = boardElement.querySelector(`.cell[data-row="${moveRow}"][data-col="${moveCol}"]`);
+                if (moveCell) {
+                    moveCell.classList.add('move-highlight');
+                    setTimeout(() => {
+                        moveCell.classList.remove('move-highlight');
+                    }, 800);
+                }
+                await sleep(150 * chainDelayFactor);
+            } else {
+                await sleep(30);
+            }
+        }
+
+        // IMPORTANT: Show explosions on CURRENT board BEFORE rendering new state
+        // This ensures explosions are visible on the cells that are about to be cleared
+        // For local moves, we need to ensure explosions show even if board was updated optimistically
+        if (data.exploded_cells && data.exploded_cells.length > 0) {
+            // If this is a local move chain, make sure we show explosions immediately
+            // Don't wait for board update - show on current board state
+            await triggerSequentialExplosions(data.exploded_cells, localChainActive);
+            // Small delay after explosions
+            await sleep(localChainActive ? 30 : 100);
+        }
+
+        // Then, render board with new state (this updates the board for all players)
+        // This happens AFTER animations so animations are visible on the old board
+        if (data.state) {
+            renderBoard(data.state);
+            // Small delay to see the updated board
+            await sleep(localChainActive ? 20 : 60);
+        }
+
+        // After explosions and board update, handle eliminations IMMEDIATELY
+        // Check for eliminations in this message
+        if (data.eliminated_players !== undefined) {
+            // Check which players are newly eliminated (not shown before)
+            const newlyEliminated = data.eliminated_players.filter(p => !shownEliminatedPlayers.has(p));
+
+            // Update our tracking
+            eliminatedPlayers = data.eliminated_players;
+            newlyEliminated.forEach(p => shownEliminatedPlayers.add(p));
+
+            // Show elimination animation IMMEDIATELY for newly eliminated players
+            if (newlyEliminated.length > 0) {
+                // Don't wait - show immediately after board update
+                await handlePlayerElimination(newlyEliminated);
+            }
+        }
+
+        // Finally, log message if not game start
+        if (data.message && data.special_event !== 'game_start_roll') {
+            logMessage(data.message, 'info');
+        }
+
+        if (localChainActive) {
+            if ((data.turn && data.turn !== myUsername) || data.status === 'finished') {
+                localChainActive = false;
+                if (localChainResetHandle) {
+                    clearTimeout(localChainResetHandle);
+                    localChainResetHandle = null;
+                }
+                lastLocalMoveCell = null;
+            }
+        }
+    }
+
+    gameSocket.onclose = function (e) {
+        logMessage(translations.connectionLost, 'danger');
+    };
+
+    gameSocket.onopen = function (e) {
+        logMessage(translations.connected, 'success');
+        // Sayfa yüklendiğinde gelen oyuncu listesini ve renkleri ayarla
+        const initialPlayers = [{% for p in game.players.all %}"{{ p.username }}"{% if not forloop.last %}, {% endif %} {% endfor %}];
+    updatePlayerList(initialPlayers, eliminatedPlayers, winnerUsername);
+    // Sayfa yüklendiğinde durumu da güncelle (Örn. oyun bitmişse)
+    updateTurnIndicator("{{ game.current_turn.username|default:'' }}", "{{ game.status }}", "{{ game.winner.username|default:'' }}");
         };
 
-        gameSocket.onopen = function(e) {
-            logMessage(translations.connected, 'success');
-            // Sayfa yüklendiğinde gelen oyuncu listesini ve renkleri ayarla
-            const initialPlayers = [{% for p in game.players.all %}"{{ p.username }}"{% if not forloop.last %}, {% endif %}{% endfor %}];
-            updatePlayerList(initialPlayers, eliminatedPlayers, winnerUsername);
-            // Sayfa yüklendiğinde durumu da güncelle (Örn. oyun bitmişse)
-            updateTurnIndicator("{{ game.current_turn.username|default:'' }}", "{{ game.status }}", "{{ game.winner.username|default:'' }}");
-        };
+    if (rematchButton) {
+        rematchButton.addEventListener('click', requestRematch);
+    }
+    if (acceptRematchBtn) {
+        acceptRematchBtn.addEventListener('click', () => {
+            if (!pendingRematchData) return;
+            const joinUrl = pendingRematchData.join_url || buildJoinGameUrl(pendingRematchData.new_game_id);
+            window.location.href = joinUrl;
+        });
+    }
+    if (declineRematchBtn) {
+        declineRematchBtn.addEventListener('click', () => {
+            if (rematchInviteBanner) {
+                rematchInviteBanner.style.display = 'none';
+                logMessage(translations.rematchDeclined, 'info');
+            }
+            pendingRematchData = null;
+        });
+    }
 
-        if (rematchButton) {
-            rematchButton.addEventListener('click', requestRematch);
-        }
-        if (acceptRematchBtn) {
-            acceptRematchBtn.addEventListener('click', () => {
-                if (!pendingRematchData) return;
-                const joinUrl = pendingRematchData.join_url || buildJoinGameUrl(pendingRematchData.new_game_id);
-                window.location.href = joinUrl;
-            });
-        }
-        if (declineRematchBtn) {
-            declineRematchBtn.addEventListener('click', () => {
-                if (rematchInviteBanner) {
-                    rematchInviteBanner.style.display = 'none';
-                    logMessage(translations.rematchDeclined, 'info');
-                }
-                pendingRematchData = null;
-            });
-        }
+    // --- DEĞİŞTİ: Oyuncu Listesi Güncelleme (Kick, Elenme ve Kazanma durumu eklendi) ---
+    function updatePlayerList(players, eliminated = [], winner = null) {
+        playerListContainer.innerHTML = '';
+        playerColors = {};
 
-        // --- DEĞİŞTİ: Oyuncu Listesi Güncelleme (Kick, Elenme ve Kazanma durumu eklendi) ---
-        function updatePlayerList(players, eliminated = [], winner = null) {
-            playerListContainer.innerHTML = '';
-            playerColors = {};
+        // Oyuncu sayacı (Lobi için)
+        if (playerCountSpan) playerCountSpan.textContent = players.length;
 
-            // Oyuncu sayacı (Lobi için)
-            if (playerCountSpan) playerCountSpan.textContent = players.length;
+        players.forEach((username, index) => {
+            const playerClass = `p${index + 1}`;
+            playerColors[username] = playerClass;
 
-            players.forEach((username, index) => {
-                const playerClass = `p${index + 1}`;
-                playerColors[username] = playerClass;
+            const playerBox = document.createElement('div');
+            playerBox.className = `player-box ${playerClass}`;
+            playerBox.id = `player-box-${username}`;
 
-                const playerBox = document.createElement('div');
-                playerBox.className = `player-box ${playerClass}`;
-                playerBox.id = `player-box-${username}`;
-                
-                // Elenmiş oyuncu kontrolü
-                const isEliminated = eliminated.includes(username);
-                if (isEliminated) {
-                    playerBox.classList.add('eliminated');
-                }
-                
-                // Kazanan/Kaybeden durumu
-                let statusBadge = '';
-                if (winner) {
-                    if (username === winner) {
-                        statusBadge = `<span class="badge bg-success ms-1"><i class="fas fa-trophy"></i> {% trans "Won" %}</span>`;
-                        playerBox.classList.add('winner');
-                    } else if (eliminated.includes(username)) {
-                        statusBadge = `<span class="badge bg-danger ms-1"><i class="fas fa-skull"></i> {% trans "Eliminated" %}</span>`;
-                    } else {
-                        statusBadge = `<span class="badge bg-secondary ms-1">{% trans "Lost" %}</span>`;
-                    }
-                } else if (isEliminated) {
+            // Elenmiş oyuncu kontrolü
+            const isEliminated = eliminated.includes(username);
+            if (isEliminated) {
+                playerBox.classList.add('eliminated');
+            }
+
+            // Kazanan/Kaybeden durumu
+            let statusBadge = '';
+            if (winner) {
+                if (username === winner) {
+                    statusBadge = `<span class="badge bg-success ms-1"><i class="fas fa-trophy"></i> {% trans "Won" %}</span>`;
+                    playerBox.classList.add('winner');
+                } else if (eliminated.includes(username)) {
                     statusBadge = `<span class="badge bg-danger ms-1"><i class="fas fa-skull"></i> {% trans "Eliminated" %}</span>`;
+                } else {
+                    statusBadge = `<span class="badge bg-secondary ms-1">{% trans "Lost" %}</span>`;
                 }
+            } else if (isEliminated) {
+                statusBadge = `<span class="badge bg-danger ms-1"><i class="fas fa-skull"></i> {% trans "Eliminated" %}</span>`;
+            }
 
-                let badges = '';
-                if (username === hostUsername) {
-                    badges += `<span class="badge bg-warning">{% trans "Host" %}</span>`;
-                }
-                if (username === myUsername) {
-                    badges += `<span class="badge bg-primary ms-1">{% trans "You" %}</span>`;
-                }
-                badges += statusBadge;
+            let badges = '';
+            if (username === hostUsername) {
+                badges += `<span class="badge bg-warning">{% trans "Host" %}</span>`;
+            }
+            if (username === myUsername) {
+                badges += `<span class="badge bg-primary ms-1">{% trans "You" %}</span>`;
+            }
+            badges += statusBadge;
 
-                // --- YENİ: Kick Butonu HTML (sadece beklemede ve elenmemiş oyuncular için) ---
-                let kickButtonHtml = '';
-                if (amIHost && username !== myUsername && !isEliminated && !winner) {
-                    kickButtonHtml = `
+            // --- YENİ: Kick Butonu HTML (sadece beklemede ve elenmemiş oyuncular için) ---
+            let kickButtonHtml = '';
+            if (amIHost && username !== myUsername && !isEliminated && !winner) {
+                kickButtonHtml = `
                         <button class="kick-btn" data-username="${username}" title="{% trans 'Kick Player' %}">
                             <i class="fas fa-times"></i>
                         </button>`;
-                }
+            }
 
-                playerBox.innerHTML = `
+            playerBox.innerHTML = `
                     <div class="d-flex align-items-center">
                         <strong>
                             <i class="fas fa-circle" style="color: var(--${playerClass}-color);"></i>
@@ -824,405 +1092,405 @@
                     </div>
                     ${kickButtonHtml}
                 `;
-                playerListContainer.appendChild(playerBox);
-            });
+            playerListContainer.appendChild(playerBox);
+        });
 
-            // --- YENİ: Başlat Butonu Kontrolü ---
-            if (amIHost && startGameBtn) {
-                if (players.length >= minPlayers) {
-                    startGameBtn.disabled = false;
-                    startGameHelper.textContent = translations.gameReady;
-                    startGameHelper.classList.remove('text-muted');
-                    startGameHelper.classList.add('text-success');
-                } else {
-                    startGameBtn.disabled = true;
-                    startGameHelper.textContent = `${translations.playersRequired} ${minPlayers} ${translations.playersRequiredEnd}`;
-                    startGameHelper.classList.add('text-muted');
-                    startGameHelper.classList.remove('text-success');
+        // --- YENİ: Başlat Butonu Kontrolü ---
+        if (amIHost && startGameBtn) {
+            if (players.length >= minPlayers) {
+                startGameBtn.disabled = false;
+                startGameHelper.textContent = translations.gameReady;
+                startGameHelper.classList.remove('text-muted');
+                startGameHelper.classList.add('text-success');
+            } else {
+                startGameBtn.disabled = true;
+                startGameHelper.textContent = `${translations.playersRequired} ${minPlayers} ${translations.playersRequiredEnd}`;
+                startGameHelper.classList.add('text-muted');
+                startGameHelper.classList.remove('text-success');
+            }
+        }
+    }
+
+    // Show move indicator
+    function showMoveIndicator(username) {
+        const moveIndicator = document.getElementById('move-indicator');
+        const moveIndicatorText = document.getElementById('move-indicator-text');
+        if (moveIndicator && moveIndicatorText) {
+            moveIndicatorText.textContent = `${username} ${translations.madeMove}`;
+            moveIndicator.classList.add('show');
+            setTimeout(() => {
+                moveIndicator.classList.remove('show');
+            }, 1500);
+        }
+    }
+
+    // --- IMPROVED: Turn Indicator Update ---
+    function updateTurnIndicator(turnUsername, status, winnerUsername) {
+        document.querySelectorAll('.player-box').forEach(box => {
+            box.classList.remove('active-turn');
+        });
+
+        if (status === 'finished') {
+            turnIndicator.textContent = translations.gameOver;
+            logMessage(translations.winner + " " + winnerUsername, 'success');
+            winnerNameEl.textContent = winnerUsername;
+            gameOverOverlay.style.display = 'flex';
+            if (waitingAlert) waitingAlert.style.display = 'none';
+            if (hostControls) hostControls.style.display = 'none';
+
+        } else if (status === 'waiting') {
+            turnIndicator.textContent = translations.waiting;
+            if (waitingAlert) waitingAlert.style.display = 'block';
+            if (hostControls) hostControls.style.display = 'block';
+
+        } else if (status === 'in_progress' && turnUsername) {
+            turnIndicator.textContent = translations.turn + " " + turnUsername;
+            if (waitingAlert) waitingAlert.style.display = 'none';
+            if (hostControls) hostControls.style.display = 'none';
+
+            const activePlayerBox = document.getElementById(`player-box-${turnUsername}`);
+            if (activePlayerBox) {
+                activePlayerBox.classList.add('active-turn');
+            }
+        }
+    }
+
+    async function requestRematch() {
+        if (!rematchButton || rematchButton.dataset.loading === '1') return;
+        rematchButton.dataset.loading = '1';
+        rematchButton.disabled = true;
+        rematchButton.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>${translations.rematchRequested}`;
+        try {
+            const response = await fetch(rematchRequestUrl, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': csrfToken,
+                    'X-Requested-With': 'XMLHttpRequest'
                 }
-            }
-        }
-
-        // Show move indicator
-        function showMoveIndicator(username) {
-            const moveIndicator = document.getElementById('move-indicator');
-            const moveIndicatorText = document.getElementById('move-indicator-text');
-            if (moveIndicator && moveIndicatorText) {
-                moveIndicatorText.textContent = `${username} ${translations.madeMove}`;
-                moveIndicator.classList.add('show');
-                setTimeout(() => {
-                    moveIndicator.classList.remove('show');
-                }, 1500);
-            }
-        }
-
-        // --- IMPROVED: Turn Indicator Update ---
-        function updateTurnIndicator(turnUsername, status, winnerUsername) {
-            document.querySelectorAll('.player-box').forEach(box => {
-                box.classList.remove('active-turn');
             });
+            if (!response.ok) {
+                throw new Error('Rematch request failed');
+            }
+            const payload = await response.json();
+            logMessage(translations.rematchCreated, 'success');
+            setTimeout(() => {
+                const redirectUrl = payload.redirect_url || buildGameRoomUrl(payload.new_game_id);
+                window.location.href = redirectUrl;
+            }, 800);
+        } catch (err) {
+            console.error(err);
+            rematchButton.dataset.loading = '0';
+            rematchButton.disabled = false;
+            rematchButton.innerHTML = `<i class="fas fa-undo-alt me-2"></i> {% trans "Request Rematch" %}`;
+            logMessage(translations.rematchError, 'danger');
+        }
+    }
 
-            if (status === 'finished') {
-                turnIndicator.textContent = translations.gameOver;
-                logMessage(translations.winner + " " + winnerUsername, 'success');
-                winnerNameEl.textContent = winnerUsername;
-                gameOverOverlay.style.display = 'flex';
-                if (waitingAlert) waitingAlert.style.display = 'none';
-                if (hostControls) hostControls.style.display = 'none';
-
-            } else if (status === 'waiting') {
-                turnIndicator.textContent = translations.waiting;
-                if (waitingAlert) waitingAlert.style.display = 'block';
-                if (hostControls) hostControls.style.display = 'block';
-
-            } else if (status === 'in_progress' && turnUsername) {
-                turnIndicator.textContent = translations.turn + " " + turnUsername;
-                if (waitingAlert) waitingAlert.style.display = 'none';
-                if (hostControls) hostControls.style.display = 'none';
-
-                const activePlayerBox = document.getElementById(`player-box-${turnUsername}`);
-                if (activePlayerBox) {
-                    activePlayerBox.classList.add('active-turn');
-                }
+    function handleRematchInvite(data) {
+        if (data.message) {
+            logMessage(data.message, 'info');
+        }
+        const invitedPlayers = Array.isArray(data.invited_players) ? data.invited_players : [];
+        if (invitedPlayers.includes(myUsername)) {
+            pendingRematchData = data;
+            if (rematchInviteBanner && rematchInviteText) {
+                rematchInviteText.innerHTML = `<strong>${data.host}</strong> ${translations.rematchInvite}<br><small class="text-light">${translations.privateRematchInfo}</small>`;
+                rematchInviteBanner.style.display = 'block';
             }
         }
-
-        async function requestRematch() {
-            if (!rematchButton || rematchButton.dataset.loading === '1') return;
+        if (data.host === myUsername && rematchButton) {
             rematchButton.dataset.loading = '1';
             rematchButton.disabled = true;
-            rematchButton.innerHTML = `<span class="spinner-border spinner-border-sm me-2"></span>${translations.rematchRequested}`;
-            try {
-                const response = await fetch(rematchRequestUrl, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': csrfToken,
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                });
-                if (!response.ok) {
-                    throw new Error('Rematch request failed');
-                }
-                const payload = await response.json();
-                logMessage(translations.rematchCreated, 'success');
+            rematchButton.innerHTML = `<i class="fas fa-hourglass-half me-2"></i> ${translations.rematchCreated}`;
+        }
+    }
+
+    // IMPROVED: Sequential explosions with better timing and visual effects
+    // This function shows explosions on the CURRENT board state (before it's updated)
+    async function triggerSequentialExplosions(explodedCells, fastMode = false) {
+        const EXPLOSION_DELAY = fastMode ? 30 : 80; // Faster for local moves
+        for (const coords of explodedCells) {
+            const [r, c] = coords;
+            // Find cell on CURRENT board (before new state is rendered)
+            // For local moves, the board might have been updated optimistically,
+            // but we still need to find and explode the cells
+            const cellEl = boardElement.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
+            if (cellEl) {
+                // Get player color from current cell classes
+                const playerClass = Array.from(cellEl.classList).find(cls => cls.startsWith('p'));
+                const color = playerClass ? `var(--${playerClass}-color)` : 'var(--cell-border)';
+                createExplosion(cellEl, color);
+                await sleep(EXPLOSION_DELAY);
+            } else if (fastMode) {
+                // If cell not found in fast mode (local move), create explosion at expected position
+                // This handles the case where board was updated optimistically
+                const gameBoardContainer = document.getElementById('game-board-container');
+                const boardRect = boardElement.getBoundingClientRect();
+                const containerRect = gameBoardContainer.getBoundingClientRect();
+                const cellSize = boardRect.width / boardSize;
+                const x = (c + 0.5) * cellSize;
+                const y = (r + 0.5) * cellSize;
+
+                // Create a temporary element for explosion
+                const tempEl = document.createElement('div');
+                tempEl.style.position = 'absolute';
+                tempEl.style.left = `${x}px`;
+                tempEl.style.top = `${y}px`;
+                tempEl.style.width = `${cellSize}px`;
+                tempEl.style.height = `${cellSize}px`;
+                boardElement.appendChild(tempEl);
+                createExplosion(tempEl, 'var(--cell-border)');
+                await sleep(EXPLOSION_DELAY);
                 setTimeout(() => {
-                    const redirectUrl = payload.redirect_url || buildGameRoomUrl(payload.new_game_id);
-                    window.location.href = redirectUrl;
-                }, 800);
-            } catch (err) {
-                console.error(err);
-                rematchButton.dataset.loading = '0';
-                rematchButton.disabled = false;
-                rematchButton.innerHTML = `<i class="fas fa-undo-alt me-2"></i> {% trans "Request Rematch" %}`;
-                logMessage(translations.rematchError, 'danger');
-            }
-        }
-
-        function handleRematchInvite(data) {
-            if (data.message) {
-                logMessage(data.message, 'info');
-            }
-            const invitedPlayers = Array.isArray(data.invited_players) ? data.invited_players : [];
-            if (invitedPlayers.includes(myUsername)) {
-                pendingRematchData = data;
-                if (rematchInviteBanner && rematchInviteText) {
-                    rematchInviteText.innerHTML = `<strong>${data.host}</strong> ${translations.rematchInvite}<br><small class="text-light">${translations.privateRematchInfo}</small>`;
-                    rematchInviteBanner.style.display = 'block';
-                }
-            }
-            if (data.host === myUsername && rematchButton) {
-                rematchButton.dataset.loading = '1';
-                rematchButton.disabled = true;
-                rematchButton.innerHTML = `<i class="fas fa-hourglass-half me-2"></i> ${translations.rematchCreated}`;
-            }
-        }
-
-        // IMPROVED: Sequential explosions with better timing and visual effects
-        // This function shows explosions on the CURRENT board state (before it's updated)
-        async function triggerSequentialExplosions(explodedCells, fastMode = false) {
-            const EXPLOSION_DELAY = fastMode ? 30 : 80; // Faster for local moves
-            for (const coords of explodedCells) {
-                const [r, c] = coords;
-                // Find cell on CURRENT board (before new state is rendered)
-                // For local moves, the board might have been updated optimistically,
-                // but we still need to find and explode the cells
-                const cellEl = boardElement.querySelector(`.cell[data-row="${r}"][data-col="${c}"]`);
-                if (cellEl) {
-                    // Get player color from current cell classes
-                    const playerClass = Array.from(cellEl.classList).find(cls => cls.startsWith('p'));
-                    const color = playerClass ? `var(--${playerClass}-color)` : 'var(--cell-border)';
-                    createExplosion(cellEl, color);
-                    await sleep(EXPLOSION_DELAY);
-                } else if (fastMode) {
-                    // If cell not found in fast mode (local move), create explosion at expected position
-                    // This handles the case where board was updated optimistically
-                    const gameBoardContainer = document.getElementById('game-board-container');
-                    const boardRect = boardElement.getBoundingClientRect();
-                    const containerRect = gameBoardContainer.getBoundingClientRect();
-                    const cellSize = boardRect.width / boardSize;
-                    const x = (c + 0.5) * cellSize;
-                    const y = (r + 0.5) * cellSize;
-                    
-                    // Create a temporary element for explosion
-                    const tempEl = document.createElement('div');
-                    tempEl.style.position = 'absolute';
-                    tempEl.style.left = `${x}px`;
-                    tempEl.style.top = `${y}px`;
-                    tempEl.style.width = `${cellSize}px`;
-                    tempEl.style.height = `${cellSize}px`;
-                    boardElement.appendChild(tempEl);
-                    createExplosion(tempEl, 'var(--cell-border)');
-                    await sleep(EXPLOSION_DELAY);
-                    setTimeout(() => {
-                        if (tempEl.parentElement) {
-                            tempEl.parentElement.removeChild(tempEl);
-                        }
-                    }, 500);
-                }
-            }
-            await sleep(fastMode ? 50 : 150);
-        }
-        function renderBoard(boardState) {
-            boardElement.innerHTML = '';
-            for (let r = 0; r < boardSize; r++) {
-                for (let c = 0; c < boardSize; c++) {
-                    const cellElement = document.createElement('div');
-                    cellElement.classList.add('cell');
-                    cellElement.dataset.row = r;
-                    cellElement.dataset.col = c;
-                    const rowData = boardState[String(r)];
-                    const cellData = rowData ? rowData[String(c)] : null;
-                    if (cellData && cellData.count > 0) {
-                        // Enhanced dice design with better styling
-                        const diceContainer = document.createElement('div');
-                        diceContainer.style.cssText = 'display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; position: relative;';
-                        
-                        if (diceIcons[cellData.count]) {
-                            const icon = document.createElement('i');
-                            icon.className = `fas ${diceIcons[cellData.count]}`;
-                            icon.style.cssText = 'font-size: 1.5em; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); text-shadow: 0 1px 2px rgba(0,0,0,0.8);';
-                            diceContainer.appendChild(icon);
-                        } else {
-                            const countText = document.createElement('span');
-                            countText.textContent = cellData.count;
-                            countText.style.cssText = 'font-weight: bold; font-size: 1.3em; text-shadow: 0 2px 4px rgba(0,0,0,0.8);';
-                            diceContainer.appendChild(countText);
-                        }
-                        cellElement.appendChild(diceContainer);
-                        
-                        const playerClass = playerColors[cellData.owner];
-                        if (playerClass) {
-                            cellElement.classList.add(playerClass);
-                        }
-                    } else {
-                        cellElement.innerHTML = '';
-                    }
-                    boardElement.appendChild(cellElement);
-                }
-            }
-        }
-
-        // IMPROVED: Move handling with immediate visual feedback (local only, server will broadcast to all)
-        boardElement.addEventListener('click', function(e) {
-            const cell = e.target.closest('.cell');
-            if (!cell) return;
-            if (isSpectator) {
-                logMessage(translations.spectatorNoMove, 'warning');
-                return;
-            }
-            if (!playerUsernames.includes(myUsername)) {
-                logMessage(translations.eliminatedNoMove, 'warning');
-                return;
-            }
-            if (gameOverOverlay.style.display === 'flex' || wheelOverlay.style.display === 'flex') {
-                return;
-            }
-            if (turnIndicator.textContent.startsWith(translations.turn)) {
-                const row = parseInt(cell.dataset.row, 10);
-                const col = parseInt(cell.dataset.col, 10);
-                
-                // Immediate local visual feedback (server will broadcast to all players)
-                cell.classList.add('move-highlight');
-                setTimeout(() => {
-                    cell.classList.remove('move-highlight');
-                }, 800);
-                lastLocalMoveCell = [row, col];
-                
-                gameSocket.send(JSON.stringify({
-                    'type': 'make_move',
-                    'row': row,
-                    'col': col
-                }));
-            }
-        });
-
-        // Start Game Button Listener
-        if (startGameBtn) {
-            startGameBtn.addEventListener('click', function() {
-                if (confirm(translations.startGameConfirm)) {
-                    gameSocket.send(JSON.stringify({
-                        'type': 'start_game'
-                    }));
-                }
-            });
-        }
-
-        // Kick Button Listener
-        playerListContainer.addEventListener('click', function(e) {
-            const kickBtn = e.target.closest('.kick-btn');
-            if (kickBtn) {
-                const usernameToKick = kickBtn.dataset.username;
-                if (confirm(`${translations.kickPlayerConfirm} ${usernameToKick} ${translations.kickPlayerConfirmEnd}`)) {
-                    gameSocket.send(JSON.stringify({
-                        'type': 'kick_player',
-                        'username_to_kick': usernameToKick
-                    }));
-                }
-            }
-        });
-
-
-        // IMPROVED: Faster elimination animation - shows immediately
-        async function handlePlayerElimination(eliminatedUsernames) {
-            const eliminationOverlay = document.getElementById('elimination-overlay');
-            const eliminatedPlayersList = document.getElementById('eliminated-players-list');
-            
-            if (!eliminationOverlay || !eliminatedPlayersList) {
-                console.warn('Elimination overlay elements not found');
-                return;
-            }
-            
-            // Mark eliminated players in list immediately
-            eliminatedUsernames.forEach(username => {
-                const playerBox = document.getElementById(`player-box-${username}`);
-                if (playerBox) {
-                    playerBox.classList.add('eliminated');
-                    playerBox.style.animation = 'eliminationPulse 0.6s ease-in-out';
-                }
-            });
-            
-            // Show eliminated players in overlay
-            eliminatedPlayersList.innerHTML = '';
-            eliminatedUsernames.forEach((username, index) => {
-                const eliminatedDiv = document.createElement('div');
-                eliminatedDiv.className = 'eliminated-name';
-                eliminatedDiv.textContent = `❌ ${username}`;
-                eliminatedDiv.style.animationDelay = `${index * 0.1}s`;
-                eliminatedPlayersList.appendChild(eliminatedDiv);
-            });
-            
-            // Show overlay IMMEDIATELY - don't wait
-            // Remove any existing animation first
-            eliminationOverlay.style.animation = '';
-            eliminationOverlay.classList.add('show');
-            
-            // Force a reflow to ensure the show class is applied
-            void eliminationOverlay.offsetWidth;
-            
-            // Faster: Hide after 1.2 seconds
-            await sleep(1200);
-            eliminationOverlay.style.animation = 'eliminationHide 0.3s ease-out forwards';
-            await sleep(300);
-            eliminationOverlay.classList.remove('show');
-            eliminationOverlay.style.animation = '';
-            
-            // Inform user if eliminated
-            if (eliminatedUsernames.includes(myUsername)) {
-                logMessage(translations.youEliminated, 'warning');
-            }
-        }
-
-        // Improved alert system instead of log
-        function logMessage(msg, type = 'info') {
-            if (!msg || !gameAlertContainer) return;
-            
-            // Remove old alerts if there are more than 5
-            const alerts = gameAlertContainer.querySelectorAll('.game-alert');
-            if (alerts.length >= 5) {
-                alerts[0].remove();
-            }
-            
-            const alert = document.createElement('div');
-            alert.className = `game-alert alert-${type}`;
-            
-            // Icon based on type
-            let icon = 'fa-info-circle';
-            if (type === 'success') icon = 'fa-check-circle';
-            else if (type === 'warning') icon = 'fa-exclamation-triangle';
-            else if (type === 'danger') icon = 'fa-times-circle';
-            
-            const time = new Date().toLocaleTimeString();
-            alert.innerHTML = `
-                <i class="fas ${icon}"></i>
-                <span class="alert-content">${msg}</span>
-                <span class="alert-time">${time}</span>
-            `;
-            
-            gameAlertContainer.appendChild(alert);
-            
-            // Auto-remove after 5 seconds for info/success, 8 seconds for warnings
-            const removeDelay = (type === 'warning' || type === 'danger') ? 8000 : 5000;
-            setTimeout(() => {
-                if (alert.parentElement) {
-                    alert.style.animation = 'slideInAlert 0.3s ease-out reverse';
-                    setTimeout(() => alert.remove(), 300);
-                }
-            }, removeDelay);
-        }
-        function createExplosion(cellEl, color) {
-            const gameBoardContainer = document.getElementById('game-board-container');
-            const rect = cellEl.getBoundingClientRect();
-            const containerRect = gameBoardContainer.getBoundingClientRect();
-            const startTop = rect.top - containerRect.top + (rect.height / 2);
-            const startLeft = rect.left - containerRect.left + (rect.width / 2);
-            const directions = ['up', 'down', 'left', 'right'];
-            
-            // Enhanced explosion flash
-            cellEl.style.setProperty('color', color);
-            cellEl.classList.add('explode-flash');
-            setTimeout(() => {
-                cellEl.classList.remove('explode-flash');
-                cellEl.style.removeProperty('color');
-            }, 400);
-            
-            // Create more dramatic dice particles
-            const diceCount = 8; // More particles for better effect
-            for (let i = 0; i < diceCount; i++) {
-                const particle = document.createElement('div');
-                particle.classList.add('particle');
-                
-                // Random dice icon
-                const diceValues = [1, 2, 3, 4, 5, 6];
-                const randomDice = diceValues[Math.floor(Math.random() * diceValues.length)];
-                const icon = document.createElement('i');
-                icon.className = `fas ${diceIcons[randomDice] || 'fa-dice'}`;
-                icon.style.cssText = 'font-size: 0.8em;';
-                particle.appendChild(icon);
-                
-                particle.style.color = color;
-                particle.style.top = `${startTop}px`;
-                particle.style.left = `${startLeft}px`;
-                
-                // Distribute particles in all directions
-                const dir = directions[i % directions.length];
-                
-                gameBoardContainer.appendChild(particle);
-                void particle.offsetWidth;
-                
-                // Use existing particle animations
-                particle.classList.add(dir);
-                
-                setTimeout(() => {
-                    if (particle.parentElement) {
-                        particle.parentElement.removeChild(particle);
+                    if (tempEl.parentElement) {
+                        tempEl.parentElement.removeChild(tempEl);
                     }
                 }, 500);
             }
         }
+        await sleep(fastMode ? 50 : 150);
+    }
+    function renderBoard(boardState) {
+        boardElement.innerHTML = '';
+        for (let r = 0; r < boardSize; r++) {
+            for (let c = 0; c < boardSize; c++) {
+                const cellElement = document.createElement('div');
+                cellElement.classList.add('cell');
+                cellElement.dataset.row = r;
+                cellElement.dataset.col = c;
+                const rowData = boardState[String(r)];
+                const cellData = rowData ? rowData[String(c)] : null;
+                if (cellData && cellData.count > 0) {
+                    // Enhanced dice design with better styling
+                    const diceContainer = document.createElement('div');
+                    diceContainer.style.cssText = 'display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; position: relative;';
 
-        // İlk render
-        console.log(`İlk tahta ${boardSize}x${boardSize} olarak çiziliyor...`, initialBoardState);
-        renderBoard(initialBoardState);
+                    if (diceIcons[cellData.count]) {
+                        const icon = document.createElement('i');
+                        icon.className = `fas ${diceIcons[cellData.count]}`;
+                        icon.style.cssText = 'font-size: 1.5em; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.5)); text-shadow: 0 1px 2px rgba(0,0,0,0.8);';
+                        diceContainer.appendChild(icon);
+                    } else {
+                        const countText = document.createElement('span');
+                        countText.textContent = cellData.count;
+                        countText.style.cssText = 'font-weight: bold; font-size: 1.3em; text-shadow: 0 2px 4px rgba(0,0,0,0.8);';
+                        diceContainer.appendChild(countText);
+                    }
+                    cellElement.appendChild(diceContainer);
 
-    </script>
+                    const playerClass = playerColors[cellData.owner];
+                    if (playerClass) {
+                        cellElement.classList.add(playerClass);
+                    }
+                } else {
+                    cellElement.innerHTML = '';
+                }
+                boardElement.appendChild(cellElement);
+            }
+        }
+    }
+
+    // IMPROVED: Move handling with immediate visual feedback (local only, server will broadcast to all)
+    boardElement.addEventListener('click', function (e) {
+        const cell = e.target.closest('.cell');
+        if (!cell) return;
+        if (isSpectator) {
+            logMessage(translations.spectatorNoMove, 'warning');
+            return;
+        }
+        if (!playerUsernames.includes(myUsername)) {
+            logMessage(translations.eliminatedNoMove, 'warning');
+            return;
+        }
+        if (gameOverOverlay.style.display === 'flex' || wheelOverlay.style.display === 'flex') {
+            return;
+        }
+        if (turnIndicator.textContent.startsWith(translations.turn)) {
+            const row = parseInt(cell.dataset.row, 10);
+            const col = parseInt(cell.dataset.col, 10);
+
+            // Immediate local visual feedback (server will broadcast to all players)
+            cell.classList.add('move-highlight');
+            setTimeout(() => {
+                cell.classList.remove('move-highlight');
+            }, 800);
+            lastLocalMoveCell = [row, col];
+
+            gameSocket.send(JSON.stringify({
+                'type': 'make_move',
+                'row': row,
+                'col': col
+            }));
+        }
+    });
+
+    // Start Game Button Listener
+    if (startGameBtn) {
+        startGameBtn.addEventListener('click', function () {
+            if (confirm(translations.startGameConfirm)) {
+                gameSocket.send(JSON.stringify({
+                    'type': 'start_game'
+                }));
+            }
+        });
+    }
+
+    // Kick Button Listener
+    playerListContainer.addEventListener('click', function (e) {
+        const kickBtn = e.target.closest('.kick-btn');
+        if (kickBtn) {
+            const usernameToKick = kickBtn.dataset.username;
+            if (confirm(`${translations.kickPlayerConfirm} ${usernameToKick} ${translations.kickPlayerConfirmEnd}`)) {
+                gameSocket.send(JSON.stringify({
+                    'type': 'kick_player',
+                    'username_to_kick': usernameToKick
+                }));
+            }
+        }
+    });
+
+
+    // IMPROVED: Faster elimination animation - shows immediately
+    async function handlePlayerElimination(eliminatedUsernames) {
+        const eliminationOverlay = document.getElementById('elimination-overlay');
+        const eliminatedPlayersList = document.getElementById('eliminated-players-list');
+
+        if (!eliminationOverlay || !eliminatedPlayersList) {
+            console.warn('Elimination overlay elements not found');
+            return;
+        }
+
+        // Mark eliminated players in list immediately
+        eliminatedUsernames.forEach(username => {
+            const playerBox = document.getElementById(`player-box-${username}`);
+            if (playerBox) {
+                playerBox.classList.add('eliminated');
+                playerBox.style.animation = 'eliminationPulse 0.6s ease-in-out';
+            }
+        });
+
+        // Show eliminated players in overlay
+        eliminatedPlayersList.innerHTML = '';
+        eliminatedUsernames.forEach((username, index) => {
+            const eliminatedDiv = document.createElement('div');
+            eliminatedDiv.className = 'eliminated-name';
+            eliminatedDiv.textContent = `❌ ${username}`;
+            eliminatedDiv.style.animationDelay = `${index * 0.1}s`;
+            eliminatedPlayersList.appendChild(eliminatedDiv);
+        });
+
+        // Show overlay IMMEDIATELY - don't wait
+        // Remove any existing animation first
+        eliminationOverlay.style.animation = '';
+        eliminationOverlay.classList.add('show');
+
+        // Force a reflow to ensure the show class is applied
+        void eliminationOverlay.offsetWidth;
+
+        // Faster: Hide after 1.2 seconds
+        await sleep(1200);
+        eliminationOverlay.style.animation = 'eliminationHide 0.3s ease-out forwards';
+        await sleep(300);
+        eliminationOverlay.classList.remove('show');
+        eliminationOverlay.style.animation = '';
+
+        // Inform user if eliminated
+        if (eliminatedUsernames.includes(myUsername)) {
+            logMessage(translations.youEliminated, 'warning');
+        }
+    }
+
+    // Improved alert system instead of log
+    function logMessage(msg, type = 'info') {
+        if (!msg || !gameAlertContainer) return;
+
+        // Remove old alerts if there are more than 5
+        const alerts = gameAlertContainer.querySelectorAll('.game-alert');
+        if (alerts.length >= 5) {
+            alerts[0].remove();
+        }
+
+        const alert = document.createElement('div');
+        alert.className = `game-alert alert-${type}`;
+
+        // Icon based on type
+        let icon = 'fa-info-circle';
+        if (type === 'success') icon = 'fa-check-circle';
+        else if (type === 'warning') icon = 'fa-exclamation-triangle';
+        else if (type === 'danger') icon = 'fa-times-circle';
+
+        const time = new Date().toLocaleTimeString();
+        alert.innerHTML = `
+                <i class="fas ${icon}"></i>
+                <span class="alert-content">${msg}</span>
+                <span class="alert-time">${time}</span>
+            `;
+
+        gameAlertContainer.appendChild(alert);
+
+        // Auto-remove after 5 seconds for info/success, 8 seconds for warnings
+        const removeDelay = (type === 'warning' || type === 'danger') ? 8000 : 5000;
+        setTimeout(() => {
+            if (alert.parentElement) {
+                alert.style.animation = 'slideInAlert 0.3s ease-out reverse';
+                setTimeout(() => alert.remove(), 300);
+            }
+        }, removeDelay);
+    }
+    function createExplosion(cellEl, color) {
+        const gameBoardContainer = document.getElementById('game-board-container');
+        const rect = cellEl.getBoundingClientRect();
+        const containerRect = gameBoardContainer.getBoundingClientRect();
+        const startTop = rect.top - containerRect.top + (rect.height / 2);
+        const startLeft = rect.left - containerRect.left + (rect.width / 2);
+        const directions = ['up', 'down', 'left', 'right'];
+
+        // Enhanced explosion flash
+        cellEl.style.setProperty('color', color);
+        cellEl.classList.add('explode-flash');
+        setTimeout(() => {
+            cellEl.classList.remove('explode-flash');
+            cellEl.style.removeProperty('color');
+        }, 400);
+
+        // Create more dramatic dice particles
+        const diceCount = 8; // More particles for better effect
+        for (let i = 0; i < diceCount; i++) {
+            const particle = document.createElement('div');
+            particle.classList.add('particle');
+
+            // Random dice icon
+            const diceValues = [1, 2, 3, 4, 5, 6];
+            const randomDice = diceValues[Math.floor(Math.random() * diceValues.length)];
+            const icon = document.createElement('i');
+            icon.className = `fas ${diceIcons[randomDice] || 'fa-dice'}`;
+            icon.style.cssText = 'font-size: 0.8em;';
+            particle.appendChild(icon);
+
+            particle.style.color = color;
+            particle.style.top = `${startTop}px`;
+            particle.style.left = `${startLeft}px`;
+
+            // Distribute particles in all directions
+            const dir = directions[i % directions.length];
+
+            gameBoardContainer.appendChild(particle);
+            void particle.offsetWidth;
+
+            // Use existing particle animations
+            particle.classList.add(dir);
+
+            setTimeout(() => {
+                if (particle.parentElement) {
+                    particle.parentElement.removeChild(particle);
+                }
+            }, 500);
+        }
+    }
+
+    // İlk render
+    console.log(`İlk tahta ${boardSize}x${boardSize} olarak çiziliyor...`, initialBoardState);
+    renderBoard(initialBoardState);
+
+</script>
 {% endblock %}

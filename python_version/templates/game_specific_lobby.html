@@ -1,4 +1,4 @@
-{% extends 'base_app.html' %}
+{% extends request.GET.partial|yesno:"partials/base.html,base_app.html" %}
 {% load static %}
 {% load i18n %}
 

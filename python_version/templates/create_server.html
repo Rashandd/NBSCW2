@@ -1,4 +1,4 @@
-{% extends 'base_app.html' %}
+{% extends request.GET.partial|yesno:"partials/base.html,base_app.html" %}
 {% load i18n %}
 
 {% block title %}{% trans "Create Server" %} - Rashigo{% endblock %}
