@@ -459,594 +459,189 @@
         document.documentElement.setAttribute('data-theme', 'dark');
     </script>
 
-    <!-- Hidden Voice Frame - Maintains connection across pages -->
-    <iframe id="voice-frame" src="/voice-frame/" style="display:none; width:0; height:0; border:0;"></iframe>
-
-    <!-- Voice Chat Mini Box (Global) -->
-    <div id="voice-mini-box" class="voice-mini-box" style="display: none;">
-        <div class="voice-mini-header">
-            <span class="voice-mini-status" id="voice-mini-status-wrap">
-                <span class="voice-mini-dot" id="voice-mini-dot"></span>
-                <span id="voice-mini-channel">Voice Connected</span>
-            </span>
-        </div>
-        <div class="voice-mini-server" id="voice-mini-server"></div>
-        <div class="voice-mini-participants" id="voice-mini-participants"></div>
-        <div class="voice-mini-controls">
-            <button class="voice-mini-btn" id="voice-mini-mute" onclick="toggleMiniMute()" title="{% trans 'Mute' %}">
-                <i class="fas fa-microphone"></i>
-            </button>
-            <button class="voice-mini-btn" id="voice-mini-deafen" onclick="toggleMiniDeafen()"
-                title="{% trans 'Deafen' %}">
-                <i class="fas fa-headphones"></i>
-            </button>
-            <button class="voice-mini-btn" id="voice-mini-camera" onclick="toggleMiniCamera()"
-                title="{% trans 'Camera' %}">
-                <i class="fas fa-video"></i>
-            </button>
-            <button class="voice-mini-btn" id="voice-mini-screen" onclick="toggleMiniScreenShare()"
-                title="{% trans 'Share Screen' %}">
-                <i class="fas fa-desktop"></i>
+    <!-- Voice Call Pop-up Widget (Shared) -->
+    <div id="voice-popup" class="voice-popup">
+        <div class="voice-popup-header">
+            <div>
+                <div class="voice-popup-title">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <path
+                            d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
+                    </svg>
+                    {% trans "Voice Connected" %}
+                </div>
+                <div class="voice-popup-server voice-popup-server-label"></div>
+            </div>
+            <button class="voice-popup-close" onclick="window.voiceClient && window.voiceClient.disconnect()">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2">
+                    <line x1="18" y1="6" x2="6" y2="18" />
+                    <line x1="6" y1="6" x2="18" y2="18" />
+                </svg>
             </button>
         </div>
-        <div class="voice-mini-controls voice-mini-controls-secondary">
-            <button class="voice-mini-btn return" onclick="returnToVoice()" title="{% trans 'Return to Channel' %}">
-                <i class="fas fa-arrow-right"></i>
-            </button>
-            <button class="voice-mini-btn disconnect" onclick="disconnectMiniVoice()" title="{% trans 'Leave Voice' %}">
-                <i class="fas fa-phone-slash"></i>
-            </button>
+        <div class="voice-popup-body">
+            <div class="voice-popup-users" id="voice-popup-users"></div>
+            <div class="voice-popup-controls">
+                <button class="voice-popup-btn mute" onclick="window.voiceClient && window.voiceClient.toggleMute()">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z" />
+                        <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                        <line x1="12" x2="12" y1="19" y2="22" />
+                    </svg>
+                    {% trans "Mute" %}
+                </button>
+                <button class="voice-popup-btn leave" onclick="window.voiceClient && window.voiceClient.disconnect()">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2">
+                        <path
+                            d="M10.68 13.31a16 16 0 0 0 3.41 2.6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7 2 2 0 0 1 1.72 2v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.42 19.42 0 0 1-3.33-2.67m-2.67-3.34a19.79 19.79 0 0 1-3.07-8.63A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91" />
+                        <line x1="22" x2="2" y1="2" y2="22" />
+                    </svg>
+                    {% trans "Leave" %}
+                </button>
+            </div>
         </div>
     </div>
 
+    <!-- Global Voice Application CSS (Popup) -->
     <style>
-        /* Voice Mini Box - Warm Design */
-        .voice-mini-box {
+        .voice-popup {
             position: fixed;
             bottom: 24px;
             left: 24px;
-            background: var(--dark-surface);
-            border: 1px solid var(--dark-border);
-            border-radius: 16px;
-            padding: 16px;
-            min-width: 220px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-            z-index: 10000;
-            animation: slideInUp 0.3s ease;
+            width: 280px;
+            background: #1E293B;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            z-index: 9999;
+            display: none;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
         }
 
-        @keyframes slideInUp {
+        .voice-popup.active {
+            display: block;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
             from {
-                transform: translateY(100px);
                 opacity: 0;
+                transform: translateY(20px);
             }
 
             to {
-                transform: translateY(0);
                 opacity: 1;
+                transform: translateY(0);
             }
         }
 
-        .voice-mini-header {
+        .voice-popup-header {
+            background: linear-gradient(135deg, #38BDF8, #6366F1);
+            padding: 10px 12px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 12px;
         }
 
-        .voice-mini-status {
+        .voice-popup-title {
             display: flex;
             align-items: center;
             gap: 8px;
-            color: var(--voice-active);
+            color: #0F172A;
             font-size: 13px;
             font-weight: 600;
         }
 
-        .voice-mini-dot {
-            width: 8px;
-            height: 8px;
-            background: var(--voice-active);
-            border-radius: 50%;
-            animation: pulse-dot 1.5s ease-in-out infinite;
+        .voice-popup-title svg {
+            width: 16px;
+            height: 16px;
         }
 
-        @keyframes pulse-dot {
-
-            0%,
-            100% {
-                opacity: 1;
-                transform: scale(1);
-            }
-
-            50% {
-                opacity: 0.6;
-                transform: scale(1.1);
-            }
+        .voice-popup-server {
+            color: rgba(15, 23, 42, 0.7);
+            font-size: 11px;
+            font-weight: 500;
         }
 
-        .voice-mini-close {
+        .voice-popup-close {
             background: none;
             border: none;
-            color: #38BDF8;
+            color: #0F172A;
             cursor: pointer;
-            padding: 4px 8px;
+            padding: 4px;
             border-radius: 4px;
-            transition: all 0.2s ease;
+            transition: background 0.2s;
         }
 
-        .voice-mini-close:hover {
-            background: rgba(56, 189, 248, 0.1);
+        .voice-popup-close:hover {
+            background: rgba(0, 0, 0, 0.1);
         }
 
-        .voice-mini-server {
-            font-size: 10px;
-            color: #6B7280;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 4px;
+        .voice-popup-close svg {
+            width: 16px;
+            height: 16px;
         }
 
-        .voice-mini-status.disconnected .voice-mini-dot {
-            background: #FFA500 !important;
-            box-shadow: 0 0 8px rgba(255, 165, 0, 0.6);
-            animation: pulse-orange 2s infinite;
+        .voice-popup-body {
+            padding: 12px;
         }
 
-        @keyframes pulse-orange {
+        .voice-popup-users {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 12px;
+        }
+
+        .voice-popup-user {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #38BDF8, #6366F1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #0F172A;
+            font-size: 11px;
+            font-weight: 700;
+            border: 2px solid transparent;
+        }
+
+        .voice-popup-user.speaking {
+            border-color: #10B981;
+            animation: speakingPulse 1s infinite;
+        }
+
+        @keyframes speakingPulse {
 
             0%,
             100% {
-                box-shadow: 0 0 8px rgba(255, 165, 0, 0.6);
+                box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4);
             }
 
             50% {
-                box-shadow: 0 0 16px rgba(255, 165, 0, 0.9);
+                box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);
             }
         }
 
-        .voice-mini-participants {
+        .voice-popup-controls {
             display: flex;
-            flex-wrap: wrap;
-            gap: 4px;
-            margin-bottom: 8px;
-            max-height: 60px;
-            overflow-y: auto;
+            gap: 8px;
         }
 
-        .voice-mini-participant {
-            display: flex;
-            align-items: center;
-            gap: 3px;
-            padding: 2px 6px;
-            background: rgba(56, 189, 248, 0.1);
-            border-radius: 10px;
-            font-size: 10px;
-            color: #38BDF8;
-        }
-
-        .voice-mini-participant.muted {
-            opacity: 0.6;
-        }
-
-        .voice-mini-participant .avatar {
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #38BDF8, #FF00FF);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 8px;
-            font-weight: bold;
-            color: #0F172A;
-        }
-
-        .voice-mini-controls {
-            display: flex;
-            gap: 6px;
-            margin-bottom: 6px;
-        }
-
-        .voice-mini-controls-secondary {
-            margin-bottom: 0;
-        }
-
-        .voice-mini-btn {
+        .voice-popup-btn {
             flex: 1;
-            padding: 10px;
-            background: rgba(99, 102, 241, 0.1);
-            border: 1px solid var(--dark-border);
-            border-radius: 10px;
-            color: var(--primary);
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 14px;
-        }
-
-        .voice-mini-btn.active {
-            background: var(--voice-active);
-            border-color: var(--voice-active);
-            color: white;
-        }
-
-        .voice-mini-btn.return {
-            background: rgba(99, 102, 241, 0.2);
-            border-color: rgba(99, 102, 241, 0.3);
-            color: #6366F1;
-        }
-
-        .voice-mini-btn.return:hover {
-            background: rgba(99, 102, 241, 0.3);
-            box-shadow: 0 0 15px rgba(99, 102, 241, 0.3);
-        }
-
-        .voice-mini-btn:hover {
-            background: rgba(99, 102, 241, 0.2);
-            transform: translateY(-1px);
-        }
-
-        .voice-mini-btn.muted {
-            background: var(--error);
-            border-color: var(--error);
-            color: white;
-        }
-
-        .voice-mini-btn.disconnect {
-            background: rgba(239, 68, 68, 0.1);
-            border-color: var(--error);
-            color: var(--error);
-        }
-
-        .voice-mini-btn.disconnect:hover {
-            background: var(--error);
-            color: white;
-        }
     </style>
 
-    <script>
-        // ============================================
-        // PERSISTENT VOICE - Uses hidden iframe for connection
-        // ============================================
+    <script src="{% static 'js/voice_client.js' %}"></script>
 
-        window.voiceState = {
-            connected: false,
-            channelName: '',
-            serverSlug: '',
-            serverName: '',
-            channelSlug: '',
-            muted: false,
-            deafened: false
-        };
-
-        let voiceFrameReady = false;
-
-        // Get voice frame
-        function getVoiceFrame() {
-            return document.getElementById('voice-frame');
-        }
-
-        // Send message to voice frame
-        function sendToVoiceFrame(type, data = {}) {
-            const frame = getVoiceFrame();
-            if (frame && frame.contentWindow) {
-                frame.contentWindow.postMessage({ type, data }, '*');
-            }
-        }
-
-        // Listen for messages from voice frame
-        window.addEventListener('message', (event) => {
-            if (event.source !== getVoiceFrame()?.contentWindow) return;
-
-            const { type, data } = event.data;
-            console.log('[Voice] Frame message:', type, data);
-
-            switch (type) {
-                case 'ready':
-                    voiceFrameReady = true;
-                    checkVoiceSession();
-                    break;
-
-                case 'connected':
-                    window.voiceState.connected = true;
-                    window.voiceState = { ...window.voiceState, ...data };
-                    updateVoiceUI(true);
-                    saveVoiceStateToSession();
-                    break;
-
-                case 'disconnected':
-                    window.voiceState.connected = false;
-                    window.voiceState.cameraOn = false;
-                    window.voiceState.screenSharing = false;
-                    updateVoiceUI(false);
-                    hideVoiceMiniBox();
-                    break;
-
-                case 'connectionLost':
-                    // Connection was lost unexpectedly - show reconnect state
-                    updateVoiceUI(false);
-                    break;
-
-                case 'muteChanged':
-                    window.voiceState.muted = data.muted;
-                    updateMiniButtonStates();
-                    saveVoiceStateToSession();
-                    break;
-
-                case 'deafenChanged':
-                    window.voiceState.deafened = data.deafened;
-                    updateMiniButtonStates();
-                    saveVoiceStateToSession();
-                    break;
-
-                case 'cameraChanged':
-                    window.voiceState.cameraOn = data.cameraOn;
-                    updateMiniButtonStates();
-                    saveVoiceStateToSession();
-                    break;
-
-                case 'screenShareChanged':
-                    window.voiceState.screenSharing = data.screenSharing;
-                    updateMiniButtonStates();
-                    saveVoiceStateToSession();
-                    break;
-
-                case 'participantsChanged':
-                    window.voiceState.participants = data.participants;
-                    updateMiniParticipants();
-                    // Forward to server_view if it's listening
-                    window.dispatchEvent(new CustomEvent('voiceFrameEvent', { detail: { type, ...data } }));
-                    break;
-
-                case 'voiceEvent':
-                    // Forward to server_view if it's listening
-                    window.dispatchEvent(new CustomEvent('voiceFrameEvent', { detail: data }));
-                    break;
-
-                case 'peerConnected':
-                case 'peerDisconnected':
-                case 'peerTrack':
-                    window.dispatchEvent(new CustomEvent('voiceFrameEvent', { detail: { type, ...data } }));
-                    break;
-
-                case 'error':
-                    console.error('[Voice] Frame error:', data.message);
-                    break;
-            }
-        });
-
-        function saveVoiceStateToSession() {
-            sessionStorage.setItem('voiceState', JSON.stringify(window.voiceState));
-        }
-
-        function checkVoiceSession() {
-            const savedState = sessionStorage.getItem('voiceState');
-            if (savedState) {
-                try {
-                    const state = JSON.parse(savedState);
-                    window.voiceState = { ...window.voiceState, ...state };
-
-                    // Only show mini box if we're NOT on the server view page
-                    const isServerView = document.querySelector('.gaming-hud-container');
-
-                    if (state.connected && !isServerView) {
-                        showVoiceMiniBox(state);
-
-                        // If frame is ready and we have connection info, reconnect
-                        if (voiceFrameReady && state.channelSlug) {
-                            reconnectVoice(state);
-                        }
-                    }
-                } catch (e) {
-                    console.error('Error parsing voice state:', e);
-                }
-            }
-        }
-
-        function reconnectVoice(state) {
-            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${wsProtocol}//${window.location.host}/ws/voice/?channel_slug=${state.channelSlug}&channel_type=voice`;
-
-            sendToVoiceFrame('connect', {
-                wsUrl,
-                channelSlug: state.channelSlug,
-                channelName: state.channelName,
-                userId: state.userId,
-                username: state.username,
-                muted: state.muted,
-                deafened: state.deafened
-            });
-        }
-
-        function updateVoiceUI(connected) {
-            const statusWrap = document.getElementById('voice-mini-status-wrap');
-            const dot = document.getElementById('voice-mini-dot');
-
-            if (statusWrap) {
-                statusWrap.classList.toggle('disconnected', !connected);
-            }
-            if (dot) {
-                dot.style.background = connected ? '#6366F1' : '#FFA500';
-            }
-        }
-
-        function showVoiceMiniBox(state) {
-            const miniBox = document.getElementById('voice-mini-box');
-            const channelLabel = document.getElementById('voice-mini-channel');
-            const serverLabel = document.getElementById('voice-mini-server');
-
-            if (miniBox && channelLabel) {
-                window.voiceState = { ...window.voiceState, ...state };
-                channelLabel.textContent = state.channelName || 'Voice Connected';
-                if (serverLabel) {
-                    serverLabel.textContent = state.serverName ? `🖥️ ${state.serverName}` : (state.serverSlug || '');
-                }
-                miniBox.style.display = 'block';
-                updateMiniButtonStates();
-                updateVoiceUI(state.connected);
-            }
-        }
-
-        function hideVoiceMiniBox() {
-            const miniBox = document.getElementById('voice-mini-box');
-            if (miniBox) {
-                miniBox.style.display = 'none';
-            }
-        }
-
-        function updateMiniButtonStates() {
-            const muteBtn = document.getElementById('voice-mini-mute');
-            const deafenBtn = document.getElementById('voice-mini-deafen');
-            const cameraBtn = document.getElementById('voice-mini-camera');
-            const screenBtn = document.getElementById('voice-mini-screen');
-
-            if (muteBtn) {
-                muteBtn.classList.toggle('muted', window.voiceState.muted);
-                muteBtn.innerHTML = window.voiceState.muted ?
-                    '<i class="fas fa-microphone-slash"></i>' :
-                    '<i class="fas fa-microphone"></i>';
-            }
-
-            if (deafenBtn) {
-                deafenBtn.classList.toggle('muted', window.voiceState.deafened);
-                deafenBtn.innerHTML = window.voiceState.deafened ?
-                    '<i class="fas fa-volume-mute"></i>' :
-                    '<i class="fas fa-headphones"></i>';
-            }
-
-            if (cameraBtn) {
-                cameraBtn.classList.toggle('active', window.voiceState.cameraOn);
-                cameraBtn.innerHTML = window.voiceState.cameraOn ?
-                    '<i class="fas fa-video"></i>' :
-                    '<i class="fas fa-video-slash"></i>';
-            }
-
-            if (screenBtn) {
-                screenBtn.classList.toggle('active', window.voiceState.screenSharing);
-            }
-        }
-
-        function updateMiniParticipants() {
-            const container = document.getElementById('voice-mini-participants');
-            if (!container) return;
-
-            const participants = window.voiceState.participants || [];
-            container.innerHTML = '';
-
-            participants.forEach(p => {
-                const el = document.createElement('div');
-                el.className = 'voice-mini-participant' + (p.muted ? ' muted' : '');
-                el.innerHTML = `
-                    <span class="avatar">${(p.username || '?').charAt(0).toUpperCase()}</span>
-                    <span>${p.username || 'User'}</span>
-                    ${p.muted ? '<i class="fas fa-microphone-slash" style="font-size:8px;opacity:0.6;"></i>' : ''}
-                    ${p.video ? '<i class="fas fa-video" style="font-size:8px;color:#6366F1;"></i>' : ''}
-                    ${p.screen ? '<i class="fas fa-desktop" style="font-size:8px;color:#FF00FF;"></i>' : ''}
-                `;
-                container.appendChild(el);
-            });
-        }
-
-        function returnToVoice() {
-            if (window.voiceState.serverSlug) {
-                window.location.href = '/server/' + window.voiceState.serverSlug + '/';
-            }
-        }
-
-        function toggleMiniMute() {
-            sendToVoiceFrame('toggleMute');
-        }
-
-        function toggleMiniDeafen() {
-            sendToVoiceFrame('toggleDeafen');
-        }
-
-        function toggleMiniCamera() {
-            sendToVoiceFrame('toggleCamera');
-        }
-
-        function toggleMiniScreenShare() {
-            sendToVoiceFrame('toggleScreenShare');
-        }
-
-        function disconnectMiniVoice() {
-            sendToVoiceFrame('disconnect');
-            window.voiceState = { connected: false, participants: [] };
-            sessionStorage.removeItem('voiceState');
-            hideVoiceMiniBox();
-        }
-
-        // Global function to connect voice from server_view
-        window.connectVoiceViaFrame = function (config) {
-            window.voiceState = {
-                connected: true,
-                channelName: config.channelName,
-                channelSlug: config.channelSlug,
-                serverSlug: config.serverSlug,
-                serverName: config.serverName,
-                userId: config.userId,
-                username: config.username,
-                muted: config.muted || false,
-                deafened: config.deafened || false,
-                cameraOn: false,
-                screenSharing: false,
-                participants: []
-            };
-            saveVoiceStateToSession();
-
-            const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${wsProtocol}//${window.location.host}/ws/voice/?channel_slug=${config.channelSlug}&channel_type=voice`;
-
-            sendToVoiceFrame('connect', {
-                wsUrl,
-                ...config
-            });
-
-            // Show mini box when on other pages
-            const isServerView = document.querySelector('.gaming-hud-container');
-            if (!isServerView) {
-                showVoiceMiniBox(window.voiceState);
-            }
-        };
-
-        window.disconnectVoiceViaFrame = function () {
-            sendToVoiceFrame('disconnect');
-            window.voiceState = { connected: false, participants: [] };
-            sessionStorage.removeItem('voiceState');
-            hideVoiceMiniBox();
-        };
-
-        // Function to get current voice frame state
-        window.getVoiceFrameState = function () {
-            return new Promise((resolve) => {
-                const handler = (event) => {
-                    if (event.source === getVoiceFrame()?.contentWindow && event.data?.type === 'state') {
-                        window.removeEventListener('message', handler);
-                        resolve(event.data.data);
-                    }
-                };
-                window.addEventListener('message', handler);
-                sendToVoiceFrame('getState');
-                // Timeout after 1 second
-                setTimeout(() => {
-                    window.removeEventListener('message', handler);
-                    resolve(null);
-                }, 1000);
-            });
-        };
-
-        // Run on page load
-        document.addEventListener('DOMContentLoaded', () => {
-            // Wait a bit for iframe to load
-            setTimeout(checkVoiceSession, 500);
-        });
-    </script>
-
-    {% block extra_js %}{% endblock %}
-
+    {% block extra_js %}
+    {% endblock %}
 </body>
 
 </html>

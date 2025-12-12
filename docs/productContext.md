@@ -28,10 +28,17 @@ Rashigo is a **Gamified Social Platform** combining real-time communication with
 
 ---
 
-## Design Standards
-
-### Visual Style: Clean Modern Dark UI
-Inspired by Discord and Linear.app - professional yet gamified.
+### Mobile Responsiveness & Touch UX
+* **Layout Strategy:** "App Shell" adapts to screen size.
+    * **Desktop:** Persistent Left Sidebar + Main Content.
+    * **Mobile (< 768px):** Bottom Navigation Bar (Fixed) + Slide-out Drawer for Server List.
+* **Navigation:**
+    * **Bottom Bar:** Contains 3-4 core actions: `Home/Chat`, `Games`, `Ranks`, `Profile`.
+    * **Hamburger Menu (Top-Left):** Triggers the Server List drawer.
+* **Touch Targets:** All interactive elements (buttons, icons) must have a minimum hit area of **44x44px**.
+* **Typography:** Increase base font size slightly (16px) for readability.
+* **Safe Areas:** Account for mobile notches and bottom swipe gestures (padding-bottom/top).
+* **Feedback:** Active states must replace hover effects (instant visual feedback on tap).
 
 ### Color Palette
 Token,Value,Usage

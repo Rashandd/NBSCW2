@@ -1,0 +1,4 @@
+ALWAYS:Check `docs/productContext.md` before starting logic.
+- NO EMOJIS in UI. Use Lucide Icons.
+- Use Django Template Language, not React syntax unless specified.
+- Design: Deep Navy / Gamer Aesthetic.

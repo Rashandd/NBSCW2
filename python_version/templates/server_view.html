@@ -2833,160 +2833,158 @@
                 </div>
 
                 <!-- MAIN CONTENT VIEWPORT (HTMX will swap content here) -->
-                <div id="main-content-viewport" class="main-content-viewport">
-                    <!-- Default: Chat Panel -->
-                    <div id="chat-content" class="chat-panel">
-                        <!-- Chat Header -->
-                        <div class="chat-header">
-                            <button class="mobile-menu-toggle" id="mobile-menu-toggle" onclick="toggleSidebar()">
-                                <i class="fas fa-bars"></i>
-                            </button>
-                            <i class="fas fa-hashtag" id="chat-header-icon"></i>
-                            <h3 id="chat-channel-name">{% trans "SELECT CHANNEL" %}</h3>
-                            <span class="channel-topic" id="chat-channel-topic" style="display: none;"></span>
-                            <div class="voice-indicator" id="voice-indicator" style="display: none;">
-                                <i class="fas fa-volume-up"></i>
-                                <span id="voice-indicator-name"></span>
+                <!-- Default: Chat Panel -->
+                <div id="chat-content" class="chat-panel">
+                    <!-- Chat Header -->
+                    <div class="chat-header">
+                        <button class="mobile-menu-toggle" id="mobile-menu-toggle" onclick="toggleSidebar()">
+                            <i class="fas fa-bars"></i>
+                        </button>
+                        <i class="fas fa-hashtag" id="chat-header-icon"></i>
+                        <h3 id="chat-channel-name">{% trans "SELECT CHANNEL" %}</h3>
+                        <span class="channel-topic" id="chat-channel-topic" style="display: none;"></span>
+                        <div class="voice-indicator" id="voice-indicator" style="display: none;">
+                            <i class="fas fa-volume-up"></i>
+                            <span id="voice-indicator-name"></span>
+                        </div>
+                    </div>
+
+                    <!-- Voice Room View (replaces messages when in voice channel) -->
+                    <div id="voice-room-view" class="voice-room-view" style="display: none;">
+                        <!-- Header with channel info and controls -->
+                        <div class="voice-room-header">
+                            <div class="voice-room-title">
+                                <i class="fas fa-volume-up voice-room-icon"></i>
+                                <span class="voice-room-channel-name" id="voice-room-channel-name">Voice
+                                    Channel</span>
+                                <span class="voice-room-status" id="voice-room-status">Connecting...</span>
+                            </div>
+                            <div class="voice-room-actions">
+                                <button class="voice-room-btn" onclick="toggleCamera()" id="voice-room-camera-btn"
+                                    title="Toggle Camera">
+                                    <i class="fas fa-video"></i>
+                                </button>
+                                <button class="voice-room-btn" onclick="toggleScreenShare()" id="voice-room-screen-btn"
+                                    title="Share Screen">
+                                    <i class="fas fa-desktop"></i>
+                                </button>
+                                <button class="voice-room-btn" onclick="toggleMute()" id="voice-room-mute-btn"
+                                    title="Toggle Mute">
+                                    <i class="fas fa-microphone"></i>
+                                </button>
+                                <button class="voice-room-btn" onclick="toggleDeafen()" id="voice-room-deafen-btn"
+                                    title="Toggle Deafen">
+                                    <i class="fas fa-headphones"></i>
+                                </button>
+                                <button class="voice-room-btn" onclick="disconnectVoice()" title="Disconnect"
+                                    style="background: rgba(255, 0, 100, 0.15); border-color: rgba(255, 0, 100, 0.35); color: #FF0064;">
+                                    <i class="fas fa-phone-slash"></i>
+                                </button>
                             </div>
                         </div>
 
-                        <!-- Voice Room View (replaces messages when in voice channel) -->
-                        <div id="voice-room-view" class="voice-room-view" style="display: none;">
-                            <!-- Header with channel info and controls -->
-                            <div class="voice-room-header">
-                                <div class="voice-room-title">
-                                    <i class="fas fa-volume-up voice-room-icon"></i>
-                                    <span class="voice-room-channel-name" id="voice-room-channel-name">Voice
-                                        Channel</span>
-                                    <span class="voice-room-status" id="voice-room-status">Connecting...</span>
-                                </div>
-                                <div class="voice-room-actions">
-                                    <button class="voice-room-btn" onclick="toggleCamera()" id="voice-room-camera-btn"
-                                        title="Toggle Camera">
-                                        <i class="fas fa-video"></i>
-                                    </button>
-                                    <button class="voice-room-btn" onclick="toggleScreenShare()"
-                                        id="voice-room-screen-btn" title="Share Screen">
-                                        <i class="fas fa-desktop"></i>
-                                    </button>
-                                    <button class="voice-room-btn" onclick="toggleMute()" id="voice-room-mute-btn"
-                                        title="Toggle Mute">
-                                        <i class="fas fa-microphone"></i>
-                                    </button>
-                                    <button class="voice-room-btn" onclick="toggleDeafen()" id="voice-room-deafen-btn"
-                                        title="Toggle Deafen">
-                                        <i class="fas fa-headphones"></i>
-                                    </button>
-                                    <button class="voice-room-btn" onclick="disconnectVoice()" title="Disconnect"
-                                        style="background: rgba(255, 0, 100, 0.15); border-color: rgba(255, 0, 100, 0.35); color: #FF0064;">
-                                        <i class="fas fa-phone-slash"></i>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Voice Room Content - Two Layout Modes -->
-                            <div class="voice-room-content" id="voice-room-content">
-                                <!-- STAGE: Main focus area for pinned user -->
-                                <div class="voice-room-stage" id="voice-room-stage">
-                                    <div class="voice-room-stage-card" id="voice-room-stage-card">
-                                        <video id="voice-room-stage-video" autoplay playsinline></video>
-                                        <div class="voice-room-stage-avatar" id="voice-room-stage-avatar">A</div>
-                                        <div class="voice-room-stage-info">
-                                            <span class="voice-room-stage-name" id="voice-room-stage-name">User</span>
-                                            <div class="voice-room-stage-controls">
-                                                <i class="fas fa-volume-up"
-                                                    style="color: #fff; opacity: 0.7; font-size: 14px;"></i>
-                                                <input type="range" min="0" max="1" step="0.05" value="1"
-                                                    id="voice-room-stage-volume" title="Volume">
-                                                <button class="voice-room-stage-unpin" onclick="unpinUser()">
-                                                    <i class="fas fa-thumbtack"></i> Unpin
-                                                </button>
-                                            </div>
+                        <!-- Voice Room Content - Two Layout Modes -->
+                        <div class="voice-room-content" id="voice-room-content">
+                            <!-- STAGE: Main focus area for pinned user -->
+                            <div class="voice-room-stage" id="voice-room-stage">
+                                <div class="voice-room-stage-card" id="voice-room-stage-card">
+                                    <video id="voice-room-stage-video" autoplay playsinline></video>
+                                    <div class="voice-room-stage-avatar" id="voice-room-stage-avatar">A</div>
+                                    <div class="voice-room-stage-info">
+                                        <span class="voice-room-stage-name" id="voice-room-stage-name">User</span>
+                                        <div class="voice-room-stage-controls">
+                                            <i class="fas fa-volume-up"
+                                                style="color: #fff; opacity: 0.7; font-size: 14px;"></i>
+                                            <input type="range" min="0" max="1" step="0.05" value="1"
+                                                id="voice-room-stage-volume" title="Volume">
+                                            <button class="voice-room-stage-unpin" onclick="unpinUser()">
+                                                <i class="fas fa-thumbtack"></i> Unpin
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
+                            </div>
 
-                                <!-- GRID: Participant tiles (or FILMSTRIP when someone is pinned) -->
-                                <div class="voice-room-grid" id="voice-room-grid" data-count="0">
-                                    <!-- Participant cards added dynamically -->
-                                    <div class="voice-room-empty" id="voice-room-empty">
-                                        <i class="fas fa-users"></i>
-                                        <p>Connecting to voice...</p>
-                                    </div>
+                            <!-- GRID: Participant tiles (or FILMSTRIP when someone is pinned) -->
+                            <div class="voice-room-grid" id="voice-room-grid" data-count="0">
+                                <!-- Participant cards added dynamically -->
+                                <div class="voice-room-empty" id="voice-room-empty">
+                                    <i class="fas fa-users"></i>
+                                    <p>Connecting to voice...</p>
                                 </div>
-                            </div>
-                        </div>
-
-                        <!-- Video grid removed - using voice-room-view instead -->
-
-                        <!-- Messages Area -->
-                        <div class="messages-container" id="messages-container">
-                            <div style="text-align: center; padding: 60px 20px; color: #6B7280;">
-                                <i class="fas fa-comments"
-                                    style="font-size: 64px; margin-bottom: 20px; opacity: 0.3; color: #38BDF8; filter: drop-shadow(0 0 20px rgba(56, 189, 248, 0.3));"></i>
-                                <p style="font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">{% trans
-                                    "SELECT A
-                                    CHANNEL
-                                    TO BEGIN" %}</p>
-                            </div>
-                        </div>
-
-                        <!-- Input Area -->
-                        <div class="input-area">
-                            <div class="input-wrapper">
-                                <button class="input-btn" title="{% trans 'Add attachment' %}">
-                                    <i class="fas fa-plus"></i>
-                                </button>
-                                <input type="text" id="chat-input" placeholder="{% trans 'Type message...' %}"
-                                    autocomplete="off" disabled>
-                                <button class="input-btn" onclick="sendMessage()" title="{% trans 'Send message' %}">
-                                    <i class="fas fa-paper-plane"></i>
-                                </button>
                             </div>
                         </div>
                     </div>
 
-                    <!-- RIGHT SIDEBAR - Member List -->
-                    <div class="member-sidebar" id="member-sidebar">
-                        <div class="member-sidebar-header">
-                            <h3>
-                                <i class="fas fa-users"></i>
-                                {% trans "MEMBERS" %}
-                                <span class="member-count">{{ members|length }}</span>
-                            </h3>
+                    <!-- Video grid removed - using voice-room-view instead -->
+
+                    <!-- Messages Area -->
+                    <div class="messages-container" id="messages-container">
+                        <div style="text-align: center; padding: 60px 20px; color: #6B7280;">
+                            <i class="fas fa-comments"
+                                style="font-size: 64px; margin-bottom: 20px; opacity: 0.3; color: #38BDF8; filter: drop-shadow(0 0 20px rgba(56, 189, 248, 0.3));"></i>
+                            <p style="font-size: 14px; text-transform: uppercase; letter-spacing: 2px;">{% trans
+                                "SELECT A
+                                CHANNEL
+                                TO BEGIN" %}</p>
                         </div>
-                        <div class="member-list-container">
-                            <!-- Online Members -->
-                            <div class="member-group">
-                                <div class="member-group-header online">
-                                    {% trans "ONLINE" %} — <span id="online-count">{{ members|length }}</span>
-                                </div>
-                                {% for member in members %}
-                                <div class="member-item {% if not member.user.is_active %}offline{% endif %}"
-                                    data-user-id="{{ member.user.id }}" data-username="{{ member.user.username }}">
-                                    <div class="member-avatar {% if not member.user.is_active %}offline{% endif %}">
-                                        {{ member.user.username|first|upper }}
-                                        <span
-                                            class="member-status-dot {% if member.user.is_active %}online{% else %}offline{% endif %}"></span>
-                                    </div>
-                                    <div class="member-info">
-                                        <div class="member-name">{{ member.user.username }}</div>
-                                        {% if member.user == server.owner %}
-                                        <div class="member-role owner">{% trans "OWNER" %}</div>
-                                        {% elif member.roles.exists %}
-                                        <div class="member-role">{{ member.roles.first.name|upper }}</div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                                {% empty %}
-                                <div class="member-item" style="opacity: 0.5; cursor: default;">
-                                    <div class="member-avatar">?</div>
-                                    <div class="member-info">
-                                        <div class="member-name">{% trans "No members" %}</div>
-                                    </div>
-                                </div>
-                                {% endfor %}
+                    </div>
+
+                    <!-- Input Area -->
+                    <div class="input-area">
+                        <div class="input-wrapper">
+                            <button class="input-btn" title="{% trans 'Add attachment' %}">
+                                <i class="fas fa-plus"></i>
+                            </button>
+                            <input type="text" id="chat-input" placeholder="{% trans 'Type message...' %}"
+                                autocomplete="off" disabled>
+                            <button class="input-btn" onclick="sendMessage()" title="{% trans 'Send message' %}">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- RIGHT SIDEBAR - Member List -->
+                <div class="member-sidebar" id="member-sidebar">
+                    <div class="member-sidebar-header">
+                        <h3>
+                            <i class="fas fa-users"></i>
+                            {% trans "MEMBERS" %}
+                            <span class="member-count">{{ members|length }}</span>
+                        </h3>
+                    </div>
+                    <div class="member-list-container">
+                        <!-- Online Members -->
+                        <div class="member-group">
+                            <div class="member-group-header online">
+                                {% trans "ONLINE" %} — <span id="online-count">{{ members|length }}</span>
                             </div>
+                            {% for member in members %}
+                            <div class="member-item {% if not member.user.is_active %}offline{% endif %}"
+                                data-user-id="{{ member.user.id }}" data-username="{{ member.user.username }}">
+                                <div class="member-avatar {% if not member.user.is_active %}offline{% endif %}">
+                                    {{ member.user.username|first|upper }}
+                                    <span
+                                        class="member-status-dot {% if member.user.is_active %}online{% else %}offline{% endif %}"></span>
+                                </div>
+                                <div class="member-info">
+                                    <div class="member-name">{{ member.user.username }}</div>
+                                    {% if member.user == server.owner %}
+                                    <div class="member-role owner">{% trans "OWNER" %}</div>
+                                    {% elif member.roles.exists %}
+                                    <div class="member-role">{{ member.roles.first.name|upper }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% empty %}
+                            <div class="member-item" style="opacity: 0.5; cursor: default;">
+                                <div class="member-avatar">?</div>
+                                <div class="member-info">
+                                    <div class="member-name">{% trans "No members" %}</div>
+                                </div>
+                            </div>
+                            {% endfor %}
                         </div>
                     </div>
                 </div>

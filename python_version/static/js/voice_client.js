@@ -171,6 +171,13 @@ function updateVoicePopupUI() {
     const popup = document.getElementById('voice-popup');
     if (!popup) return;
 
+    // Hide popup if we are on the server view (full page)
+    // The server view has its own voice interface
+    if (window.location.pathname.startsWith('/server/')) {
+        popup.classList.remove('active');
+        return;
+    }
+
     const state = window.voiceClient.getState();
 
     if (state.connected) {
