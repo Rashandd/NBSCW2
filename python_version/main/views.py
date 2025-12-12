@@ -358,6 +358,11 @@ def app_shell(request):
         if is_htmx:
             return render(request, 'partials/_settings.html', context)
     
+    elif view == 'servers':
+        # Servers grid view
+        if is_htmx:
+            return render(request, 'partials/_servers.html', context)
+    
     elif view == 'home':
         # Home view is default
         if is_htmx:
@@ -912,6 +917,10 @@ def game_specific_lobby(request, game_slug):
         'my_games': my_games,
         'available_games': available_games,
     }
+    
+    # HTMX Support: Return partial template for App Shell loading
+    if request.GET.get('partial') == 'true' or request.headers.get('HX-Request'):
+        return render(request, 'partials/_game_lobby.html', context)
     return render(request, 'game_specific_lobby.html', context)
 
 

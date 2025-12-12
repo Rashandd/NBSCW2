@@ -1,13 +1,13 @@
 # Product Context - Rashigo
 
 ## Platform Overview
-Rashigo is a **Gamified Social Platform** combining real-time communication with competitive gaming features.
+Rashigo is a **Gamified Social Platform** combining real-time communication with competitive gaming features. It functions as a native game launcher similar to Discord or Steam.
 
 ## Core Features
 
 ### 1. Communication System
-- **Text Channels**: Discord-style chat within servers
-- **Voice Channels**: WebRTC-powered voice communication with COTURN
+- **Text Channels**: Real-time chat within servers via WebSocket
+- **Voice Channels**: WebRTC-powered voice with COTURN support
 - **Private Messages**: Direct messaging between users
 - **Server System**: Create and manage community servers with roles
 
@@ -20,16 +20,46 @@ Rashigo is a **Gamified Social Platform** combining real-time communication with
 - **Rank Points**: Earned through gameplay performance
 - **Leaderboards**: Global and per-game rankings
 - **Player Stats**: Total games, wins, losses, win rate
-- **Per-Game Statistics**: Tracked via JSONField
 
 ### 4. User System
 - **Custom Profiles**: Bio, avatar, status message
-- **Verification**: Email/phone verification support
-- **Security**: Bot detection, profanity filtering, Turnstile
+- **Verification**: Email verification support
+- **Security**: Bot detection, profanity filtering, Turnstile CAPTCHA
 
-## Target Experience
-A social hub where users can:
-1. Join servers to chat and voice with friends
-2. Play competitive mini-games
-3. Climb leaderboards and earn ranks
-4. Build communities around shared interests
+---
+
+## Design Standards
+
+### Visual Style: Clean Modern Dark UI
+Inspired by Discord and Linear.app - professional yet gamified.
+
+### Color Palette
+| Token | Value | Usage |
+|-------|-------|-------|
+| `--bg-primary` | `#0A0E27` | Main background |
+| `--bg-secondary` | `#0F1535` | Sidebar, cards |
+| `--bg-surface` | `#151B3B` | Elevated surfaces |
+| `--accent-primary` | `#00FFFF` | Primary accent (cyan) |
+| `--accent-secondary` | `#00FF80` | Secondary accent (green) |
+| `--text-primary` | `#F8FAFC` | Main text |
+| `--text-secondary` | `#94A3B8` | Muted text |
+| `--border` | `rgba(0,255,255,0.15)` | Borders |
+
+### Typography
+- **Font Family**: Inter (Google Fonts)
+- **Weights**: 400 (body), 500 (medium), 600 (semibold), 700 (bold)
+
+### Iconography
+- **Icon Set**: Lucide Icons (SVG)
+- **NO EMOJIS**: Strictly prohibited in UI - use icons only
+- **Icon Size**: 20-24px for navigation, 16-18px for inline
+
+### Spacing
+- **Base Unit**: 4px
+- **Sidebar Width**: 72px
+- **Card Border Radius**: 12-16px
+
+### Interaction
+- **Transitions**: 0.2s ease
+- **Hover States**: Background shift + accent color
+- **Active States**: Accent color with indicator bar
