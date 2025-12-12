@@ -4,7 +4,7 @@ from . import views
 from django.contrib.auth import views as auth_views # auth_views'i import edin
 
 urlpatterns = [
-    path('', views.index, name='index'),
+    path('', views.app_shell, name='index'),  # App Shell as main entry
     path('voice-frame/', TemplateView.as_view(template_name='voice_frame.html'), name='voice_frame'),
     path('register/', views.register, name='register'),
     path('verify/phone/', views.request_phone_verification, name='request_phone_verification'),

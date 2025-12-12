@@ -310,33 +310,67 @@ def request_phone_verification(request):
     return redirect('settings')
 
 
-def index(request):
-    """Landing page - shows servers if logged in"""
-    if request.user.is_authenticated:
-        # Get servers user is member of or owns
-        my_servers = Server.objects.filter(
-            Q(owner=request.user) | 
-            Q(members__user=request.user)
-        ).distinct().prefetch_related('members', 'text_channels', 'voice_channels').order_by('name')
-        
-        # Get all public servers that user is NOT a member of
-        public_servers = Server.objects.filter(
-            is_private=False
-        ).exclude(
-            Q(owner=request.user) | 
-            Q(members__user=request.user)
-        ).distinct().prefetch_related('members', 'text_channels', 'voice_channels').order_by('-created_at')[:12]
-            
-        context = {
-            'my_servers': my_servers,
-            'public_servers': public_servers,
-            'title': _('Your Servers'),
-            'user': request.user,
-        }
-        return render(request, 'index.html', context)
+def app_shell(request):
+    """
+    Unified App Shell - Discord/Steam-like launcher interface.
+    Serves as the main entry point for authenticated users.
+    Supports HTMX partial loading for Home, Settings, etc.
+    """
+    # Redirect to login if not authenticated
+    if not request.user.is_authenticated:
+        return render(request, 'landing.html', {'title': _('Welcome to Rashigo')})
     
-    # Not logged in state
-    return render(request, 'index.html', {'title': _('Welcome to Rashigo')})
+    # Determine which view/partial to load
+    view = request.GET.get('view', 'home')
+    is_htmx = request.headers.get('HX-Request') or request.GET.get('partial') == 'true'
+    
+    # Get user's servers for all views
+    my_servers = Server.objects.filter(
+        Q(owner=request.user) | 
+        Q(members__user=request.user)
+    ).distinct().prefetch_related('members', 'text_channels', 'voice_channels').order_by('name')
+    
+    # Get public servers user can discover
+    public_servers = Server.objects.filter(
+        is_private=False
+    ).exclude(
+        Q(owner=request.user) | 
+        Q(members__user=request.user)
+    ).distinct().prefetch_related('members').order_by('-created_at')[:12]
+    
+    # Base context for all views
+    context = {
+        'user': request.user,
+        'my_servers': my_servers,
+        'public_servers': public_servers,
+        'current_view': view,
+    }
+    
+    # Handle different views
+    if view == 'settings':
+        # Settings view data
+        owned_servers = Server.objects.filter(owner=request.user).count()
+        member_servers = Server.objects.filter(members__user=request.user).exclude(owner=request.user).distinct().count()
+        context.update({
+            'owned_servers': owned_servers,
+            'member_servers': member_servers,
+        })
+        if is_htmx:
+            return render(request, 'partials/_settings.html', context)
+    
+    elif view == 'home':
+        # Home view is default
+        if is_htmx:
+            return render(request, 'partials/_home.html', context)
+    
+    # Full page render - App Shell with initial content
+    return render(request, 'base_app.html', context)
+
+
+# Legacy index redirect (for backwards compatibility)
+def index(request):
+    """Legacy redirect to app_shell"""
+    return app_shell(request)
 
 
 @login_required

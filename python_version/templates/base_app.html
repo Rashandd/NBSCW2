@@ -1,0 +1,360 @@
+{% load i18n %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="{{ LANGUAGE_CODE|default:'en' }}" data-theme="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rashigo</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <style>
+        /* ============================================
+           RASHIGO APP SHELL - Dark Cyberpunk Theme
+           ============================================ */
+
+        :root {
+            --bg-primary: #0A0E27;
+            --bg-secondary: #0F1535;
+            --bg-surface: #151B3B;
+            --accent-cyan: #00FFFF;
+            --accent-green: #00FF80;
+            --accent-purple: #8B5CF6;
+            --text-primary: #F8FAFC;
+            --text-secondary: #94A3B8;
+            --border-color: rgba(0, 255, 255, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* App Shell Layout */
+        .app-shell {
+            display: grid;
+            grid-template-columns: 72px 1fr;
+            height: 100vh;
+        }
+
+        /* Sidebar Navigation */
+        .app-sidebar {
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 16px 0;
+            gap: 8px;
+        }
+
+        .sidebar-logo {
+            width: 48px;
+            height: 48px;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-green));
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-logo:hover {
+            border-radius: 12px;
+            transform: scale(1.05);
+        }
+
+        .sidebar-logo svg {
+            width: 24px;
+            height: 24px;
+            color: var(--bg-primary);
+        }
+
+        .sidebar-divider {
+            width: 32px;
+            height: 2px;
+            background: var(--border-color);
+            margin: 8px 0;
+        }
+
+        .sidebar-item {
+            width: 48px;
+            height: 48px;
+            background: var(--bg-surface);
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            position: relative;
+            border: none;
+            color: var(--text-secondary);
+        }
+
+        .sidebar-item:hover {
+            background: var(--accent-cyan);
+            color: var(--bg-primary);
+            border-radius: 16px;
+        }
+
+        .sidebar-item.active {
+            background: var(--accent-cyan);
+            color: var(--bg-primary);
+            border-radius: 16px;
+        }
+
+        .sidebar-item.active::before {
+            content: '';
+            position: absolute;
+            left: -12px;
+            width: 4px;
+            height: 32px;
+            background: var(--accent-cyan);
+            border-radius: 0 4px 4px 0;
+        }
+
+        .sidebar-item svg {
+            width: 22px;
+            height: 22px;
+        }
+
+        .sidebar-tooltip {
+            position: absolute;
+            left: 64px;
+            background: var(--bg-surface);
+            color: var(--text-primary);
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 500;
+            white-space: nowrap;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.15s ease;
+            z-index: 1000;
+            border: 1px solid var(--border-color);
+        }
+
+        .sidebar-item:hover .sidebar-tooltip {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        .sidebar-bottom {
+            margin-top: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        /* Main Content Area */
+        .main-content {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Top Bar */
+        .topbar {
+            height: 52px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            flex-shrink: 0;
+        }
+
+        .topbar-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .topbar-user {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            color: white;
+        }
+
+        .user-name {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+        }
+
+        /* Main Viewport */
+        #main-viewport {
+            flex: 1;
+            overflow-y: auto;
+            background: var(--bg-primary);
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--accent-cyan);
+            border-radius: 4px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app-shell">
+        <!-- Sidebar Navigation -->
+        <nav class="app-sidebar">
+            <!-- Logo -->
+            <a href="/" class="sidebar-logo" title="Rashigo">
+                <!-- Lucide: MessageCircle -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z" />
+                </svg>
+            </a>
+
+            <div class="sidebar-divider"></div>
+
+            <!-- Home -->
+            <button class="sidebar-item {% if current_view == 'home' %}active{% endif %}"
+                hx-get="/?view=home&partial=true" hx-target="#main-viewport" hx-swap="innerHTML"
+                onclick="setActiveNav(this)">
+                <!-- Lucide: Home -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                    <polyline points="9 22 9 12 15 12 15 22" />
+                </svg>
+                <span class="sidebar-tooltip">{% trans "Home" %}</span>
+            </button>
+
+            <!-- My Servers -->
+            <button class="sidebar-item" hx-get="/?view=servers&partial=true" hx-target="#main-viewport"
+                hx-swap="innerHTML" onclick="setActiveNav(this)">
+                <!-- Lucide: Server -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="20" height="8" x="2" y="2" rx="2" ry="2" />
+                    <rect width="20" height="8" x="2" y="14" rx="2" ry="2" />
+                    <line x1="6" x2="6.01" y1="6" y2="6" />
+                    <line x1="6" x2="6.01" y1="18" y2="18" />
+                </svg>
+                <span class="sidebar-tooltip">{% trans "My Servers" %}</span>
+            </button>
+
+            <!-- Games -->
+            <button class="sidebar-item" hx-get="/game-lobby/?partial=true" hx-target="#main-viewport"
+                hx-swap="innerHTML" onclick="setActiveNav(this)">
+                <!-- Lucide: Gamepad2 -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="6" x2="10" y1="11" y2="11" />
+                    <line x1="8" x2="8" y1="9" y2="13" />
+                    <line x1="15" x2="15.01" y1="12" y2="12" />
+                    <line x1="18" x2="18.01" y1="10" y2="10" />
+                    <path
+                        d="M17.32 5H6.68a4 4 0 0 0-3.978 3.59c-.006.052-.01.101-.017.152C2.604 9.416 2 14.456 2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.414-1.414A2 2 0 0 1 9.828 16h4.344a2 2 0 0 1 1.414.586L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3c0-1.545-.604-6.584-.685-7.258-.007-.05-.011-.1-.017-.151A4 4 0 0 0 17.32 5z" />
+                </svg>
+                <span class="sidebar-tooltip">{% trans "Games" %}</span>
+            </button>
+
+            <!-- Leaderboard -->
+            <button class="sidebar-item" hx-get="/leaderboard/?partial=true" hx-target="#main-viewport"
+                hx-swap="innerHTML" onclick="setActiveNav(this)">
+                <!-- Lucide: Trophy -->
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6" />
+                    <path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18" />
+                    <path d="M4 22h16" />
+                    <path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22" />
+                    <path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22" />
+                    <path d="M18 2H6v7a6 6 0 0 0 12 0V2Z" />
+                </svg>
+                <span class="sidebar-tooltip">{% trans "Leaderboard" %}</span>
+            </button>
+
+            <div class="sidebar-bottom">
+                <!-- Settings -->
+                <button class="sidebar-item {% if current_view == 'settings' %}active{% endif %}"
+                    hx-get="/?view=settings&partial=true" hx-target="#main-viewport" hx-swap="innerHTML"
+                    onclick="setActiveNav(this)">
+                    <!-- Lucide: Settings -->
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path
+                            d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z" />
+                        <circle cx="12" cy="12" r="3" />
+                    </svg>
+                    <span class="sidebar-tooltip">{% trans "Settings" %}</span>
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Top Bar -->
+            <header class="topbar">
+                <span class="topbar-title">Rashigo</span>
+                <div class="topbar-user">
+                    <span class="user-name">{{ user.username }}</span>
+                    <div class="user-avatar">{{ user.username|first|upper }}</div>
+                </div>
+            </header>
+
+            <!-- Viewport for Dynamic Content -->
+            <div id="main-viewport">
+                {% include 'partials/_home.html' %}
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function setActiveNav(element) {
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            element.classList.add('active');
+        }
+    </script>
+</body>
+
+</html>
