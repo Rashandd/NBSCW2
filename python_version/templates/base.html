@@ -37,7 +37,7 @@
             --success: #10B981;
             --warning: #F59E0B;
             --error: #EF4444;
-            --voice-active: #8B5CF6;
+            --voice-active: #6366F1;
             --game-active: #F59E0B;
 
             /* Dark mode */
@@ -568,7 +568,7 @@
         .voice-mini-close {
             background: none;
             border: none;
-            color: #00FFFF;
+            color: #38BDF8;
             cursor: pointer;
             padding: 4px 8px;
             border-radius: 4px;
@@ -622,7 +622,7 @@
             background: rgba(0, 255, 255, 0.1);
             border-radius: 10px;
             font-size: 10px;
-            color: #00FFFF;
+            color: #38BDF8;
         }
 
         .voice-mini-participant.muted {
@@ -633,13 +633,13 @@
             width: 14px;
             height: 14px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #00FFFF, #FF00FF);
+            background: linear-gradient(135deg, #38BDF8, #FF00FF);
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 8px;
             font-weight: bold;
-            color: #0A0E27;
+            color: #0F172A;
         }
 
         .voice-mini-controls {
@@ -676,7 +676,7 @@
         .voice-mini-btn.return {
             background: rgba(0, 255, 128, 0.2);
             border-color: rgba(0, 255, 128, 0.3);
-            color: #00FF80;
+            color: #6366F1;
         }
 
         .voice-mini-btn.return:hover {
@@ -869,7 +869,7 @@
                 statusWrap.classList.toggle('disconnected', !connected);
             }
             if (dot) {
-                dot.style.background = connected ? '#00FF80' : '#FFA500';
+                dot.style.background = connected ? '#6366F1' : '#FFA500';
             }
         }
 
@@ -943,7 +943,7 @@
                     <span class="avatar">${(p.username || '?').charAt(0).toUpperCase()}</span>
                     <span>${p.username || 'User'}</span>
                     ${p.muted ? '<i class="fas fa-microphone-slash" style="font-size:8px;opacity:0.6;"></i>' : ''}
-                    ${p.video ? '<i class="fas fa-video" style="font-size:8px;color:#00FF80;"></i>' : ''}
+                    ${p.video ? '<i class="fas fa-video" style="font-size:8px;color:#6366F1;"></i>' : ''}
                     ${p.screen ? '<i class="fas fa-desktop" style="font-size:8px;color:#FF00FF;"></i>' : ''}
                 `;
                 container.appendChild(el);

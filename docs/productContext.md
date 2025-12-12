@@ -34,16 +34,15 @@ Rashigo is a **Gamified Social Platform** combining real-time communication with
 Inspired by Discord and Linear.app - professional yet gamified.
 
 ### Color Palette
-| Token | Value | Usage |
-|-------|-------|-------|
-| `--bg-primary` | `#0A0E27` | Main background |
-| `--bg-secondary` | `#0F1535` | Sidebar, cards |
-| `--bg-surface` | `#151B3B` | Elevated surfaces |
-| `--accent-primary` | `#00FFFF` | Primary accent (cyan) |
-| `--accent-secondary` | `#00FF80` | Secondary accent (green) |
-| `--text-primary` | `#F8FAFC` | Main text |
-| `--text-secondary` | `#94A3B8` | Muted text |
-| `--border` | `rgba(0,255,255,0.15)` | Borders |
+Token,Value,Usage
+--bg-primary,#0F172A,Main background (Deep Slate)
+--bg-secondary,#1E293B,"Sidebar, cards (Lighter Navy)"
+--bg-surface,#334155,"Inputs, hover states"
+--accent-primary,#38BDF8,Primary accent (Sky Blue)
+--accent-secondary,#6366F1,Secondary accent (Indigo)
+--text-primary,#F8FAFC,Main text (Off-white)
+--text-secondary,#94A3B8,Muted text (Slate gray)
+--border,"rgba(148, 163, 184, 0.1)",Subtle borders
 
 ### Typography
 - **Font Family**: Inter (Google Fonts)

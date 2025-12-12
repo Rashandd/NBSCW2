@@ -11,10 +11,10 @@
 
     <style>
         :root {
-            --bg-primary: #0A0E27;
-            --bg-secondary: #0F1535;
-            --accent-cyan: #00FFFF;
-            --accent-green: #00FF80;
+            --bg-primary: #0F172A;
+            --bg-secondary: #1E293B;
+            --accent-primary: #38BDF8;
+            --accent-secondary: #6366F1;
             --text-primary: #F8FAFC;
             --text-secondary: #94A3B8;
         }
@@ -51,7 +51,7 @@
             gap: 0.5rem;
             font-size: 1.5rem;
             font-weight: 700;
-            color: var(--accent-cyan);
+            color: var(--accent-primary);
             text-decoration: none;
         }
 
@@ -80,12 +80,12 @@
         }
 
         .btn-outline:hover {
-            border-color: var(--accent-cyan);
-            color: var(--accent-cyan);
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-green));
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
             color: var(--bg-primary);
         }
 
@@ -108,7 +108,7 @@
             font-size: 3.5rem;
             font-weight: 800;
             margin-bottom: 1.5rem;
-            background: linear-gradient(135deg, #FFFFFF 0%, var(--accent-cyan) 100%);
+            background: linear-gradient(135deg, #FFFFFF 0%, var(--accent-primary) 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -152,7 +152,7 @@
             align-items: center;
             justify-content: center;
             margin-bottom: 1rem;
-            color: var(--accent-cyan);
+            color: var(--accent-primary);
         }
 
         .feature-title {

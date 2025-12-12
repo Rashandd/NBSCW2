@@ -18,7 +18,7 @@
        ============================================ */
     
     body {
-        background: #0A0E27 !important;
+        background: #0F172A !important;
     }
     
     main.container, main.full-width {
@@ -33,7 +33,7 @@
         align-items: center;
         justify-content: center;
         padding: 40px 20px;
-        background: linear-gradient(135deg, #0A0E27 0%, #0F1635 50%, #0A0E27 100%);
+        background: linear-gradient(135deg, #0F172A 0%, #0F1635 50%, #0F172A 100%);
         position: relative;
         overflow: hidden;
     }
@@ -100,7 +100,7 @@
         width: 80px;
         height: 80px;
         margin: 0 auto 20px;
-        background: linear-gradient(135deg, #00FFFF 0%, #00FF80 50%, #00FFFF 100%);
+        background: linear-gradient(135deg, #38BDF8 0%, #6366F1 50%, #38BDF8 100%);
         border-radius: 20px;
         display: flex;
         align-items: center;
@@ -118,7 +118,7 @@
     
     .register-logo i {
         font-size: 36px;
-        color: #0A0E27;
+        color: #0F172A;
     }
     
     .register-header h1 {
@@ -157,13 +157,13 @@
     .alert-success {
         background: rgba(0, 255, 128, 0.1);
         border-color: rgba(0, 255, 128, 0.3);
-        color: #00FF80;
+        color: #6366F1;
     }
     
     .alert-info, .alert-warning {
         background: rgba(0, 255, 255, 0.1);
         border-color: rgba(0, 255, 255, 0.3);
-        color: #00FFFF;
+        color: #38BDF8;
     }
     
     /* Form */
@@ -177,7 +177,7 @@
         gap: 8px;
         font-size: 12px;
         font-weight: 600;
-        color: #00FF80;
+        color: #6366F1;
         text-transform: uppercase;
         letter-spacing: 1.5px;
         margin-bottom: 10px;
@@ -201,7 +201,7 @@
     
     .form-control:focus {
         outline: none;
-        border-color: #00FFFF;
+        border-color: #38BDF8;
         background: rgba(0, 0, 0, 0.5);
         box-shadow: 0 0 20px rgba(0, 255, 255, 0.15);
     }
@@ -235,8 +235,8 @@
     
     .password-strength-bar.weak { background: #FF0064; width: 25%; }
     .password-strength-bar.fair { background: #FFA500; width: 50%; }
-    .password-strength-bar.good { background: #00FF80; width: 75%; }
-    .password-strength-bar.strong { background: #00FFFF; width: 100%; box-shadow: 0 0 10px rgba(0, 255, 255, 0.5); }
+    .password-strength-bar.good { background: #6366F1; width: 75%; }
+    .password-strength-bar.strong { background: #38BDF8; width: 100%; box-shadow: 0 0 10px rgba(0, 255, 255, 0.5); }
     
     /* Turnstile container */
     .turnstile-container {
@@ -249,10 +249,10 @@
     .btn-register {
         width: 100%;
         padding: 16px 24px;
-        background: linear-gradient(135deg, #00FFFF 0%, #00FF80 100%);
+        background: linear-gradient(135deg, #38BDF8 0%, #6366F1 100%);
         border: none;
         border-radius: 12px;
-        color: #0A0E27;
+        color: #0F172A;
         font-size: 15px;
         font-weight: 700;
         text-transform: uppercase;
@@ -304,7 +304,7 @@
         width: 20px;
         height: 20px;
         border: 2px solid rgba(10, 14, 39, 0.3);
-        border-top-color: #0A0E27;
+        border-top-color: #0F172A;
         border-radius: 50%;
         animation: spin 0.8s linear infinite;
         display: none;
@@ -328,14 +328,14 @@
     }
     
     .login-link a {
-        color: #00FFFF;
+        color: #38BDF8;
         text-decoration: none;
         font-weight: 600;
         transition: all 0.3s ease;
     }
     
     .login-link a:hover {
-        color: #00FF80;
+        color: #6366F1;
         text-shadow: 0 0 10px rgba(0, 255, 128, 0.5);
     }
     
@@ -458,7 +458,7 @@
                      data-expired-callback="onTurnstileExpired"></div>
                 {% else %}
                 <div class="turnstile-placeholder" style="padding: 10px; text-align: center; color: #8B9DC3; font-size: 12px;">
-                    <i class="fas fa-shield-alt" style="color: #00FF80;"></i> {% trans "Security verification" %}
+                    <i class="fas fa-shield-alt" style="color: #6366F1;"></i> {% trans "Security verification" %}
                 </div>
                 {% endif %}
             </div>

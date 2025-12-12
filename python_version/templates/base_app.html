@@ -14,19 +14,18 @@
 
     <style>
         /* ============================================
-           RASHIGO APP SHELL - Dark Cyberpunk Theme
+           RASHIGO APP SHELL - Clean Modern Dark UI
            ============================================ */
 
         :root {
-            --bg-primary: #0A0E27;
-            --bg-secondary: #0F1535;
-            --bg-surface: #151B3B;
-            --accent-cyan: #00FFFF;
-            --accent-green: #00FF80;
-            --accent-purple: #8B5CF6;
+            --bg-primary: #0F172A;
+            --bg-secondary: #1E293B;
+            --bg-surface: #334155;
+            --accent-primary: #38BDF8;
+            --accent-secondary: #6366F1;
             --text-primary: #F8FAFC;
             --text-secondary: #94A3B8;
-            --border-color: rgba(0, 255, 255, 0.2);
+            --border-color: rgba(148, 163, 184, 0.1);
         }
 
         * {
@@ -64,7 +63,7 @@
         .sidebar-logo {
             width: 48px;
             height: 48px;
-            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-green));
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
             border-radius: 16px;
             display: flex;
             align-items: center;
@@ -108,13 +107,13 @@
         }
 
         .sidebar-item:hover {
-            background: var(--accent-cyan);
+            background: var(--accent-primary);
             color: var(--bg-primary);
             border-radius: 16px;
         }
 
         .sidebar-item.active {
-            background: var(--accent-cyan);
+            background: var(--accent-primary);
             color: var(--bg-primary);
             border-radius: 16px;
         }
@@ -125,7 +124,7 @@
             left: -12px;
             width: 4px;
             height: 32px;
-            background: var(--accent-cyan);
+            background: var(--accent-primary);
             border-radius: 0 4px 4px 0;
         }
 
@@ -198,7 +197,7 @@
         .user-avatar {
             width: 32px;
             height: 32px;
-            background: linear-gradient(135deg, var(--accent-cyan), var(--accent-purple));
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -231,7 +230,7 @@
         }
 
         ::-webkit-scrollbar-thumb {
-            background: var(--accent-cyan);
+            background: var(--accent-primary);
             border-radius: 4px;
         }
     </style>

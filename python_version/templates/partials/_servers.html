@@ -94,9 +94,9 @@
 <!-- Join Server Modal -->
 <div class="modal fade" id="joinServerModal" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="background: #151B3B; border: 1px solid rgba(0,255,255,0.2);">
-            <div class="modal-header" style="border-bottom-color: rgba(0,255,255,0.2);">
-                <h5 class="modal-title" style="color: #00FFFF;">{% trans "Join a Server" %}</h5>
+        <div class="modal-content" style="background: #1E293B; border: 1px solid rgba(148,163,184,0.1);">
+            <div class="modal-header" style="border-bottom-color: rgba(148,163,184,0.1);">
+                <h5 class="modal-title" style="color: #38BDF8;">{% trans "Join a Server" %}</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <form method="post" action="{% url 'join_server' %}">
@@ -104,10 +104,10 @@
                 <div class="modal-body">
                     <label class="form-label" style="color: #94A3B8;">{% trans "Invite Code" %}</label>
                     <input type="text" name="invite_code" class="form-control" placeholder="Enter invite code"
-                        style="background: #0A0E27; border-color: rgba(0,255,255,0.3); color: #F8FAFC;" required>
+                        style="background: #0F172A; border-color: rgba(148,163,184,0.15); color: #F8FAFC;" required>
                 </div>
-                <div class="modal-footer" style="border-top-color: rgba(0,255,255,0.2);">
-                    <button type="submit" class="btn" style="background: #00FFFF; color: #0A0E27; font-weight: 600;">
+                <div class="modal-footer" style="border-top-color: rgba(148,163,184,0.1);">
+                    <button type="submit" class="btn" style="background: #38BDF8; color: #0F172A; font-weight: 600;">
                         {% trans "Join" %}
                     </button>
                 </div>
@@ -133,7 +133,7 @@
         gap: 0.75rem;
         font-size: 1.75rem;
         font-weight: 700;
-        color: #00FFFF;
+        color: #38BDF8;
         margin-bottom: 0.5rem;
     }
 
@@ -163,23 +163,23 @@
     }
 
     .action-btn.primary {
-        background: linear-gradient(135deg, #00FFFF, #00FF80);
-        color: #0A0E27;
+        background: linear-gradient(135deg, #38BDF8, #6366F1);
+        color: #0F172A;
     }
 
     .action-btn.primary:hover {
         transform: translateY(-2px);
-        box-shadow: 0 8px 20px rgba(0, 255, 255, 0.3);
+        box-shadow: 0 8px 20px rgba(148, 163, 184, 0.15);
     }
 
     .action-btn.secondary {
         background: rgba(0, 255, 255, 0.1);
-        color: #00FFFF;
-        border: 1px solid rgba(0, 255, 255, 0.3);
+        color: #38BDF8;
+        border: 1px solid rgba(148, 163, 184, 0.15);
     }
 
     .action-btn.secondary:hover {
-        background: rgba(0, 255, 255, 0.2);
+        background: rgba(148, 163, 184, 0.1);
     }
 
     .servers-grid {
@@ -193,8 +193,8 @@
         align-items: center;
         gap: 1rem;
         padding: 1.25rem;
-        background: #151B3B;
-        border: 1px solid rgba(0, 255, 255, 0.15);
+        background: #1E293B;
+        border: 1px solid rgba(148, 163, 184, 0.1);
         border-radius: 14px;
         text-decoration: none;
         transition: all 0.2s ease;
@@ -209,7 +209,7 @@
     .server-icon {
         width: 56px;
         height: 56px;
-        background: linear-gradient(135deg, #00FFFF, #8B5CF6);
+        background: linear-gradient(135deg, #38BDF8, #6366F1);
         border-radius: 14px;
         display: flex;
         align-items: center;
@@ -252,8 +252,8 @@
     .owner-badge {
         display: inline-block;
         padding: 0.125rem 0.5rem;
-        background: rgba(0, 255, 255, 0.15);
-        color: #00FFFF;
+        background: rgba(148, 163, 184, 0.1);
+        color: #38BDF8;
         border-radius: 4px;
         font-size: 0.75rem;
         font-weight: 600;
@@ -266,7 +266,7 @@
     }
 
     .server-card:hover .server-arrow {
-        color: #00FFFF;
+        color: #38BDF8;
         transform: translateX(4px);
     }
 
